@@ -1,0 +1,25 @@
+@layer utilities {
+  .radial-gradient {
+    background: radial-gradient(circle at top left, color-mix(in srgb, var(--color-loud), transparent 50%) 0%, rgba(0, 0, 0, 0) 70%);
+  }
+
+  .accent-border-gradient {
+    position: relative;
+  }
+
+  .accent-border-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    border: 2px solid transparent;
+    border-radius: inherit;
+    background: linear-gradient(225deg, var(--color-loud-less) 0%, transparent 10%) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
