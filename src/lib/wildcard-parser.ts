@@ -37,8 +37,17 @@ export function insertWildcard(
   const before = text.substring(0, cursorPosition)
   const after = text.substring(cursorPosition)
 
+  // Add space before if there's content before and it doesn't already end with whitespace
+  const needsSpaceBefore = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n')
+  const prefix = needsSpaceBefore ? ' ' : ''
+
+  // Always add comma after
+  const suffix = ','
+
+  const insertedText = prefix + wildcardSyntax + suffix
+
   return {
-    text: before + wildcardSyntax + after,
-    newCursorPosition: cursorPosition + wildcardSyntax.length,
+    text: before + insertedText + after,
+    newCursorPosition: cursorPosition + insertedText.length,
   }
 }
