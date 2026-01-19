@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -22,6 +23,7 @@ export function StackOutputBlock() {
   const { data: wildcards } = api.wildcards.list.useQuery()
   const { addError } = useErrors()
   const utils = api.useUtils()
+  const [commaSeparated, setCommaSeparated] = useState(true)
 
   const updateBlockMutation = api.blocks.update.useMutation({
     onSuccess: () => {
@@ -32,12 +34,34 @@ export function StackOutputBlock() {
     },
   })
 
+  // Process content to add trailing commas if enabled
+  const getProcessedContent = (content: string): string => {
+    if (!commaSeparated) return content
+
+    // Split by double newline to get individual blocks
+    const blocks = content.split('\n\n')
+
+    // Add trailing comma to each block if it doesn't already have one
+    const processedBlocks = blocks.map(block => {
+      const trimmed = block.trimEnd()
+      if (trimmed.length === 0) return block
+      if (trimmed.endsWith(',')) return block
+      if (trimmed.endsWith('.')) return trimmed.slice(0, -1) + ','
+      return trimmed + ','
+    })
+
+    return processedBlocks.join('\n\n')
+  }
+
+  const processedContent = getProcessedContent(renderedContent)
+  const processedContentWithMarkers = getProcessedContent(renderedContentWithMarkers)
+
   const handleCopy = async () => {
     try {
       if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
         throw new Error('Clipboard API not available (requires HTTPS or localhost)')
       }
-      await navigator.clipboard.writeText(renderedContent)
+      await navigator.clipboard.writeText(processedContent)
     } catch (error) {
       addError(error instanceof Error ? error.message : 'Failed to copy to clipboard')
     }
@@ -163,7 +187,16 @@ export function StackOutputBlock() {
       <CardHeader className="bg-primary/5">
         <div className={`flex items-center ${isMinimized ? 'justify-end' : 'justify-between'}`}>
           {!isMinimized && <CardTitle className="text-xl font-bold">Stack Output</CardTitle>}
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={commaSeparated}
+                onChange={(e) => setCommaSeparated(e.target.checked)}
+                className="cursor-pointer"
+              />
+              Comma Separated
+            </label>
             <Button
               variant="outline"
               size="sm"
@@ -201,7 +234,7 @@ export function StackOutputBlock() {
       {!isMinimized && (
         <CardContent className="pt-6 max-h-48 overflow-y-auto">
           <TextWithWildcards
-            text={renderedContentWithMarkers}
+            text={processedContentWithMarkers}
             className="text-base whitespace-pre-wrap font-mono"
             valueOnly={true}
           />
