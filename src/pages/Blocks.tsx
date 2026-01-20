@@ -43,6 +43,7 @@ export default function Blocks() {
   const handleCreate = (values: BlockFormValues) => {
     createMutation.mutate({
       uuid: generateUUID(),
+      name: values.name,
       displayId: values.displayId,
       text: values.text,
       labels: values.labels,
@@ -53,6 +54,8 @@ export default function Blocks() {
   const handleUpdate = (id: number, values: BlockFormValues) => {
     updateMutation.mutate({
       id,
+      name: values.name,
+      displayId: values.displayId,
       text: values.text,
       labels: values.labels,
       typeId: values.typeId,
@@ -114,6 +117,7 @@ export default function Blocks() {
                   <BlockForm
                     mode="edit"
                     initialValues={{
+                      name: block.name ?? undefined,
                       displayId: block.displayId,
                       text: block.text,
                       labels: block.labels,
@@ -130,6 +134,7 @@ export default function Blocks() {
                     onDelete={() => handleDelete(block.id)}
                     onTransform={(blockId, transformedText) =>
                       handleUpdate(blockId, {
+                        name: block.name ?? undefined,
                         displayId: block.displayId,
                         text: transformedText,
                         labels: block.labels,
@@ -137,6 +142,7 @@ export default function Blocks() {
                       })
                     }
                     isDeleting={deleteMutation.isPending}
+                    alwaysActive={true}
                   />
                 )}
               </motion.div>
