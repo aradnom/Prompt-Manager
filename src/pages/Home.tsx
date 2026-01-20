@@ -17,7 +17,7 @@ function HomeContent() {
           transition={{ duration: 0.5 }}
         >
           <h1 className="text-4xl font-bold mb-2">Prompt Manager</h1>
-          <p className="text-muted-foreground mb-8">
+          <p className="text-cyan-medium mb-8">
             Manage your diffusion model prompts with ease
           </p>
         </motion.div>

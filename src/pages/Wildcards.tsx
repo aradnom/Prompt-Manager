@@ -86,7 +86,7 @@ function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }:
   }
 
   return (
-    <Card className="bg-muted">
+    <Card className="bg-cyan-dark">
       <CardHeader>
         <CardTitle>{mode === 'create' ? 'Create Wildcard' : 'Edit Wildcard'}</CardTitle>
       </CardHeader>
@@ -112,7 +112,7 @@ function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }:
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Wildcard"
-              className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               required
               disabled={isSubmitting}
             />
@@ -122,7 +122,7 @@ function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }:
             <select
               value={format}
               onChange={(e) => setFormat(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               disabled={isSubmitting}
             >
               <option value="json">JSON</option>
@@ -241,7 +241,7 @@ export default function Wildcards() {
           const parsed = JSON.parse(labelResult.result)
           if (parsed.title) labelTitle = parsed.title
           if (parsed.code) labelCode = parsed.code
-        } catch (e) {
+        } catch {
           // If parsing fails, use the result as-is for title
           labelTitle = labelResult.result
         }
@@ -317,7 +317,7 @@ export default function Wildcards() {
     <main className="container mx-auto p-8 pt-20">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Wildcards</h1>
-        <p className="text-muted-foreground">
+        <p className="text-cyan-medium">
           Manage your wildcard templates
         </p>
       </div>
@@ -344,7 +344,7 @@ export default function Wildcards() {
       )}
 
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="text-center py-12 text-cyan-medium">
           Loading wildcards...
         </div>
       ) : wildcards && wildcards.length > 0 ? (
@@ -375,7 +375,7 @@ export default function Wildcards() {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-xl">{wildcard.name}</CardTitle>
-                        <div className="flex gap-2 mt-2 text-sm text-muted-foreground">
+                        <div className="flex gap-2 mt-2 text-sm text-cyan-medium">
                           <span className="font-mono">{wildcard.displayId}</span>
                           <span>•</span>
                           <span className="capitalize">{wildcard.format}</span>
@@ -401,7 +401,7 @@ export default function Wildcards() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <pre className="bg-muted p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap break-words">
+                    <pre className="bg-cyan-dark p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap break-words">
                       {wildcard.content}
                     </pre>
                   </CardContent>
@@ -413,7 +413,7 @@ export default function Wildcards() {
       ) : (
         <Card>
           <CardContent className="py-12">
-            <div className="text-center text-muted-foreground">
+            <div className="text-center text-cyan-medium">
               <p className="mb-4">No wildcards yet</p>
               <Button onClick={() => setIsCreating(true)}>
                 Create Your First Wildcard
@@ -445,12 +445,12 @@ export default function Wildcards() {
                     }
                   }}
                   placeholder="Enter a category (e.g., 'emotions', 'fantasy locations')"
-                  className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+                  className="w-full px-4 py-2 border border-cyan-medium rounded-md focus:outline-none focus:ring-2 focus:ring-magenta-medium bg-background"
                   maxLength={140}
                   autoFocus
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-cyan-medium">
                     {generateConcept.length}/140 characters
                   </span>
                   <Button
@@ -483,7 +483,7 @@ export default function Wildcards() {
                           handleGenerateSubmit()
                         }
                       }}
-                      className="flex-1 px-3 py-2 rounded-md border border-input bg-background"
+                      className="flex-1 px-3 py-2 rounded-md border border-cyan-medium bg-background"
                       maxLength={140}
                     />
                     <Button
@@ -504,7 +504,7 @@ export default function Wildcards() {
                     value={generatedName}
                     onChange={(e) => setGeneratedName(e.target.value)}
                     placeholder="My Wildcard"
-                    className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                    className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                   />
                 </div>
 

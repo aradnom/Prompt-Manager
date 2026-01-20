@@ -178,7 +178,7 @@ export default function Stacks() {
     <main className="container mx-auto p-8 pt-20">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Stacks</h1>
-          <p className="text-muted-foreground">
+          <p className="text-cyan-medium">
             Manage your prompt stacks
           </p>
         </div>
@@ -250,7 +250,7 @@ export default function Stacks() {
         )}
 
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-cyan-medium">
             Loading stacks...
           </div>
         ) : stacks && stacks.length > 0 ? (
@@ -267,7 +267,7 @@ export default function Stacks() {
                   className="relative"
                 >
                   <Card
-                    className={`cursor-pointer transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}
+                    className={`cursor-pointer transition-all ${isActive ? 'ring-2 ring-magenta-dark' : ''}`}
                     onClick={(e) => {
                       // Don't toggle if clicking on buttons
                       if (!(e.target as HTMLElement).closest('button')) {
@@ -285,7 +285,7 @@ export default function Stacks() {
                                 e.stopPropagation()
                                 setShowRevisionsForStack(stack.id)
                               }}
-                              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                              className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
                               aria-label="Show revisions"
                             >
                               <Clock className="h-4 w-4" />
@@ -312,7 +312,7 @@ export default function Stacks() {
                               e.stopPropagation()
                               handleDelete(stack.id)
                             }}
-                            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
                             aria-label="Delete stack"
                           >
                             <X className="h-4 w-4" />
@@ -329,7 +329,7 @@ export default function Stacks() {
                           transition={{ duration: 0.2 }}
                         >
                           <CardContent className="space-y-4 pt-0">
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-cyan-medium">
                               <div>Created: {new Date(stack.createdAt).toLocaleString()}</div>
                               <div>Updated: {new Date(stack.updatedAt).toLocaleString()}</div>
                             </div>
@@ -341,7 +341,7 @@ export default function Stacks() {
                                 <input
                                   type="text"
                                   placeholder="e.g., Summer Landscapes"
-                                  className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                                  className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                                   value={editName}
                                   onChange={(e) => setEditName(e.target.value)}
                                   onClick={(e) => e.stopPropagation()}
@@ -374,7 +374,7 @@ export default function Stacks() {
                               <label className="text-sm font-medium mb-2 block">
                                 Stack Output
                               </label>
-                              <Card className="border-2 border-primary shadow-lg bg-background">
+                              <Card className="border-2 border-magenta-medium shadow-lg bg-background">
                                 <CardContent className="pt-6 max-h-48 overflow-y-auto">
                                   {stackContent.rendered ? (
                                     <TextWithWildcards
@@ -383,7 +383,7 @@ export default function Stacks() {
                                       valueOnly={true}
                                     />
                                   ) : (
-                                    <p className="text-muted-foreground text-sm">No blocks in this stack</p>
+                                    <p className="text-cyan-medium text-sm">No blocks in this stack</p>
                                   )}
                                 </CardContent>
                               </Card>
@@ -398,7 +398,7 @@ export default function Stacks() {
                   <AnimatePresence>
                     {showRevisionsForStack === stack.id && (
                       <motion.div
-                        className="absolute inset-0 bg-card z-20 rounded-lg overflow-hidden border"
+                        className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden border"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -409,7 +409,7 @@ export default function Stacks() {
                             e.stopPropagation()
                             setShowRevisionsForStack(null)
                           }}
-                          className="absolute right-2 top-2 z-30 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
                           aria-label="Close revisions"
                         >
                           <X className="h-4 w-4" />
@@ -417,7 +417,7 @@ export default function Stacks() {
                         <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
                           {revisionsQuery.isLoading ? (
                             <div className="flex items-center justify-center w-full">
-                              <p className="text-sm text-muted-foreground">Loading revisions...</p>
+                              <p className="text-sm text-cyan-medium">Loading revisions...</p>
                             </div>
                           ) : sortedRevisions.length > 0 ? (
                             sortedRevisions.map((revision) => {
@@ -425,7 +425,7 @@ export default function Stacks() {
                               return (
                                 <div
                                   key={revision.id}
-                                  className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-muted flex flex-col cursor-pointer hover:bg-muted/80 transition-colors relative"
+                                  className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
                                   onClick={async (e) => {
                                     e.stopPropagation()
                                     try {
@@ -440,15 +440,15 @@ export default function Stacks() {
                                   }}
                                 >
                                   {isActiveRevision && (
-                                    <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground">
+                                    <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
                                       Active
                                     </div>
                                   )}
                                   <div className="space-y-1 mb-3">
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs text-cyan-medium">
                                       <span className="font-medium">Created:</span> {new Date(revision.createdAt).toLocaleString()}
                                     </p>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs text-cyan-medium">
                                       <span className="font-medium">Updated:</span> {new Date(revision.updatedAt).toLocaleString()}
                                     </p>
                                   </div>
@@ -456,14 +456,14 @@ export default function Stacks() {
                                     <p className="text-xs font-medium mb-2">Blocks ({revision.blockIds.length}):</p>
                                     {revision.blockIds.length > 0 ? (
                                       <ol className="space-y-1 text-sm list-decimal list-inside">
-                                        {revision.blockIds.map((blockId) => (
+                                        {revision.blockIds.map((blockId: number) => (
                                           <li key={blockId} className="text-foreground">
                                             {getBlockDisplayName(blockId)}
                                           </li>
                                         ))}
                                       </ol>
                                     ) : (
-                                      <p className="text-xs text-muted-foreground italic">No blocks</p>
+                                      <p className="text-xs text-cyan-medium italic">No blocks</p>
                                     )}
                                   </div>
                                 </div>
@@ -471,7 +471,7 @@ export default function Stacks() {
                             })
                           ) : (
                             <div className="flex items-center justify-center w-full">
-                              <p className="text-sm text-muted-foreground">No revisions found</p>
+                              <p className="text-sm text-cyan-medium">No revisions found</p>
                             </div>
                           )}
                         </div>
@@ -485,7 +485,7 @@ export default function Stacks() {
         ) : (
           <Card>
             <CardContent className="py-12">
-              <div className="text-center text-muted-foreground">
+              <div className="text-center text-cyan-medium">
                 <p className="mb-4">No stacks yet</p>
                 <Button onClick={() => setIsCreating(true)}>
                   Create Your First Stack

@@ -31,7 +31,7 @@ export default function DeveloperSettings() {
   if (isLoading) {
     return (
       <main className="container mx-auto p-8 pt-20">
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="text-center py-12 text-cyan-medium">
           Loading...
         </div>
       </main>
@@ -51,7 +51,7 @@ export default function DeveloperSettings() {
     <main className="container mx-auto p-8 pt-20">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Developer Settings</h1>
-        <p className="text-muted-foreground">
+        <p className="text-cyan-medium">
           Advanced settings and tools for development
         </p>
       </div>
@@ -87,7 +87,7 @@ export default function DeveloperSettings() {
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-cyan-medium">
                 Select which service to use for text transformations and variations.
               </p>
             </div>
@@ -102,7 +102,7 @@ export default function DeveloperSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-cyan-medium">
               Developer settings are currently enabled via the DEV_SETTINGS environment variable.
             </p>
           </CardContent>

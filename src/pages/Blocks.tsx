@@ -78,7 +78,7 @@ export default function Blocks() {
     <main className="container mx-auto p-8 pt-20">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Blocks</h1>
-          <p className="text-muted-foreground">
+          <p className="text-cyan-medium">
             Manage your text blocks
           </p>
         </div>
@@ -101,7 +101,7 @@ export default function Blocks() {
         )}
 
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-cyan-medium">
             Loading blocks...
           </div>
         ) : blocks && blocks.length > 0 ? (
@@ -151,7 +151,7 @@ export default function Blocks() {
         ) : (
           <Card>
             <CardContent className="py-12">
-              <div className="text-center text-muted-foreground">
+              <div className="text-center text-cyan-medium">
                 <p className="mb-4">No blocks yet</p>
                 <Button onClick={() => setIsCreating(true)}>
                   Create Your First Block
