@@ -25,7 +25,7 @@ export const DisplayIdInput = forwardRef<HTMLInputElement, DisplayIdInputProps>(
         type="text"
         value={value}
         onChange={handleChange}
-        className={`px-3 py-2 rounded-md border border-input bg-background ${className}`}
+        className={`px-3 py-2 rounded-md border border-cyan-medium bg-background ${className}`}
         {...props}
       />
     )

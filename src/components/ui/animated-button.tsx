@@ -9,12 +9,12 @@ import { animatedButtonVariants } from "./animated-button-variants"
 const dotVariants = cva("rounded-full", {
   variants: {
     variant: {
-      default: "bg-primary",
-      destructive: "bg-destructive",
+      default: "bg-magenta-dark",
+      destructive: "bg-magenta-light",
       outline: "bg-foreground",
-      secondary: "bg-secondary",
-      ghost: "bg-accent",
-      link: "bg-primary",
+      secondary: "bg-cyan-medium",
+      ghost: "bg-cyan-dark",
+      link: "bg-magenta-dark",
     },
   },
   defaultVariants: {
