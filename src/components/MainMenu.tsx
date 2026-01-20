@@ -48,7 +48,7 @@ export function MainMenu() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50">
+        <Button variant="ghost" size="icon" className="text-magenta-medium fixed top-4 left-4 z-50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -89,7 +89,7 @@ export function MainMenu() {
                 <span className="mr-2">{item.icon}</span>
                 {item.label}
                 {item.disabled && (
-                  <span className="ml-auto text-xs text-muted-foreground">
+                  <span className="ml-auto text-xs text-cyan-medium">
                     Soon
                   </span>
                 )}

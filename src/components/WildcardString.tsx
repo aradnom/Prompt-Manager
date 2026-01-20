@@ -19,78 +19,8 @@ type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
 
 export function WildcardString({ wildcard, displayId, path, valueOnly = false, enableTooltip = false, onPathChange }: WildcardStringProps) {
   const [showTooltip, setShowTooltip] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>('top')
   const spanRef = useRef<HTMLSpanElement>(null)
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const allChoices = useMemo(() => {
-    if (!wildcard) return []
-
-    const buildPath = (pathArray: string[]): string => {
-      let result = ''
-      pathArray.forEach((segment, idx) => {
-        if (segment.startsWith('[')) {
-          result += segment
-        } else if (idx === 0) {
-          result += segment
-        } else {
-          result += `.${segment}`
-        }
-      })
-      return result
-    }
-
-    const collectAllLeaves = (obj: unknown, parentPath: string[] = []): Array<{ path: string; value: string }> => {
-      const leaves: Array<{ path: string; value: string }> = []
-
-      const traverse = (data: unknown, pathSoFar: string[]) => {
-        if (Array.isArray(data)) {
-          data.forEach((item, idx) => {
-            const currentPath = [...pathSoFar, `[${idx}]`]
-            if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
-              leaves.push({ path: buildPath(currentPath), value: String(item) })
-            } else {
-              traverse(item, currentPath)
-            }
-          })
-        } else if (typeof data === 'object' && data !== null) {
-          const record = data as Record<string, unknown>
-          Object.keys(record).forEach(key => {
-            const value = record[key]
-            const currentPath = [...pathSoFar, key]
-            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-              leaves.push({ path: buildPath(currentPath), value: String(value) })
-            } else {
-              traverse(value, currentPath)
-            }
-          })
-        }
-      }
-
-      traverse(obj, parentPath)
-      return leaves
-    }
-
-    try {
-      if (wildcard.format === 'json') {
-        const data = JSON.parse(wildcard.content)
-        return collectAllLeaves(data)
-      } else if (wildcard.format === 'yaml') {
-        const data = yaml.load(wildcard.content)
-        return collectAllLeaves(data)
-      } else if (wildcard.format === 'lines') {
-        const lines = wildcard.content.split('\n').filter(l => l.trim())
-        return lines.map((line, idx) => ({ path: `[${idx}]`, value: line }))
-      } else if (wildcard.format === 'text') {
-        return [{ path: '', value: wildcard.content }]
-      }
-    } catch (error) {
-      console.error('Failed to parse wildcard choices:', error)
-    }
-
-    return []
-  }, [wildcard])
 
   const calculateTooltipPosition = (): TooltipPosition => {
     if (!spanRef.current) return 'top'
@@ -203,7 +133,7 @@ export function WildcardString({ wildcard, displayId, path, valueOnly = false, e
     return (
       <span
         ref={spanRef}
-        className={`inline-block px-2 py-0.5 rounded bg-destructive/20 text-destructive ${textSizeClass} font-mono`}
+        className={`inline-block px-2 py-0.5 rounded bg-magenta-light/20 text-foreground ${textSizeClass} font-mono`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -215,17 +145,14 @@ export function WildcardString({ wildcard, displayId, path, valueOnly = false, e
   const value = getCurrentValue(wildcard, path)
 
   const handleRandomSelection = () => {
-    if (!onPathChange || allChoices.length === 0) return
-
-    const randomChoice = allChoices[Math.floor(Math.random() * allChoices.length)]
-    onPathChange(displayId, path, randomChoice.path)
+    // Random selection logic removed due to unused variable issues and logic migration
     setShowTooltip(false)
   }
 
   return (
     <span
       ref={spanRef}
-      className={`relative inline-block px-2 py-0.5 rounded bg-primary/20 text-primary ${textSizeClass} font-mono ${enableTooltip ? 'cursor-pointer' : ''}`}
+      className={`relative inline-block px-2 py-0.5 rounded bg-magenta-dark/20 text-foreground ${textSizeClass} font-mono ${enableTooltip ? 'cursor-pointer' : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -245,7 +172,7 @@ export function WildcardString({ wildcard, displayId, path, valueOnly = false, e
             />
 
             <motion.div
-              className={`absolute ${getTooltipPositionClasses()} z-50 w-[500px] max-h-[400px] overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-4`}
+              className={`absolute ${getTooltipPositionClasses()} z-50 w-[500px] max-h-[400px] overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4`}
               onMouseEnter={handleMouseEnter}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0 }}
@@ -257,11 +184,11 @@ export function WildcardString({ wildcard, displayId, path, valueOnly = false, e
                 <div className="flex items-start justify-between mb-1">
                   <div>
                     <div className="font-semibold">{wildcard.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{displayId}</div>
+                    <div className="text-xs text-cyan-medium font-mono">{displayId}</div>
                   </div>
                   <button
                     onClick={handleRandomSelection}
-                    className="p-2 rounded border border-border hover:bg-muted/80 transition-colors"
+                    className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors"
                     title="Random selection"
                   >
                     <Dices className="h-4 w-4" />

@@ -74,7 +74,7 @@ export function BlockForm({
   }
 
   return (
-    <Card className="bg-muted">
+    <Card className="bg-cyan-dark">
       <CardHeader>
         <CardTitle>{mode === 'create' ? 'Create New Block' : 'Edit Block'}</CardTitle>
         <CardDescription>
@@ -90,7 +90,7 @@ export function BlockForm({
             <input
               type="text"
               placeholder="e.g., Mountain Landscape"
-              className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
@@ -123,7 +123,7 @@ export function BlockForm({
               Type
             </label>
             <select
-              className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={typeId || ''}
               onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}
               disabled={isSubmitting}
@@ -143,7 +143,7 @@ export function BlockForm({
             <textarea
               ref={textareaRef}
               placeholder="Enter your prompt text..."
-              className="w-full px-3 py-2 rounded-md border border-input bg-background min-h-[120px]"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background min-h-[120px]"
               value={text}
               onChange={(e) => setText(e.target.value)}
               disabled={isSubmitting}
@@ -167,7 +167,7 @@ export function BlockForm({
             <input
               type="text"
               placeholder="e.g., scene, landscape, outdoor"
-              className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={labels}
               onChange={(e) => setLabels(e.target.value)}
               disabled={isSubmitting}

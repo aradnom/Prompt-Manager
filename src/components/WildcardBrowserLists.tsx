@@ -193,7 +193,7 @@ export function WildcardBrowserLists({ wildcard, currentPath, onSelectValue }: W
 
   if (tree.length === 0) {
     return (
-      <div className="text-xs text-muted-foreground italic">
+      <div className="text-xs text-cyan-medium italic">
         No values found in wildcard
       </div>
     )
@@ -207,7 +207,7 @@ export function WildcardBrowserLists({ wildcard, currentPath, onSelectValue }: W
         return (
           <div key={levelIndex}>
             {levelIndex > 0 && (
-              <hr className="border-t border-border my-3" />
+              <hr className="border-t border-cyan-medium my-3" />
             )}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
               {levelNodes.map((node, idx) => {
@@ -218,10 +218,10 @@ export function WildcardBrowserLists({ wildcard, currentPath, onSelectValue }: W
                     onClick={() => handleNavigate(node.key, node.isLeaf, node.path || '', node.value, levelIndex)}
                     className={`flex-shrink-0 px-3 py-2 rounded border text-sm ${
                       node.isLeaf
-                        ? 'bg-primary/10 border-primary/30 hover:bg-primary/20'
+                        ? 'bg-magenta-dark/10 border-magenta-medium/30 hover:bg-magenta-dark/20'
                         : isSelected
-                        ? 'bg-primary/20 border-primary/50 hover:bg-primary/30'
-                        : 'bg-muted border-border hover:bg-muted/80'
+                        ? 'bg-magenta-dark/20 border-magenta-medium/50 hover:bg-magenta-dark/30'
+                        : 'bg-cyan-dark border-cyan-medium hover:bg-cyan-dark/80'
                     }`}
                   >
                     <div className="text-left">

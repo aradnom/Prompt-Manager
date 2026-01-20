@@ -72,7 +72,7 @@ export function TextWithWildcards({ text, className, valueOnly = false, enableTo
         result.push(
           <span
             key={`val-${idx}`}
-            className="inline-block px-2 py-0.5 rounded bg-primary/20 text-primary font-mono"
+            className="inline-block px-2 py-0.5 rounded bg-magenta-dark/20 text-foreground font-mono"
           >
             {match.content}
           </span>

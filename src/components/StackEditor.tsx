@@ -439,7 +439,7 @@ export function StackEditor({ stack }: StackEditorProps) {
               transition={{ duration: 0.2 }}
               className="border-t border-b overflow-hidden"
             >
-              <div className="px-6 py-3 bg-muted/30">
+              <div className="px-6 py-3 bg-cyan-dark/30">
                 <div className="flex gap-2">
                   <Button
                     variant="destructive"
@@ -465,7 +465,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         <CardContent className="flex-1">
           <div className="space-y-4">
             {isLoading ? (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="text-center py-12 text-cyan-medium">
                 Loading blocks...
               </div>
             ) : (
@@ -528,7 +528,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                       ))}
                     </SortableContext>
                   ) : !isCreatingNew && (
-                    <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <div className="text-center py-12 text-cyan-medium border-2 border-dashed rounded-lg">
                       <p>No blocks in this stack yet.</p>
                       <p className="text-xs mt-2">Add blocks using the toolbar below.</p>
                     </div>
@@ -553,18 +553,18 @@ export function StackEditor({ stack }: StackEditorProps) {
             )}
           </div>
         </CardContent>
-        <CardFooter className="border-t p-4 bg-muted/20 gap-2">
+        <CardFooter className="border-t p-4 bg-cyan-dark/20 gap-2">
             {!isCreatingNew && (
               <>
-                <Button onClick={() => setIsSearchOpen(true)} variant="secondary" className="w-full sm:w-auto">
+                <Button onClick={() => setIsSearchOpen(true)} variant="default" className="w-full sm:w-auto">
                     <Search className="mr-2 h-4 w-4" />
                     Add Existing Block
                 </Button>
-                <Button onClick={() => setIsCreatingNew(true)} className="w-full sm:w-auto">
+                <Button onClick={() => setIsCreatingNew(true)} variant="tertiary" className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
                     Add New Block
                 </Button>
-                <Button onClick={handleGenerateOpen} variant="secondary" className="w-full sm:w-auto">
+                <Button onClick={handleGenerateOpen} variant="tertiary" className="w-full sm:w-auto">
                     <Sparkles className="mr-2 h-4 w-4" />
                     Generate New Block
                 </Button>
@@ -600,12 +600,12 @@ export function StackEditor({ stack }: StackEditorProps) {
                     }
                   }}
                   placeholder="Enter a concept (e.g., 'landscape', 'action scenes')"
-                  className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+                  className="w-full px-4 py-2 border border-cyan-medium rounded-md focus:outline-none focus:ring-2 focus:ring-magenta-medium bg-background"
                   maxLength={140}
                   autoFocus
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-cyan-medium">
                     {generateConcept.length}/140 characters
                   </span>
                   <Button
@@ -631,7 +631,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                   return (
                     <motion.div
                       key={`spoke-${index}`}
-                      className="absolute origin-left pointer-events-none border-t-2 border-dashed border-border"
+                      className="absolute origin-left pointer-events-none border-t-2 border-dashed border-cyan-medium"
                       style={{
                         top: '50%',
                         left: '50%',
@@ -650,11 +650,11 @@ export function StackEditor({ stack }: StackEditorProps) {
 
                 {/* Concept in center */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[100px] flex items-center justify-center" style={{ zIndex: 10 }}>
-                  <div className="p-4 border-2 border-primary rounded-md bg-card w-full h-full flex items-center justify-center relative">
+                  <div className="p-4 border-2 border-magenta-medium rounded-md bg-background w-full h-full flex items-center justify-center relative">
                     <button
                       onClick={handleGenerateSubmit}
                       disabled={generateMutation.isPending}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors disabled:opacity-50"
                       title="Regenerate suggestions"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
@@ -676,7 +676,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                       />
                     ) : (
                       <p
-                        className="text-sm font-semibold text-center line-clamp-3 cursor-pointer hover:text-primary/80 transition-colors"
+                        className="text-sm font-semibold text-center line-clamp-3 cursor-pointer hover:text-foreground/80 transition-colors"
                         onClick={handleConceptClick}
                       >
                         {generateConcept}
@@ -712,7 +712,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <div className="p-4 border rounded-md bg-muted w-full h-full flex items-center justify-center hover:bg-muted/80 transition-colors">
+                      <div className="p-4 border rounded-md bg-cyan-dark w-full h-full flex items-center justify-center hover:bg-cyan-dark/80 transition-colors">
                         <p className="text-sm text-center line-clamp-3">
                           {suggestion}
                         </p>

@@ -183,8 +183,8 @@ export function StackOutputBlock() {
   }
 
   return (
-    <Card className={`border-2 border-primary shadow-lg bg-background ${isMinimized ? 'w-fit ml-auto' : ''}`}>
-      <CardHeader className="bg-primary/5">
+    <Card className={`border-2 border-magenta-medium shadow-lg bg-background ${isMinimized ? 'w-fit ml-auto' : ''}`}>
+      <CardHeader className="bg-magenta-dark/5">
         <div className={`flex items-center ${isMinimized ? 'justify-end' : 'justify-between'}`}>
           {!isMinimized && <CardTitle className="text-xl font-bold">Stack Output</CardTitle>}
           <div className="flex gap-2 items-center">

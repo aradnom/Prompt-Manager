@@ -5,13 +5,15 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-magenta-dark text-foreground hover:bg-magenta-dark/90",
+        default: "bg-magenta-medium text-foreground hover:bg-magenta-medium/80",
+        secondary:
+          "bg-cyan-medium text-foreground hover:bg-cyan-medium/80",
+        tertiary:
+          "bg-cyan-dark text-foreground hover:bg-cyan-medium/50",
         destructive:
           "bg-magenta-light text-foreground hover:bg-magenta-light/90",
         outline:
           "border border-cyan-medium bg-background hover:bg-cyan-dark hover:text-foreground",
-        secondary:
-          "bg-cyan-medium text-foreground hover:bg-cyan-medium/80",
         ghost: "hover:bg-cyan-dark hover:text-foreground",
         link: "text-foreground underline-offset-4 hover:underline",
       },

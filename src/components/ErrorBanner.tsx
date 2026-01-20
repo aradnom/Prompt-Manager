@@ -15,7 +15,7 @@ export function ErrorBanner() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="bg-destructive text-destructive-foreground px-4 py-3 rounded-md shadow-lg border border-destructive/50 flex items-start gap-3"
+            className="bg-magenta-light text-foreground px-4 py-3 rounded-md shadow-lg border border-magenta-medium/50 flex items-start gap-3"
           >
             <div className="flex-1 text-sm">
               {error.message}
@@ -23,7 +23,7 @@ export function ErrorBanner() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-destructive-foreground/10"
+              className="h-6 w-6 p-0 hover:bg-magenta-light-foreground/10"
               onClick={() => removeError(error.id)}
             >
               ×

@@ -18,7 +18,6 @@ export function ParallaxCircle({
   minLineWidth = 2,
   maxLineWidth = 8,
   transitionDuration = 0.1,
-  backgroundColor = 'rgb(9, 9, 11, 0.5)',
   scrollMultiplier = 1,
 }: ParallaxCircleProps) {
   const { scrollY } = useScroll()
@@ -59,8 +58,8 @@ export function ParallaxCircle({
           background: `linear-gradient(
             135deg,
             color-mix(in srgb, black 80%, transparent) 0%,
-            color-mix(in srgb, #1B578C 60%, transparent) 50%,
-            color-mix(in srgb, #D914CC 40%, transparent) 100%
+            color-mix(in srgb, var(--color-background) 20%, transparent) 50%,
+            color-mix(in srgb, var(--color-magenta-light) 50%, transparent) 100%
           )`,
           padding: `${clampedWidth}px`,
           transition: `padding ${transitionDuration}s ease-out`,
@@ -70,7 +69,7 @@ export function ParallaxCircle({
         <div
           className="rounded-full w-full h-full"
           style={{
-            background: backgroundColor,
+            background: 'rgb(from var(--color-background) r g b / 50%)'
           }}
         />
       </div>

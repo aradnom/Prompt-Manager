@@ -153,11 +153,6 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
     setIsInlineEditing(false)
   }
 
-  const handleCancelInlineEdit = () => {
-    setInlineText(block.text)
-    setIsInlineEditing(false)
-  }
-
   // Close active state when clicking outside
   useEffect(() => {
     if (!isActive || alwaysActive) return
@@ -279,11 +274,11 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
   return (
     <motion.div
       ref={blockRef}
-      className="relative rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer"
+      className="relative rounded-lg border bg-background text-foreground shadow-sm cursor-pointer"
       onClick={handleBlockClick}
       animate={{
         padding: isActive ? "8px" : "0px",
-        backgroundColor: isActive ? "var(--color-muted)" : "var(--color-card)",
+        backgroundColor: isActive ? "var(--color-cyan-dark)" : "var(--color-background)",
         boxShadow: isActive
           ? "0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3)"
           : "0 1px 2px 0 rgb(0 0 0 / 0.05)",
@@ -303,7 +298,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button className="text-muted-foreground hover:text-foreground transition-colors">
+                              <button className="text-cyan-medium hover:text-foreground transition-colors">
                                 <Info className="h-4 w-4" />
                               </button>
                             </TooltipTrigger>
@@ -328,7 +323,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                       <ExpandingIcon active={isActive} origin="left">
                         <button
                           onClick={() => setShowRevisions(!showRevisions)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-cyan-medium hover:text-foreground transition-colors"
                         >
                           <Clock className="h-4 w-4" />
                         </button>
@@ -341,7 +336,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button className="text-muted-foreground hover:text-foreground transition-colors">
+                              <button className="text-cyan-medium hover:text-foreground transition-colors">
                                 <Info className="h-4 w-4" />
                               </button>
                             </TooltipTrigger>
@@ -366,7 +361,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                       <ExpandingIcon active={isActive} origin="left">
                         <button
                           onClick={() => setShowRevisions(!showRevisions)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-cyan-medium hover:text-foreground transition-colors"
                         >
                           <Clock className="h-4 w-4" />
                         </button>
@@ -375,7 +370,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                   )}
                 </div>
                 {block.name && (
-                  <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                  <div className="text-xs text-cyan-medium font-mono mt-0.5">
                     {block.displayId}
                   </div>
                 )}
@@ -390,7 +385,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                       setSelectedLabel(label)
                       setIsLabelSearchOpen(true)
                     }}
-                    className="px-2 py-1 text-xs rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                    className="px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
                   >
                     {label}
                   </button>
@@ -411,7 +406,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                 {block.type && (
                   <button
                     onClick={() => setIsTypeSearchOpen(true)}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors cursor-pointer"
                   >
                     {block.type.name}
                   </button>
@@ -420,7 +415,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                   <button
                     onClick={onDelete}
                     disabled={isDeleting}
-                    className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                    className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
                     aria-label="Delete block"
                   >
                     <X className="h-4 w-4" />
@@ -440,12 +435,12 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                 value={inlineText}
                 onChange={(e) => setInlineText(e.target.value)}
                 onBlur={handleSaveInlineEdit}
-                className="w-full text-sm whitespace-pre-wrap bg-muted/50 border border-border rounded p-2 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                className="w-full text-sm whitespace-pre-wrap bg-cyan-dark/50 border border-cyan-medium rounded p-2 focus:outline-none focus:ring-2 focus:ring-magenta-medium resize-none"
                 minRows={1}
               />
               <button
                 onClick={handleSaveInlineEdit}
-                className="absolute top-2 right-2 p-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="absolute top-2 right-2 p-1 rounded bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors"
                 aria-label="Save"
               >
                 <Save className="h-3 w-3" />
@@ -453,10 +448,10 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
             </div>
           ) : (
             <div
-              className="cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors"
+              className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 transition-colors"
               onClick={handleTextClick}
             >
-              <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity absolute -left-5 top-2" />
+              <Pencil className="h-4 w-4 text-cyan-medium opacity-0 group-hover:opacity-100 transition-opacity absolute -left-5 top-2" />
               <TextWithWildcards
                 text={block.text}
                 className="text-sm whitespace-pre-wrap"
@@ -552,7 +547,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
       <AnimatePresence>
         {showRevisions && (
           <motion.div
-            className="absolute inset-0 bg-card z-20 rounded-lg overflow-hidden border"
+            className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden border"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -560,7 +555,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
           >
             <button
               onClick={() => setShowRevisions(false)}
-              className="absolute right-2 top-2 z-30 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
               aria-label="Close revisions"
             >
               <X className="h-4 w-4" />
@@ -568,7 +563,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
             <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
               {revisionsQuery.isLoading ? (
                 <div className="flex items-center justify-center w-full">
-                  <p className="text-sm text-muted-foreground">Loading revisions...</p>
+                  <p className="text-sm text-cyan-medium">Loading revisions...</p>
                 </div>
               ) : sortedRevisions.length > 0 ? (
                 sortedRevisions.map((revision) => {
@@ -576,7 +571,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                   return (
                     <div
                       key={revision.id}
-                      className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-muted flex flex-col cursor-pointer hover:bg-muted/80 transition-colors relative"
+                      className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
                       onClick={async () => {
                         try {
                           await setActiveRevisionMutation.mutateAsync({
@@ -590,11 +585,11 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                       }}
                     >
                       {isActive && (
-                        <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground">
+                        <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
                           Active
                         </div>
                       )}
-                      <p className="text-xs text-muted-foreground mb-2">
+                      <p className="text-xs text-cyan-medium mb-2">
                         {new Date(revision.createdAt).toLocaleString()}
                       </p>
                       <div className="flex-1 overflow-auto">
@@ -605,7 +600,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                 })
               ) : (
                 <div className="flex items-center justify-center w-full">
-                  <p className="text-sm text-muted-foreground">No revisions found</p>
+                  <p className="text-sm text-cyan-medium">No revisions found</p>
                 </div>
               )}
             </div>
@@ -638,7 +633,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                   return (
                     <motion.div
                       key={`spoke-${index}`}
-                      className="absolute origin-left pointer-events-none border-t-2 border-dashed border-border"
+                      className="absolute origin-left pointer-events-none border-t-2 border-dashed border-cyan-medium"
                       style={{
                         top: '50%',
                         left: '50%',
@@ -657,11 +652,11 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
 
                 {/* Original text in center */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[100px] flex items-center justify-center" style={{ zIndex: 10 }}>
-                  <div className="p-4 border-2 border-primary rounded-md bg-card w-full h-full flex items-center justify-center relative">
+                  <div className="p-4 border-2 border-magenta-medium rounded-md bg-background w-full h-full flex items-center justify-center relative">
                     <button
                       onClick={handleExplore}
                       disabled={exploreMutation.isPending}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors disabled:opacity-50"
                       title="Regenerate variations"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
@@ -699,7 +694,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <div className="p-4 border rounded-md bg-muted w-full h-full flex items-center justify-center hover:bg-muted/80 transition-colors">
+                      <div className="p-4 border rounded-md bg-cyan-dark w-full h-full flex items-center justify-center hover:bg-cyan-dark/80 transition-colors">
                         <p className="text-sm text-center line-clamp-3">
                           {variation}
                         </p>

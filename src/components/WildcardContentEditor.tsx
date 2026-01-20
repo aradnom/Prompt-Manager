@@ -39,7 +39,7 @@ export function WildcardContentEditor({ value, onChange, format, disabled }: Wil
         autocompletion: true,
         highlightActiveLine: true,
       }}
-      className="border border-input rounded-md overflow-hidden"
+      className="border border-cyan-medium rounded-md overflow-hidden"
     />
   )
 }
