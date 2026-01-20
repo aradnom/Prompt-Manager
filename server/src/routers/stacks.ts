@@ -6,6 +6,7 @@ export const stacksRouter = router({
     .input(
       z.object({
         uuid: z.string(),
+        name: z.string().optional(),
         displayId: z.string(),
         blockIds: z.array(z.number()).optional(),
       })
@@ -45,6 +46,40 @@ export const stacksRouter = router({
         includeBlocks: input.includeBlocks,
         includeRevisions: input.includeRevisions,
       })
+    }),
+
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        displayId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...updates } = input
+      return ctx.storage.updateStack(id, updates)
+    }),
+
+  setActiveRevision: publicProcedure
+    .input(
+      z.object({
+        stackId: z.number(),
+        revisionId: z.number(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return ctx.storage.setActiveStackRevision(input.stackId, input.revisionId)
+    }),
+
+  getRevisions: publicProcedure
+    .input(
+      z.object({
+        stackId: z.number(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.getStackRevisions(input.stackId)
     }),
 
   delete: publicProcedure

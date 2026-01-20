@@ -6,6 +6,7 @@ export const blocksRouter = router({
     .input(
       z.object({
         uuid: z.string(),
+        name: z.string().optional(),
         displayId: z.string(),
         text: z.string(),
         typeId: z.number().optional(),
@@ -64,6 +65,8 @@ export const blocksRouter = router({
     .input(
       z.object({
         id: z.number(),
+        name: z.string().optional(),
+        displayId: z.string().optional(),
         text: z.string().optional(),
         typeId: z.number().optional(),
         labels: z.array(z.string()).optional(),
