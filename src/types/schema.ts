@@ -78,6 +78,7 @@ export interface CreateBlockInput {
 
 export interface UpdateBlockInput {
   name?: string
+  displayId?: string
   text?: string
   typeId?: number
   labels?: string[]

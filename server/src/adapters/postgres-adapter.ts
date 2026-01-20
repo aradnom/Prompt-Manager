@@ -284,7 +284,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const affectedStackRevisions = await trx
         .selectFrom('stack_revisions')
         .select('stack_id')
-        .where(sql`${id} = ANY(block_ids)`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .where(sql`${id} = ANY(block_ids)` as any)
         .execute()
 
       const affectedStackIds = [...new Set(affectedStackRevisions.map(r => r.stack_id))]
@@ -296,7 +297,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           block_ids: sql`array_remove(block_ids, ${id})`,
           updated_at: now,
         })
-        .where(sql`${id} = ANY(block_ids)`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .where(sql`${id} = ANY(block_ids)` as any)
         .execute()
 
       // Update the affected stacks' updated_at timestamps

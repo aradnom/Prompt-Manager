@@ -10,6 +10,7 @@ import type {
   UpdateStackInput,
   CreateRevisionInput,
   Type,
+  StackRevision,
   Wildcard,
   CreateWildcardInput,
   UpdateWildcardInput,
