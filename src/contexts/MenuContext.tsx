@@ -17,6 +17,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMenu() {
   const context = useContext(MenuContext)
   if (context === undefined) {
