@@ -51,10 +51,12 @@ interface TextBlockProps {
   isSelectMode?: boolean
   isSelected?: boolean
   onToggleSelect?: () => void
+  defaultActive?: boolean
+  alwaysActive?: boolean
 }
 
-export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock, isDeleting, isSelectMode, isSelected, onToggleSelect }: TextBlockProps) {
-  const [isActive, setIsActive] = useState(false)
+export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock, isDeleting, isSelectMode, isSelected, onToggleSelect, defaultActive = false, alwaysActive = false }: TextBlockProps) {
+  const [isActive, setIsActive] = useState(defaultActive || alwaysActive)
   const [isInlineEditing, setIsInlineEditing] = useState(false)
   const [inlineText, setInlineText] = useState(block.text)
   const [isExploreOpen, setIsExploreOpen] = useState(false)
@@ -128,7 +130,8 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
       (e.target as HTMLElement).closest('input') ||
       (e.target as HTMLElement).closest('textarea') ||
       (e.target as HTMLElement).closest('[role="menu"]') ||
-      isSelectMode
+      isSelectMode ||
+      alwaysActive
     ) {
       return
     }
@@ -157,7 +160,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
 
   // Close active state when clicking outside
   useEffect(() => {
-    if (!isActive) return
+    if (!isActive || alwaysActive) return
 
     const handleClickOutside = (e: MouseEvent) => {
       if (blockRef.current && !blockRef.current.contains(e.target as Node)) {
@@ -168,7 +171,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isActive])
+  }, [isActive, alwaysActive])
 
   // Update inline text when block text changes
   useEffect(() => {
@@ -290,42 +293,94 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex gap-2">
-              <ExpandingIcon active={isActive} origin="left">
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="text-muted-foreground hover:text-foreground transition-colors">
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1 text-xs">
-                        <div>
-                          <span className="font-medium">ID:</span> {block.displayId}
-                        </div>
-                        <div>
-                          <span className="font-medium">Created:</span>{' '}
-                          {new Date(block.createdAt).toLocaleString()}
-                        </div>
-                        <div>
-                          <span className="font-medium">Updated:</span>{' '}
-                          {new Date(block.updatedAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ExpandingIcon>
-              <ExpandingIcon active={isActive} origin="left">
-                <button
-                  onClick={() => setShowRevisions(!showRevisions)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Clock className="h-4 w-4" />
-                </button>
-              </ExpandingIcon>
-            </div>
+            {isActive && (
+              <div className="mb-2">
+                <div className="flex items-center gap-2">
+                  {block.name ? (
+                    <>
+                      <span className="font-semibold text-foreground">{block.name}</span>
+                      <ExpandingIcon active={isActive} origin="left">
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="text-muted-foreground hover:text-foreground transition-colors">
+                                <Info className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1 text-xs">
+                                <div>
+                                  <span className="font-medium">ID:</span> {block.displayId}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Created:</span>{' '}
+                                  {new Date(block.createdAt).toLocaleString()}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Updated:</span>{' '}
+                                  {new Date(block.updatedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </ExpandingIcon>
+                      <ExpandingIcon active={isActive} origin="left">
+                        <button
+                          onClick={() => setShowRevisions(!showRevisions)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Clock className="h-4 w-4" />
+                        </button>
+                      </ExpandingIcon>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-foreground">{block.displayId}</span>
+                      <ExpandingIcon active={isActive} origin="left">
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="text-muted-foreground hover:text-foreground transition-colors">
+                                <Info className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1 text-xs">
+                                <div>
+                                  <span className="font-medium">ID:</span> {block.displayId}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Created:</span>{' '}
+                                  {new Date(block.createdAt).toLocaleString()}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Updated:</span>{' '}
+                                  {new Date(block.updatedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </ExpandingIcon>
+                      <ExpandingIcon active={isActive} origin="left">
+                        <button
+                          onClick={() => setShowRevisions(!showRevisions)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Clock className="h-4 w-4" />
+                        </button>
+                      </ExpandingIcon>
+                    </>
+                  )}
+                </div>
+                {block.name && (
+                  <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                    {block.displayId}
+                  </div>
+                )}
+              </div>
+            )}
             {block.labels.length > 0 && (
               <div className="flex gap-1 flex-wrap mt-1">
                 {block.labels.map((label) => (
