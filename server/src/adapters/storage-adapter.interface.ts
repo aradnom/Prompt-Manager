@@ -7,6 +7,7 @@ import type {
   CreateBlockInput,
   UpdateBlockInput,
   CreateStackInput,
+  UpdateStackInput,
   CreateRevisionInput,
   Type,
   Wildcard,
@@ -36,6 +37,9 @@ export interface IStorageAdapter {
   createStack(input: CreateStackInput): Promise<BlockStack>
   getStack(id: number, options?: GetStackOptions): Promise<BlockStack | StackWithBlocks | null>
   getStackByUuid(uuid: string, options?: GetStackOptions): Promise<BlockStack | StackWithBlocks | null>
+  updateStack(id: number, updates: UpdateStackInput): Promise<BlockStack>
+  setActiveStackRevision(stackId: number, revisionId: number): Promise<BlockStack>
+  getStackRevisions(stackId: number): Promise<StackRevision[]>
   getCompiledPrompt(displayId: string, userId: number): Promise<string | null>
   getRenderedPrompt(displayId: string, userId: number): Promise<string | null>
   deleteStack(id: number): Promise<void>

@@ -10,6 +10,7 @@ import type {
   CreateBlockInput,
   UpdateBlockInput,
   CreateStackInput,
+  UpdateStackInput,
   CreateRevisionInput,
   Type,
   StackRevision,
@@ -55,6 +56,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .insertInto('blocks')
         .values({
           uuid: input.uuid,
+          name: input.name ?? null,
           display_id: input.displayId,
           type_id: input.typeId ?? null,
           labels: input.labels ?? [],
@@ -79,14 +81,25 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         })
         .returningAll()
         .executeTakeFirstOrThrow()
-        
+
+      // 3. Set the active_revision_id
+      const updatedBlockResult = await trx
+        .updateTable('blocks')
+        .set({
+          active_revision_id: revisionResult.id,
+          updated_at: now,
+        })
+        .where('id', '=', blockResult.id)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
       // Fetch type if needed
       let type: Type | null = null
-      if (blockResult.type_id) {
+      if (updatedBlockResult.type_id) {
         const typeResult = await trx
             .selectFrom('types')
             .selectAll()
-            .where('id', '=', blockResult.type_id)
+            .where('id', '=', updatedBlockResult.type_id)
             .executeTakeFirst()
         if (typeResult) {
             type = this.mapType(typeResult)
@@ -94,7 +107,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       }
 
       // Return combined result
-      const block = this.mapBlock(blockResult, type)
+      const block = this.mapBlock(updatedBlockResult, type)
       block.text = revisionResult.text
       return block
     })
@@ -190,20 +203,16 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         updated_at: new Date(),
       }
 
+      if (updates.name !== undefined) updateData.name = updates.name ?? null
+      if (updates.displayId !== undefined) updateData.display_id = updates.displayId
       if (updates.typeId !== undefined) updateData.type_id = updates.typeId
       if (updates.labels !== undefined) updateData.labels = updates.labels
       if (updates.meta !== undefined) {
         updateData.meta = updates.meta ? JSON.stringify(updates.meta) : null
       }
 
-      // If text is being updated, clear the active_revision_id
-      // so the new revision becomes the active one
-      if (updates.text !== undefined) {
-        updateData.active_revision_id = null
-      }
-
-      // Update block metadata
-      const blockResult = await trx
+      // Update block metadata first (without touching active_revision_id yet)
+      let blockResult = await trx
         .updateTable('blocks')
         .set(updateData)
         .where('id', '=', id)
@@ -212,7 +221,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
       let text = ''
 
-      // If text is updated, create new revision
+      // If text is updated, create new revision and set it as active
       if (updates.text !== undefined) {
         const now = new Date()
         const revisionResult = await trx
@@ -227,6 +236,18 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           })
           .returningAll()
           .executeTakeFirstOrThrow()
+
+        // Explicitly set the new revision as active
+        blockResult = await trx
+          .updateTable('blocks')
+          .set({
+            active_revision_id: revisionResult.id,
+            updated_at: now,
+          })
+          .where('id', '=', id)
+          .returningAll()
+          .executeTakeFirstOrThrow()
+
         text = revisionResult.text
       } else {
         // Fetch current text
@@ -239,7 +260,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           .executeTakeFirstOrThrow()
         text = latestRev.text
       }
-      
+
       // Fetch type
       let type: Type | null = null
       if (blockResult.type_id) {
@@ -256,8 +277,43 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   }
 
   async deleteBlock(id: number): Promise<void> {
-    await this.db.deleteFrom('block_revisions').where('block_id', '=', id).execute()
-    await this.db.deleteFrom('blocks').where('id', '=', id).execute()
+    await this.db.transaction().execute(async (trx) => {
+      const now = new Date()
+
+      // Get stack IDs that are affected by this block deletion
+      const affectedStackRevisions = await trx
+        .selectFrom('stack_revisions')
+        .select('stack_id')
+        .where(sql`${id} = ANY(block_ids)`)
+        .execute()
+
+      const affectedStackIds = [...new Set(affectedStackRevisions.map(r => r.stack_id))]
+
+      // Remove block from any stack revisions
+      await trx
+        .updateTable('stack_revisions')
+        .set({
+          block_ids: sql`array_remove(block_ids, ${id})`,
+          updated_at: now,
+        })
+        .where(sql`${id} = ANY(block_ids)`)
+        .execute()
+
+      // Update the affected stacks' updated_at timestamps
+      if (affectedStackIds.length > 0) {
+        await trx
+          .updateTable('stacks')
+          .set({ updated_at: now })
+          .where('id', 'in', affectedStackIds)
+          .execute()
+      }
+
+      // Delete block revisions
+      await trx.deleteFrom('block_revisions').where('block_id', '=', id).execute()
+
+      // Delete the block
+      await trx.deleteFrom('blocks').where('id', '=', id).execute()
+    })
   }
 
   async listBlocks(userId?: number): Promise<Block[]> {
@@ -404,21 +460,33 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   }
 
   async createRevision(input: CreateRevisionInput): Promise<BlockRevision> {
-    const now = new Date()
-    const result = await this.db
-      .insertInto('block_revisions')
-      .values({
-        block_id: input.blockId,
-        text: input.text,
-        user_id: input.userId ?? null,
-        meta: input.meta ? JSON.stringify(input.meta) : null,
-        created_at: now,
-        updated_at: now,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow()
+    return await this.db.transaction().execute(async (trx) => {
+      const now = new Date()
+      const result = await trx
+        .insertInto('block_revisions')
+        .values({
+          block_id: input.blockId,
+          text: input.text,
+          user_id: input.userId ?? null,
+          meta: input.meta ? JSON.stringify(input.meta) : null,
+          created_at: now,
+          updated_at: now,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow()
 
-    return this.mapRevision(result)
+      // Set the new revision as active
+      await trx
+        .updateTable('blocks')
+        .set({
+          active_revision_id: result.id,
+          updated_at: now,
+        })
+        .where('id', '=', input.blockId)
+        .execute()
+
+      return this.mapRevision(result)
+    })
   }
 
   async getRevisions(blockId: number): Promise<BlockRevision[]> {
@@ -494,27 +562,122 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .insertInto('stacks')
         .values({
           uuid: input.uuid,
+          name: input.name ?? null,
           display_id: input.displayId,
+          created_at: now,
+          updated_at: now,
           user_id: input.userId ?? null,
         })
         .returningAll()
         .executeTakeFirstOrThrow()
 
       // 2. Create Initial Revision
-      await trx
+      const revisionResult = await trx
         .insertInto('stack_revisions')
         .values({
           stack_id: stackResult.id,
           block_ids: input.blockIds ?? [],
           created_at: now,
+          updated_at: now,
           user_id: input.userId ?? null,
         })
-        .execute()
+        .returningAll()
+        .executeTakeFirstOrThrow()
 
-      const stack = this.mapStack(stackResult)
+      // 3. Set the active_revision_id
+      const updatedStackResult = await trx
+        .updateTable('stacks')
+        .set({
+          active_revision_id: revisionResult.id,
+          updated_at: now,
+        })
+        .where('id', '=', stackResult.id)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      const stack = this.mapStack(updatedStackResult)
       stack.blockIds = input.blockIds ?? []
       return stack
     })
+  }
+
+  async updateStack(id: number, updates: UpdateStackInput): Promise<BlockStack> {
+    const updateData: Updateable<Database['stacks']> = {
+      updated_at: new Date(),
+    }
+
+    if (updates.name !== undefined) updateData.name = updates.name ?? null
+    if (updates.displayId !== undefined) updateData.display_id = updates.displayId
+
+    const stackResult = await this.db
+      .updateTable('stacks')
+      .set(updateData)
+      .where('id', '=', id)
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    // Get current block_ids using coalesce pattern
+    const revQuery = await this.db
+      .selectFrom('stacks')
+      .select((eb) => [
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.block_ids')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('block_ids')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('block_ids')
+      ])
+      .where('stacks.id', '=', id)
+      .executeTakeFirst()
+
+    const stack = this.mapStack(stackResult)
+    stack.blockIds = revQuery?.block_ids || []
+    return stack
+  }
+
+  async setActiveStackRevision(stackId: number, revisionId: number): Promise<BlockStack> {
+    return await this.db.transaction().execute(async (trx) => {
+      // Verify the revision belongs to this stack
+      const revision = await trx
+        .selectFrom('stack_revisions')
+        .selectAll()
+        .where('id', '=', revisionId)
+        .where('stack_id', '=', stackId)
+        .executeTakeFirstOrThrow()
+
+      // Update the stack's active_revision_id
+      const stackResult = await trx
+        .updateTable('stacks')
+        .set({
+          updated_at: new Date(),
+          active_revision_id: revisionId,
+        })
+        .where('id', '=', stackId)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      const stack = this.mapStack(stackResult)
+      stack.blockIds = revision.block_ids
+      return stack
+    })
+  }
+
+  async getStackRevisions(stackId: number): Promise<StackRevision[]> {
+    const results = await this.db
+      .selectFrom('stack_revisions')
+      .selectAll()
+      .where('stack_id', '=', stackId)
+      .orderBy('created_at', 'desc')
+      .execute()
+
+    return results.map((r) => this.mapStackRevision(r))
   }
 
   async getStack(
@@ -525,13 +688,20 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .selectFrom('stacks')
       .selectAll('stacks')
       .select((eb) => [
-        eb
-          .selectFrom('stack_revisions')
-          .select('block_ids')
-          .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
-          .orderBy('created_at', 'desc')
-          .limit(1)
-          .as('block_ids'),
+        // First try to get block_ids from active_revision_id if set, otherwise get latest revision
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.block_ids')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('block_ids')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('block_ids'),
       ])
       .where('stacks.id', '=', id)
       .executeTakeFirst()
@@ -539,7 +709,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     if (!result) return null
 
     const stack = this.mapStack(result)
-    // block_ids from subquery, defaulting to [] if null (though createStack ensures one)
     stack.blockIds = result.block_ids || []
 
     if (options?.includeBlocks) {
@@ -557,13 +726,20 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .selectFrom('stacks')
       .selectAll('stacks')
       .select((eb) => [
-        eb
-          .selectFrom('stack_revisions')
-          .select('block_ids')
-          .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
-          .orderBy('created_at', 'desc')
-          .limit(1)
-          .as('block_ids'),
+        // First try to get block_ids from active_revision_id if set, otherwise get latest revision
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.block_ids')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('block_ids')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('block_ids'),
       ])
       .where('stacks.uuid', '=', uuid)
       .executeTakeFirst()
@@ -590,18 +766,27 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .selectFrom('stacks')
       .selectAll('stacks')
       .select((eb) => [
-        eb
-          .selectFrom('stack_revisions')
-          .select('block_ids')
-          .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
-          .orderBy('created_at', 'desc')
-          .limit(1)
-          .as('block_ids'),
+        // First try to get block_ids from active_revision_id if set, otherwise get latest revision
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.block_ids')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('block_ids')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('block_ids'),
       ])
 
     if (userId !== undefined) {
       query = query.where('user_id', '=', userId)
     }
+
+    query = query.orderBy('stacks.updated_at', 'desc')
 
     const results = await query.execute()
     return results.map((r) => {
@@ -612,32 +797,36 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   }
 
   async getCompiledPrompt(displayId: string, userId: number): Promise<string | null> {
-    // 1. Get Stack by displayId and userId
-    const stack = await this.db
+    // 1. Get Stack by displayId and userId with block_ids from active or latest revision
+    const result = await this.db
       .selectFrom('stacks')
-      .select('id')
+      .select((eb) => [
+        'stacks.id',
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.block_ids')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('block_ids')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('block_ids')
+      ])
       .where('display_id', '=', displayId)
       .where('user_id', '=', userId)
       .executeTakeFirst()
 
-    if (!stack) return null
-
-    // 2. Get latest Stack Revision
-    const stackRevision = await this.db
-      .selectFrom('stack_revisions')
-      .select('block_ids')
-      .where('stack_id', '=', stack.id)
-      .orderBy('created_at', 'desc')
-      .limit(1)
-      .executeTakeFirst()
-
-    if (!stackRevision || !stackRevision.block_ids || stackRevision.block_ids.length === 0) {
+    if (!result || !result.block_ids || result.block_ids.length === 0) {
       return ''
     }
 
-    // 3. Get active revision text for each block in order
+    // 2. Get active revision text for each block in order
     // We fetch all blocks involved, then map them back to the order
-    const blockIds = stackRevision.block_ids
+    const blockIds = result.block_ids
 
     const blocksData = await this.db
       .selectFrom('blocks')
@@ -700,7 +889,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       })
     }
 
-    // 4. Compile the prompt in the correct order
+    // 3. Compile the prompt in the correct order
     const compiledParts = blockIds
       .map(id => textsMap.get(id))
       .filter(text => text !== undefined && text !== null)
@@ -709,131 +898,234 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   }
 
   async getRenderedPrompt(displayId: string, userId: number): Promise<string | null> {
-    // 1. Get Stack by displayId and userId
-    const stack = await this.db
+    // 1. Get Stack by displayId and userId with rendered content from active or latest revision
+    const result = await this.db
       .selectFrom('stacks')
-      .select('id')
+      .select((eb) => [
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.rendered_content')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('rendered_content')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('rendered_content')
+      ])
       .where('display_id', '=', displayId)
       .where('user_id', '=', userId)
       .executeTakeFirst()
 
-    if (!stack) return null
-
-    // 2. Get latest Stack Revision content
-    const stackRevision = await this.db
-      .selectFrom('stack_revisions')
-      .select('rendered_content')
-      .where('stack_id', '=', stack.id)
-      .orderBy('created_at', 'desc')
-      .limit(1)
-      .executeTakeFirst()
-
-    return stackRevision?.rendered_content || null
+    return result?.rendered_content || null
   }
 
   async addBlockToStack(stackId: number, blockId: number, _order?: number, renderedContent?: string): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
-      // Get latest revision
-      const latestRev = await trx
-        .selectFrom('stack_revisions')
-        .selectAll()
-        .where('stack_id', '=', stackId)
-        .orderBy('created_at', 'desc')
-        .limit(1)
+      const now = new Date()
+
+      // Get current block_ids (from active revision if set, otherwise latest)
+      const currentRev = await trx
+        .selectFrom('stacks')
+        .select((eb) => [
+          eb.fn.coalesce(
+            eb
+              .selectFrom('stack_revisions as active_rev')
+              .select('active_rev.block_ids')
+              .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+              .limit(1),
+            eb
+              .selectFrom('stack_revisions')
+              .select('block_ids')
+              .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+              .orderBy('created_at', 'desc')
+              .limit(1)
+          ).as('block_ids')
+        ])
+        .where('stacks.id', '=', stackId)
         .executeTakeFirst()
 
-      if (!latestRev) {
-         const now = new Date()
-         await trx.insertInto('stack_revisions')
-           .values({
-             stack_id: stackId,
-             block_ids: [blockId],
-             rendered_content: renderedContent || null,
-             created_at: now,
-             user_id: null
-           }).execute()
-         return
-      }
+      const newBlockIds = currentRev?.block_ids ? [...currentRev.block_ids, blockId] : [blockId]
 
-      const newBlockIds = [...latestRev.block_ids, blockId]
-      
-      await trx
-        .updateTable('stack_revisions')
-        .set({
-            block_ids: newBlockIds,
-            rendered_content: renderedContent || null
+      // Create new revision
+      const newRevision = await trx
+        .insertInto('stack_revisions')
+        .values({
+          stack_id: stackId,
+          block_ids: newBlockIds,
+          rendered_content: renderedContent || null,
+          created_at: now,
+          updated_at: now,
+          user_id: null
         })
-        .where('id', '=', latestRev.id)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      // Set as active revision
+      await trx
+        .updateTable('stacks')
+        .set({
+          active_revision_id: newRevision.id,
+          updated_at: now,
+        })
+        .where('id', '=', stackId)
         .execute()
     })
   }
 
   async removeBlockFromStack(stackId: number, blockId: number, renderedContent?: string): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
-      const latestRev = await trx
-        .selectFrom('stack_revisions')
-        .selectAll()
-        .where('stack_id', '=', stackId)
-        .orderBy('created_at', 'desc')
-        .limit(1)
+      const now = new Date()
+
+      // Get current block_ids (from active revision if set, otherwise latest)
+      const currentRev = await trx
+        .selectFrom('stacks')
+        .select((eb) => [
+          eb.fn.coalesce(
+            eb
+              .selectFrom('stack_revisions as active_rev')
+              .select('active_rev.block_ids')
+              .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+              .limit(1),
+            eb
+              .selectFrom('stack_revisions')
+              .select('block_ids')
+              .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+              .orderBy('created_at', 'desc')
+              .limit(1)
+          ).as('block_ids')
+        ])
+        .where('stacks.id', '=', stackId)
         .executeTakeFirst()
 
-      if (!latestRev) return
+      if (!currentRev?.block_ids) return
 
-      const newBlockIds = latestRev.block_ids.filter(id => id !== blockId)
+      const newBlockIds = currentRev.block_ids.filter(id => id !== blockId)
 
-      await trx
-        .updateTable('stack_revisions')
-        .set({
-            block_ids: newBlockIds,
-            rendered_content: renderedContent || null
+      // Create new revision
+      const newRevision = await trx
+        .insertInto('stack_revisions')
+        .values({
+          stack_id: stackId,
+          block_ids: newBlockIds,
+          rendered_content: renderedContent || null,
+          created_at: now,
+          updated_at: now,
+          user_id: null
         })
-        .where('id', '=', latestRev.id)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      // Set as active revision
+      await trx
+        .updateTable('stacks')
+        .set({
+          active_revision_id: newRevision.id,
+          updated_at: now,
+        })
+        .where('id', '=', stackId)
         .execute()
     })
   }
 
   async reorderStackBlocks(stackId: number, blockIds: number[], renderedContent?: string): Promise<void> {
      await this.db.transaction().execute(async (trx) => {
-      const latestRev = await trx
-        .selectFrom('stack_revisions')
-        .selectAll()
-        .where('stack_id', '=', stackId)
-        .orderBy('created_at', 'desc')
-        .limit(1)
+      const now = new Date()
+
+      // Get the active revision ID (or fall back to latest)
+      const stackInfo = await trx
+        .selectFrom('stacks')
+        .select(['active_revision_id'])
+        .where('id', '=', stackId)
         .executeTakeFirst()
 
-      if (!latestRev) return
+      let revisionIdToUpdate: number | null = null
 
+      if (stackInfo?.active_revision_id) {
+        revisionIdToUpdate = stackInfo.active_revision_id
+      } else {
+        // No active revision set, get latest by created_at
+        const latestRev = await trx
+          .selectFrom('stack_revisions')
+          .select('id')
+          .where('stack_id', '=', stackId)
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .executeTakeFirst()
+
+        revisionIdToUpdate = latestRev?.id ?? null
+      }
+
+      if (!revisionIdToUpdate) return
+
+      // Update the revision in place (no new revision created)
       await trx
         .updateTable('stack_revisions')
         .set({
             block_ids: blockIds,
-            rendered_content: renderedContent || null
+            rendered_content: renderedContent || null,
+            updated_at: now,
         })
-        .where('id', '=', latestRev.id)
+        .where('id', '=', revisionIdToUpdate)
+        .execute()
+
+      // Update the stack's updated_at timestamp
+      await trx
+        .updateTable('stacks')
+        .set({ updated_at: now })
+        .where('id', '=', stackId)
         .execute()
     })
   }
 
   async updateStackRevisionContent(stackId: number, renderedContent: string): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
-      const latestRev = await trx
-        .selectFrom('stack_revisions')
-        .selectAll()
-        .where('stack_id', '=', stackId)
-        .orderBy('created_at', 'desc')
-        .limit(1)
+      const now = new Date()
+
+      // Get the active revision ID (or fall back to latest)
+      const stackInfo = await trx
+        .selectFrom('stacks')
+        .select(['active_revision_id'])
+        .where('id', '=', stackId)
         .executeTakeFirst()
 
-      if (!latestRev) return
+      let revisionIdToUpdate: number | null = null
 
+      if (stackInfo?.active_revision_id) {
+        revisionIdToUpdate = stackInfo.active_revision_id
+      } else {
+        // No active revision set, get latest by created_at
+        const latestRev = await trx
+          .selectFrom('stack_revisions')
+          .select('id')
+          .where('stack_id', '=', stackId)
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .executeTakeFirst()
+
+        revisionIdToUpdate = latestRev?.id ?? null
+      }
+
+      if (!revisionIdToUpdate) return
+
+      // Update the revision in place
       await trx
         .updateTable('stack_revisions')
         .set({
-            rendered_content: renderedContent
+            rendered_content: renderedContent,
+            updated_at: now,
         })
-        .where('id', '=', latestRev.id)
+        .where('id', '=', revisionIdToUpdate)
+        .execute()
+
+      // Update the stack's updated_at timestamp
+      await trx
+        .updateTable('stacks')
+        .set({ updated_at: now })
+        .where('id', '=', stackId)
         .execute()
     })
   }
@@ -1032,6 +1324,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return {
       id: row.id,
       uuid: row.uuid,
+      name: row.name,
       displayId: row.display_id,
       text: '', // To be filled by revision
       activeRevisionId: row.active_revision_id,
@@ -1061,8 +1354,12 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return {
       id: row.id,
       uuid: row.uuid,
+      name: row.name,
       displayId: row.display_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
       userId: row.user_id,
+      activeRevisionId: row.active_revision_id,
       blockIds: [], // To be filled by subquery
     }
   }
@@ -1074,6 +1371,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           blockIds: row.block_ids,
           renderedContent: row.rendered_content,
           createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
           userId: row.user_id
       }
   }
