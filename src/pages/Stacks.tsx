@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { api, RouterOutput } from '@/lib/api'
 import { generateDisplayId } from '@/lib/generate-display-id'
 import { generateUUID } from '@/lib/uuid'
 import { useActiveStack } from '@/contexts/ActiveStackContext'
+import { resolveWildcardsInText, resolveWildcardsWithMarkers } from '@/lib/wildcard-resolver'
+import { TextWithWildcards } from '@/components/TextWithWildcards'
+import { X, Clock } from 'lucide-react'
 
 type Stack = RouterOutput['stacks']['list'][number]
 import { Button } from '@/components/ui/button'
@@ -23,10 +26,25 @@ export default function Stacks() {
   const [displayId, setDisplayId] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [stackToDelete, setStackToDelete] = useState<number | null>(null)
+  const [activeStackId, setActiveStackId] = useState<number | null>(null)
+  const [showRevisionsForStack, setShowRevisionsForStack] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDisplayId, setEditDisplayId] = useState('')
   const navigate = useNavigate()
   const { setActiveStack } = useActiveStack()
 
   const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery()
+  const { data: activeStackDetails } = api.stacks.get.useQuery(
+    { id: activeStackId!, includeBlocks: true, includeRevisions: false },
+    { enabled: activeStackId !== null }
+  )
+  const { data: wildcards } = api.wildcards.list.useQuery()
+  const { data: blocks } = api.blocks.list.useQuery()
+  const revisionsQuery = api.stacks.getRevisions.useQuery(
+    { stackId: showRevisionsForStack! },
+    { enabled: showRevisionsForStack !== null }
+  )
+  const utils = api.useUtils()
   const createMutation = api.stacks.create.useMutation({
     onSuccess: () => {
       refetch()
@@ -34,9 +52,21 @@ export default function Stacks() {
       setDisplayId('')
     },
   })
+  const updateMutation = api.stacks.update.useMutation({
+    onSuccess: () => {
+      refetch()
+    },
+  })
   const deleteMutation = api.stacks.delete.useMutation({
     onSuccess: () => {
       refetch()
+      setActiveStackId(null)
+    },
+  })
+  const setActiveRevisionMutation = api.stacks.setActiveRevision.useMutation({
+    onSuccess: () => {
+      utils.stacks.list.invalidate()
+      utils.stacks.get.invalidate()
     },
   })
 
@@ -65,6 +95,84 @@ export default function Stacks() {
     setActiveStack(stack)
     navigate('/')
   }
+
+  const handleStackClick = (stackId: number, stack: Stack) => {
+    if (activeStackId === stackId) {
+      setActiveStackId(null)
+    } else {
+      setActiveStackId(stackId)
+      setEditName(stack.name || '')
+      setEditDisplayId(stack.displayId)
+    }
+  }
+
+  const handleUpdate = () => {
+    if (!activeStackId) return
+    updateMutation.mutate({
+      id: activeStackId,
+      name: editName.trim() || undefined,
+      displayId: editDisplayId.trim(),
+    })
+  }
+
+  // Compile stack content
+  const stackContent = useMemo(() => {
+    if (!activeStackDetails || !('blocks' in activeStackDetails)) {
+      return { rendered: '', withMarkers: '' }
+    }
+
+    const rawText = activeStackDetails.blocks.map(b => b.text).join('\n\n')
+
+    if (!wildcards) {
+      return { rendered: rawText, withMarkers: rawText }
+    }
+
+    const rendered = resolveWildcardsInText(rawText, wildcards)
+    const withMarkers = resolveWildcardsWithMarkers(rawText, wildcards)
+
+    return { rendered, withMarkers }
+  }, [activeStackDetails, wildcards])
+
+  // Sort revisions to put active one first
+  const sortedRevisions = useMemo(() => {
+    if (!revisionsQuery.data || !showRevisionsForStack) return []
+
+    const stack = stacks?.find(s => s.id === showRevisionsForStack)
+    const revisions = [...revisionsQuery.data]
+    const activeRevisionId = stack?.activeRevisionId
+
+    if (activeRevisionId) {
+      revisions.sort((a, b) => {
+        if (a.id === activeRevisionId) return -1
+        if (b.id === activeRevisionId) return 1
+        return 0
+      })
+    }
+
+    return revisions
+  }, [revisionsQuery.data, showRevisionsForStack, stacks])
+
+  // Helper to get block display name
+  const getBlockDisplayName = (blockId: number) => {
+    const block = blocks?.find(b => b.id === blockId)
+    return block ? (block.name || block.displayId) : `Block ${blockId}`
+  }
+
+  // Close active state and revisions when clicking outside
+  useEffect(() => {
+    if (!activeStackId && !showRevisionsForStack) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-stack-card]')) {
+        setActiveStackId(null)
+        setShowRevisionsForStack(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [activeStackId, showRevisionsForStack])
 
   return (
     <main className="container mx-auto p-8 pt-20">
@@ -146,43 +254,233 @@ export default function Stacks() {
             Loading stacks...
           </div>
         ) : stacks && stacks.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {stacks.map((stack, index) => (
-              <motion.div
-                key={stack.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{stack.displayId}</CardTitle>
-                    <CardDescription className="font-mono text-xs">
-                      {stack.uuid}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleMakeActive(stack)}
+          <div className="space-y-4">
+            {stacks.map((stack, index) => {
+              const isActive = activeStackId === stack.id
+              return (
+                <motion.div
+                  key={stack.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  data-stack-card
+                  className="relative"
+                >
+                  <Card
+                    className={`cursor-pointer transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}
+                    onClick={(e) => {
+                      // Don't toggle if clicking on buttons
+                      if (!(e.target as HTMLElement).closest('button')) {
+                        handleStackClick(stack.id, stack)
+                      }
+                    }}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-xl">{stack.name || stack.displayId}</CardTitle>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setShowRevisionsForStack(stack.id)
+                              }}
+                              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                              aria-label="Show revisions"
+                            >
+                              <Clock className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <CardDescription className="text-xs mt-2 opacity-50">
+                            {stack.blockIds.length} block{stack.blockIds.length !== 1 ? 's' : ''}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleMakeActive(stack)
+                            }}
+                            className="cursor-pointer"
+                          >
+                            Make Active
+                          </Button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(stack.id)
+                            }}
+                            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            aria-label="Delete stack"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <AnimatePresence>
+                      {isActive && activeStackDetails && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <CardContent className="space-y-4 pt-0">
+                            <div className="text-xs text-muted-foreground">
+                              <div>Created: {new Date(stack.createdAt).toLocaleString()}</div>
+                              <div>Updated: {new Date(stack.updatedAt).toLocaleString()}</div>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">
+                                  Name (optional)
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., Summer Landscapes"
+                                  className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">
+                                  Display ID
+                                </label>
+                                <DisplayIdInput
+                                  placeholder="e.g., summer-landscape-v1"
+                                  className="w-full"
+                                  value={editDisplayId}
+                                  onChange={setEditDisplayId}
+                                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                />
+                              </div>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleUpdate()
+                                }}
+                                disabled={updateMutation.isPending || !editDisplayId.trim()}
+                                size="sm"
+                              >
+                                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                              </Button>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium mb-2 block">
+                                Stack Output
+                              </label>
+                              <Card className="border-2 border-primary shadow-lg bg-background">
+                                <CardContent className="pt-6 max-h-48 overflow-y-auto">
+                                  {stackContent.rendered ? (
+                                    <TextWithWildcards
+                                      text={stackContent.withMarkers}
+                                      className="text-base whitespace-pre-wrap font-mono"
+                                      valueOnly={true}
+                                    />
+                                  ) : (
+                                    <p className="text-muted-foreground text-sm">No blocks in this stack</p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </CardContent>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
+
+                  {/* Revisions overlay */}
+                  <AnimatePresence>
+                    {showRevisionsForStack === stack.id && (
+                      <motion.div
+                        className="absolute inset-0 bg-card z-20 rounded-lg overflow-hidden border"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
                       >
-                        Make Active
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(stack.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowRevisionsForStack(null)
+                          }}
+                          className="absolute right-2 top-2 z-30 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          aria-label="Close revisions"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
+                          {revisionsQuery.isLoading ? (
+                            <div className="flex items-center justify-center w-full">
+                              <p className="text-sm text-muted-foreground">Loading revisions...</p>
+                            </div>
+                          ) : sortedRevisions.length > 0 ? (
+                            sortedRevisions.map((revision) => {
+                              const isActiveRevision = revision.id === stack.activeRevisionId
+                              return (
+                                <div
+                                  key={revision.id}
+                                  className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-muted flex flex-col cursor-pointer hover:bg-muted/80 transition-colors relative"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    try {
+                                      await setActiveRevisionMutation.mutateAsync({
+                                        stackId: stack.id,
+                                        revisionId: revision.id,
+                                      })
+                                      setShowRevisionsForStack(null)
+                                    } catch (error) {
+                                      console.error('Failed to set active revision:', error)
+                                    }
+                                  }}
+                                >
+                                  {isActiveRevision && (
+                                    <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground">
+                                      Active
+                                    </div>
+                                  )}
+                                  <div className="space-y-1 mb-3">
+                                    <p className="text-xs text-muted-foreground">
+                                      <span className="font-medium">Created:</span> {new Date(revision.createdAt).toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      <span className="font-medium">Updated:</span> {new Date(revision.updatedAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="flex-1 overflow-auto">
+                                    <p className="text-xs font-medium mb-2">Blocks ({revision.blockIds.length}):</p>
+                                    {revision.blockIds.length > 0 ? (
+                                      <ol className="space-y-1 text-sm list-decimal list-inside">
+                                        {revision.blockIds.map((blockId) => (
+                                          <li key={blockId} className="text-foreground">
+                                            {getBlockDisplayName(blockId)}
+                                          </li>
+                                        ))}
+                                      </ol>
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground italic">No blocks</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <div className="flex items-center justify-center w-full">
+                              <p className="text-sm text-muted-foreground">No revisions found</p>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )
+            })}
           </div>
         ) : (
           <Card>
