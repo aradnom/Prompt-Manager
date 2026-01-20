@@ -8,44 +8,18 @@
 @config "../tailwind.config.js";
 
 @theme {
+  --color-magenta-light: #f63b6e;
+  --color-magenta-medium: #c44674;
+  --color-magenta-dark: #7e215d;
+
+  --color-cyan-light: #6bb8f7;
+  --color-cyan-medium: #20649d;
+  --color-cyan-dark: #0e245b;
+
   --color-background: #0f0535;
-  --color-foreground: #f0f0f0;
-
-  --color-card: #0f0535;
-  --color-card-foreground: #f0f0f0;
-
-  --color-popover: #003368;
-  --color-popover-foreground: #f0f0f0;
-
-  --color-primary: #8a278d;
-  --color-primary-foreground: #ffffff;
-
-  --color-secondary: #054674;
-  --color-secondary-foreground: #f0f0f0;
-
-  --color-muted: #043555;
-  --color-muted-foreground: #a0a0a0;
-
-  --color-accent: #12cab5;
-  --color-accent-foreground: #002858;
-
-  --color-destructive: #f0028d;
-  --color-destructive-foreground: #ffffff;
-
-  --color-border: #054674;
-  --color-input: #054674;
-  --color-ring: #8a278d;
+  --color-foreground: #ffffff;
 
   --radius: 0.5rem;
-
-  --color-chart-1: #8a278d;
-  --color-chart-2: #12cab5;
-  --color-chart-3: #054674;
-  --color-chart-4: #f0028d;
-  --color-chart-5: #002858;
-
-  --color-loud: #F24444;
-  --color-loud-less: #7e215d;
 
   --font-sans: 'Quicksand', sans-serif;
   --font-mono: 'Pitagon Sans Mono', monospace;
@@ -53,7 +27,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-cyan-medium;
   }
   body {
     @apply bg-background text-foreground;
