@@ -12,6 +12,7 @@ export interface Block {
   id: number
   uuid: string
   displayId: string
+  name: string | null
   text: string // Derived from latest revision
   createdAt: Date
   updatedAt: Date
@@ -37,7 +38,11 @@ export interface BlockStack {
   id: number
   uuid: string
   displayId: string
+  name: string | null
+  createdAt: Date
+  updatedAt: Date
   userId: number | null
+  activeRevisionId: number | null
   blockIds: number[]
 }
 
@@ -47,6 +52,7 @@ export interface StackRevision {
   blockIds: number[]
   renderedContent?: string | null
   createdAt: Date
+  updatedAt: Date
   userId: number | null
 }
 
@@ -62,6 +68,7 @@ export interface StackWithBlocks extends BlockStack {
 export interface CreateBlockInput {
   uuid: string
   displayId: string
+  name?: string
   text: string
   typeId?: number
   labels?: string[]
@@ -70,6 +77,7 @@ export interface CreateBlockInput {
 }
 
 export interface UpdateBlockInput {
+  name?: string
   text?: string
   typeId?: number
   labels?: string[]
@@ -78,9 +86,15 @@ export interface UpdateBlockInput {
 
 export interface CreateStackInput {
   uuid: string
+  name?: string
   displayId: string
   userId?: number
   blockIds?: number[]
+}
+
+export interface UpdateStackInput {
+  name?: string
+  displayId?: string
 }
 
 export interface CreateRevisionInput {

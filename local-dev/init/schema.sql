@@ -21,8 +21,9 @@ CREATE TABLE types (
 
 CREATE TABLE blocks (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    uuid character varying(255),
-    display_id character varying(255),
+    uuid character varying(255) UNIQUE,
+    display_id character varying(255) UNIQUE,
+    name character varying(255),
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     type_id integer REFERENCES types(id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -50,7 +51,11 @@ CREATE TABLE stacks (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     uuid character varying(255) UNIQUE,
     display_id character varying(255) UNIQUE,
-    user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+    name character varying(255),
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    active_revision_id integer REFERENCES stack_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- stack_revisions

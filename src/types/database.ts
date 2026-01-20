@@ -15,6 +15,7 @@ export interface BlocksTable {
   id: ColumnType<number, never, never>
   uuid: string
   display_id: string
+  name: string | null
   created_at: ColumnType<Date, Date | undefined, Date | undefined>
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>
   type_id: number | null
@@ -38,7 +39,11 @@ export interface BlockStacksTable {
   id: ColumnType<number, never, never>
   uuid: string
   display_id: string
+  name: string | null
+  created_at: ColumnType<Date, Date | undefined, Date | undefined>
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>
   user_id: number | null
+  active_revision_id: number | null
 }
 
 export interface StackRevisionsTable {
@@ -47,6 +52,7 @@ export interface StackRevisionsTable {
   block_ids: number[]
   rendered_content: ColumnType<string | null, string | null, string | null>
   created_at: ColumnType<Date, Date | undefined, Date | undefined>
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>
   user_id: number | null
 }
 
