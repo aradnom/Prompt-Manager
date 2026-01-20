@@ -14,6 +14,7 @@ import {
 import { WildcardBrowser } from '@/components/WildcardBrowser'
 
 export interface BlockFormValues {
+  name?: string
   displayId: string
   text: string
   labels: string[]
@@ -36,6 +37,7 @@ export function BlockForm({
   mode = 'create'
 }: BlockFormProps) {
   const { types } = useTypes()
+  const [name, setName] = useState(initialValues?.name || '')
   const [displayId, setDisplayId] = useState(initialValues?.displayId || generateDisplayId())
   const [text, setText] = useState(initialValues?.text || '')
   const [labels, setLabels] = useState(initialValues?.labels?.join(', ') || '')
@@ -47,6 +49,7 @@ export function BlockForm({
     if (!displayId.trim() || !text.trim()) return
 
     onSubmit({
+      name: name.trim() || undefined,
       displayId: displayId.trim(),
       text: text.trim(),
       labels: labels.trim() ? labels.split(',').map(l => l.trim()) : [],
@@ -80,6 +83,19 @@ export function BlockForm({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Name (optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., Mountain Landscape"
+              className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
           <div>
             <label className="text-sm font-medium mb-2 block">
               Display ID
