@@ -213,6 +213,7 @@ export function StackEditor({ stack }: StackEditorProps) {
       // 1. Create the block
       const newBlock = await createBlockMutation.mutateAsync({
         uuid: generateUUID(),
+        name: values.name,
         displayId: values.displayId,
         text: values.text,
         labels: values.labels,
@@ -236,6 +237,8 @@ export function StackEditor({ stack }: StackEditorProps) {
     try {
       await updateBlockMutation.mutateAsync({
         id: blockId,
+        name: values.name,
+        displayId: values.displayId,
         text: values.text,
         labels: values.labels,
         typeId: values.typeId,
@@ -489,6 +492,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                               <BlockForm
                                 mode="edit"
                                 initialValues={{
+                                  name: block.name ?? undefined,
                                   displayId: block.displayId,
                                   text: block.text,
                                   labels: block.labels,
@@ -506,6 +510,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                               onDelete={() => handleRemoveBlock(block.id)}
                               onTransform={(blockId, transformedText) =>
                                 handleUpdateBlock(blockId, {
+                                  name: block.name ?? undefined,
                                   displayId: block.displayId,
                                   text: transformedText,
                                   labels: block.labels,
