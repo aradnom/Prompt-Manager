@@ -28,12 +28,12 @@ export function SortableBlock({ id, children }: SortableBlockProps) {
     <div ref={setNodeRef} style={style} {...attributes} className="relative group">
       <button
         {...listeners}
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded hover:bg-cyan-dark transition-colors opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+        className="absolute -left-6 top-1/2 -translate-y-1/2 z-10 p-0.5 hover:bg-cyan-dark transition-colors opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-5 w-5 text-cyan-medium" />
       </button>
-      <div className="pl-8">
+      <div className="pl-0">
         {children}
       </div>
     </div>
