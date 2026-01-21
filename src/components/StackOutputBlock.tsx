@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Copy, Dices, Minimize2, Maximize2 } from 'lucide-react'
 import yaml from 'js-yaml'
 import { TextWithWildcards } from '@/components/TextWithWildcards'
@@ -189,10 +190,9 @@ export function StackOutputBlock() {
           {!isMinimized && <CardTitle className="text-xl font-bold">Stack Output</CardTitle>}
           <div className="flex gap-2 items-center">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={commaSeparated}
-                onChange={(e) => setCommaSeparated(e.target.checked)}
+                onCheckedChange={setCommaSeparated}
                 className="cursor-pointer"
               />
               Comma Separated
