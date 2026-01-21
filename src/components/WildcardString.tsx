@@ -133,7 +133,7 @@ export function WildcardString({ wildcard, displayId, path, valueOnly = false, e
     return (
       <span
         ref={spanRef}
-        className={`inline-block px-2 py-0.5 rounded bg-magenta-light/20 text-foreground ${textSizeClass} font-mono`}
+        className={`inline-block px-2 py-0.5 rounded bg-magenta-medium/20 text-foreground ${textSizeClass} font-mono`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -152,7 +152,7 @@ export function WildcardString({ wildcard, displayId, path, valueOnly = false, e
   return (
     <span
       ref={spanRef}
-      className={`relative inline-block px-2 py-0.5 rounded bg-magenta-dark/20 text-foreground ${textSizeClass} font-mono ${enableTooltip ? 'cursor-pointer' : ''}`}
+      className={`relative inline-block px-2 py-0.5 rounded-sm bg-magenta-medium/30 text-foreground ${textSizeClass} font-mono ${enableTooltip ? 'cursor-pointer' : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
