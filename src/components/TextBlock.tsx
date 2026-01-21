@@ -1,114 +1,125 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
-import { Pencil, X, Info, Clock, Save, RefreshCw } from 'lucide-react'
-import TextareaAutosize from 'react-textarea-autosize'
-import { api, RouterOutput } from '@/lib/api'
-import { AnimatedButton } from '@/components/ui/animated-button'
-import { ExpandingIcon } from '@/components/ui/expanding-icon'
-import { TEXT_BLOCK_ANIMATION } from '@/lib/text-block-animation-settings'
-import { calculateNonOverlappingPositions } from '@/lib/layout-utils'
-import { resolveWildcardsInText } from '@/lib/wildcard-resolver'
-import { insertWildcard } from '@/lib/wildcard-parser'
-import { WildcardBrowser } from '@/components/WildcardBrowser'
-import {
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card'
+import { useState, useRef, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Pencil, X, Info, Clock, Save, RefreshCw } from "lucide-react";
+import TextareaAutosize from "react-textarea-autosize";
+import { api, RouterOutput } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { AnimatedButton } from "@/components/ui/animated-button";
+import { ExpandingIcon } from "@/components/ui/expanding-icon";
+import { TEXT_BLOCK_ANIMATION } from "@/lib/text-block-animation-settings";
+import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
+import { resolveWildcardsInText } from "@/lib/wildcard-resolver";
+import { insertWildcard } from "@/lib/wildcard-parser";
+import { WildcardBrowser } from "@/components/WildcardBrowser";
+import { CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { BlockSearchDialog } from '@/components/BlockSearchDialog'
-import { TextWithWildcards } from '@/components/TextWithWildcards'
+} from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { BlockSearchDialog } from "@/components/BlockSearchDialog";
+import { TextWithWildcards } from "@/components/TextWithWildcards";
 
-import { useSettings } from '@/contexts/SettingsContext'
+import { useSettings } from "@/contexts/SettingsContext";
 
-type Block = RouterOutput['blocks']['list'][number]
+type Block = RouterOutput["blocks"]["list"][number];
 
 interface TextBlockProps {
-  block: Block
-  onEdit: () => void
-  onDelete: () => void
-  onTransform?: (blockId: number, transformedText: string) => void
-  onSelectBlock?: (blockId: number) => void
-  isDeleting?: boolean
-  isSelectMode?: boolean
-  isSelected?: boolean
-  onToggleSelect?: () => void
-  defaultActive?: boolean
-  alwaysActive?: boolean
+  block: Block;
+  onEdit: () => void;
+  onDelete: () => void;
+  onTransform?: (blockId: number, transformedText: string) => void;
+  onSelectBlock?: (blockId: number) => void;
+  isDeleting?: boolean;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  defaultActive?: boolean;
+  alwaysActive?: boolean;
 }
 
-export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock, isDeleting, isSelectMode, isSelected, onToggleSelect, defaultActive = false, alwaysActive = false }: TextBlockProps) {
-  const [isActive, setIsActive] = useState(defaultActive || alwaysActive)
-  const [isInlineEditing, setIsInlineEditing] = useState(false)
-  const [inlineText, setInlineText] = useState(block.text)
-  const [isExploreOpen, setIsExploreOpen] = useState(false)
-  const [exploreVariations, setExploreVariations] = useState<string[]>([])
-  const [showRevisions, setShowRevisions] = useState(false)
-  const [isTypeSearchOpen, setIsTypeSearchOpen] = useState(false)
-  const [isLabelSearchOpen, setIsLabelSearchOpen] = useState(false)
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
-  const [isWildcardBrowserOpen, setIsWildcardBrowserOpen] = useState(false)
-  const blockRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const utils = api.useUtils()
-  const transformMutation = api.llm.transform.useMutation()
-  const exploreMutation = api.llm.transform.useMutation()
-  const { data: wildcards } = api.wildcards.list.useQuery()
+export function TextBlock({
+  block,
+  onEdit,
+  onDelete,
+  onTransform,
+  onSelectBlock,
+  isDeleting,
+  isSelectMode,
+  isSelected,
+  onToggleSelect,
+  defaultActive = false,
+  alwaysActive = false,
+}: TextBlockProps) {
+  const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [inlineText, setInlineText] = useState(block.text);
+  const [isExploreOpen, setIsExploreOpen] = useState(false);
+  const [exploreVariations, setExploreVariations] = useState<string[]>([]);
+  const [showRevisions, setShowRevisions] = useState(false);
+  const [isTypeSearchOpen, setIsTypeSearchOpen] = useState(false);
+  const [isLabelSearchOpen, setIsLabelSearchOpen] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [isWildcardBrowserOpen, setIsWildcardBrowserOpen] = useState(false);
+  const blockRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const utils = api.useUtils();
+  const transformMutation = api.llm.transform.useMutation();
+  const exploreMutation = api.llm.transform.useMutation();
+  const { data: wildcards } = api.wildcards.list.useQuery();
   const setActiveRevisionMutation = api.blocks.setActiveRevision.useMutation({
     onSuccess: () => {
       // Refetch blocks list and stacks to show updated text
-      utils.blocks.list.invalidate()
-      utils.stacks.invalidate()
+      utils.blocks.list.invalidate();
+      utils.stacks.invalidate();
     },
-  })
+  });
   const revisionsQuery = api.blocks.getRevisions.useQuery(
     { id: block.id },
     { enabled: showRevisions }
-  )
+  );
 
   // Get resolved text (wildcards replaced with actual values)
   const getResolvedText = (text: string) => {
-    return wildcards ? resolveWildcardsInText(text, wildcards) : text
-  }
+    return wildcards ? resolveWildcardsInText(text, wildcards) : text;
+  };
 
   // Sort revisions to put active one first
   const sortedRevisions = useMemo(() => {
-    if (!revisionsQuery.data) return []
+    if (!revisionsQuery.data) return [];
 
-    const revisions = [...revisionsQuery.data]
-    const activeRevisionId = block.activeRevisionId
+    const revisions = [...revisionsQuery.data];
+    const activeRevisionId = block.activeRevisionId;
 
     if (activeRevisionId) {
       revisions.sort((a, b) => {
-        if (a.id === activeRevisionId) return -1
-        if (b.id === activeRevisionId) return 1
-        return 0
-      })
+        if (a.id === activeRevisionId) return -1;
+        if (b.id === activeRevisionId) return 1;
+        return 0;
+      });
     }
 
-    return revisions
-  }, [revisionsQuery.data, block])
+    return revisions;
+  }, [revisionsQuery.data, block]);
 
   const variationPositions = useMemo(() => {
-    if (exploreVariations.length === 0) return []
+    if (exploreVariations.length === 0) return [];
 
     return calculateNonOverlappingPositions({
       count: exploreVariations.length,
@@ -120,165 +131,185 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
       itemHeight: 100,
       radius: 300,
       margin: 40,
-    })
-  }, [exploreVariations.length])
+    });
+  }, [exploreVariations.length]);
 
   const handleBlockClick = (e: React.MouseEvent) => {
     // Don't toggle if clicking on interactive elements
     if (
-      (e.target as HTMLElement).closest('button') ||
-      (e.target as HTMLElement).closest('input') ||
-      (e.target as HTMLElement).closest('textarea') ||
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest("input") ||
+      (e.target as HTMLElement).closest("textarea") ||
       (e.target as HTMLElement).closest('[role="menu"]') ||
       isSelectMode ||
       alwaysActive
     ) {
-      return
+      return;
     }
-    setIsActive(!isActive)
-  }
+    setIsActive(!isActive);
+  };
 
   const handleTextClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsInlineEditing(true)
-    setInlineText(block.text)
+    e.stopPropagation();
+    setIsInlineEditing(true);
+    setInlineText(block.text);
     // Focus textarea after state update
-    setTimeout(() => textareaRef.current?.focus(), 0)
-  }
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
 
   const handleSaveInlineEdit = () => {
     if (inlineText !== block.text && onTransform) {
-      onTransform(block.id, inlineText)
+      onTransform(block.id, inlineText);
     }
-    setIsInlineEditing(false)
-  }
+    setIsInlineEditing(false);
+  };
 
   // Close active state when clicking outside
   useEffect(() => {
-    if (!isActive || alwaysActive) return
+    if (!isActive || alwaysActive) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (blockRef.current && !blockRef.current.contains(e.target as Node)) {
-        setIsActive(false)
-        setShowRevisions(false)
+        setIsActive(false);
+        setShowRevisions(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isActive, alwaysActive])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isActive, alwaysActive]);
 
   // Update inline text when block text changes
   useEffect(() => {
-    setInlineText(block.text)
-  }, [block.text])
+    setInlineText(block.text);
+  }, [block.text]);
 
-  const { data: serverConfig } = api.config.getSettings.useQuery()
-  const { preferredLLMTarget } = useSettings()
+  const { data: serverConfig } = api.config.getSettings.useQuery();
+  const { preferredLLMTarget } = useSettings();
 
   const llmTarget = useMemo(() => {
-    const targets = serverConfig?.llm?.allowedTargets
-    if (!targets || targets.length === 0) return 'lm-studio'
-    
+    const targets = serverConfig?.llm?.allowedTargets;
+    if (!targets || targets.length === 0) return "lm-studio";
+
     // Use preference if valid, otherwise fallback to first available
     if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget as 'lm-studio' | 'vertex' | 'openai' | 'anthropic'
+      return preferredLLMTarget as
+        | "lm-studio"
+        | "vertex"
+        | "openai"
+        | "anthropic";
     }
-    
+
     // Default fallback: Prefer vertex if available, otherwise first allowed
-    return (targets.includes('vertex') ? 'vertex' : targets[0]) as 'lm-studio' | 'vertex' | 'openai' | 'anthropic'
-  }, [serverConfig, preferredLLMTarget])
+    return (targets.includes("vertex") ? "vertex" : targets[0]) as
+      | "lm-studio"
+      | "vertex"
+      | "openai"
+      | "anthropic";
+  }, [serverConfig, preferredLLMTarget]);
 
   const handleMoreDescriptive = async () => {
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
-        operation: 'more-descriptive',
+        operation: "more-descriptive",
         target: llmTarget,
-      })
+      });
 
       if (onTransform) {
-        onTransform(block.id, result.result as string)
+        onTransform(block.id, result.result as string);
       }
     } catch (error) {
-      console.error('Transform failed:', error)
+      console.error("Transform failed:", error);
     }
-  }
+  };
 
   const handleLessDescriptive = async () => {
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
-        operation: 'less-descriptive',
+        operation: "less-descriptive",
         target: llmTarget,
-      })
+      });
 
       if (onTransform) {
-        onTransform(block.id, result.result as string)
+        onTransform(block.id, result.result as string);
       }
     } catch (error) {
-      console.error('Transform failed:', error)
+      console.error("Transform failed:", error);
     }
-  }
+  };
 
-  const handleVariation = async (operation: 'variation-slight' | 'variation-fair' | 'variation-very') => {
+  const handleVariation = async (
+    operation: "variation-slight" | "variation-fair" | "variation-very"
+  ) => {
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
         operation,
         target: llmTarget,
-      })
+      });
 
       if (onTransform) {
-        onTransform(block.id, result.result as string)
+        onTransform(block.id, result.result as string);
       }
     } catch (error) {
-      console.error('Transform failed:', error)
+      console.error("Transform failed:", error);
     }
-  }
+  };
 
   const handleExplore = async () => {
-    setIsExploreOpen(true)
+    setIsExploreOpen(true);
 
     try {
       const result = await exploreMutation.mutateAsync({
         text: getResolvedText(block.text),
-        operation: 'explore',
+        operation: "explore",
         target: llmTarget,
-      })
+      });
 
       if (Array.isArray(result.result)) {
-        setExploreVariations(result.result)
+        setExploreVariations(result.result);
       }
     } catch (error) {
-      console.error('Explore failed:', error)
+      console.error("Explore failed:", error);
     }
-  }
+  };
 
   const handleSelectVariation = (variation: string) => {
     if (onTransform) {
-      onTransform(block.id, variation)
+      onTransform(block.id, variation);
     }
-    setIsExploreOpen(false)
-  }
+    setIsExploreOpen(false);
+  };
 
   const handleWildcardSelect = (displayId: string, path?: string) => {
     // Insert wildcard at the end of the current text
-    const result = insertWildcard(block.text, block.text.length, displayId, path)
+    const result = insertWildcard(
+      block.text,
+      block.text.length,
+      displayId,
+      path
+    );
 
     if (onTransform) {
-      onTransform(block.id, result.text)
+      onTransform(block.id, result.text);
     }
-  }
+  };
 
   return (
     <motion.div
       ref={blockRef}
-      className="relative rounded-lg border bg-background text-foreground shadow-sm cursor-pointer"
+      className={cn(
+        "relative rounded-lg bg-background text-foreground shadow-sm cursor-pointer",
+        !alwaysActive && "border"
+      )}
       onClick={handleBlockClick}
       animate={{
         padding: isActive ? "8px" : "0px",
-        backgroundColor: isActive ? "var(--color-cyan-dark)" : "var(--color-background)",
+        backgroundColor: isActive && !alwaysActive
+          ? "var(--color-cyan-dark)"
+          : "var(--color-background)",
         boxShadow: isActive
           ? "0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3)"
           : "0 1px 2px 0 rgb(0 0 0 / 0.05)",
@@ -293,7 +324,9 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                 <div className="flex items-center gap-2">
                   {block.name ? (
                     <>
-                      <span className="font-semibold text-foreground">{block.name}</span>
+                      <span className="font-semibold text-foreground">
+                        {block.name}
+                      </span>
                       <ExpandingIcon active={isActive} origin="left">
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
@@ -305,14 +338,15 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                             <TooltipContent>
                               <div className="space-y-1 text-xs">
                                 <div>
-                                  <span className="font-medium">ID:</span> {block.displayId}
+                                  <span className="font-medium">ID:</span>{" "}
+                                  {block.displayId}
                                 </div>
                                 <div>
-                                  <span className="font-medium">Created:</span>{' '}
+                                  <span className="font-medium">Created:</span>{" "}
                                   {new Date(block.createdAt).toLocaleString()}
                                 </div>
                                 <div>
-                                  <span className="font-medium">Updated:</span>{' '}
+                                  <span className="font-medium">Updated:</span>{" "}
                                   {new Date(block.updatedAt).toLocaleString()}
                                 </div>
                               </div>
@@ -321,17 +355,26 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         </TooltipProvider>
                       </ExpandingIcon>
                       <ExpandingIcon active={isActive} origin="left">
-                        <button
-                          onClick={() => setShowRevisions(!showRevisions)}
-                          className="text-cyan-medium hover:text-foreground transition-colors"
-                        >
-                          <Clock className="h-4 w-4" />
-                        </button>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild className="cursor-pointer">
+                              <button
+                                onClick={() => setShowRevisions(!showRevisions)}
+                                className="text-cyan-medium hover:text-foreground transition-colors"
+                              >
+                                <Clock className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>View block history</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </ExpandingIcon>
                     </>
                   ) : (
                     <>
-                      <span className="font-semibold text-foreground">{block.displayId}</span>
+                      <span className="font-semibold text-foreground">
+                        {block.displayId}
+                      </span>
                       <ExpandingIcon active={isActive} origin="left">
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
@@ -343,14 +386,15 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                             <TooltipContent>
                               <div className="space-y-1 text-xs">
                                 <div>
-                                  <span className="font-medium">ID:</span> {block.displayId}
+                                  <span className="font-medium">ID:</span>{" "}
+                                  {block.displayId}
                                 </div>
                                 <div>
-                                  <span className="font-medium">Created:</span>{' '}
+                                  <span className="font-medium">Created:</span>{" "}
                                   {new Date(block.createdAt).toLocaleString()}
                                 </div>
                                 <div>
-                                  <span className="font-medium">Updated:</span>{' '}
+                                  <span className="font-medium">Updated:</span>{" "}
                                   {new Date(block.updatedAt).toLocaleString()}
                                 </div>
                               </div>
@@ -359,12 +403,19 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         </TooltipProvider>
                       </ExpandingIcon>
                       <ExpandingIcon active={isActive} origin="left">
-                        <button
-                          onClick={() => setShowRevisions(!showRevisions)}
-                          className="text-cyan-medium hover:text-foreground transition-colors"
-                        >
-                          <Clock className="h-4 w-4" />
-                        </button>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild className="cursor-pointer">
+                              <button
+                                onClick={() => setShowRevisions(!showRevisions)}
+                                className="text-cyan-medium hover:text-foreground transition-colors"
+                              >
+                                <Clock className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>View block history</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </ExpandingIcon>
                     </>
                   )}
@@ -382,10 +433,15 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                   <button
                     key={label}
                     onClick={() => {
-                      setSelectedLabel(label)
-                      setIsLabelSearchOpen(true)
+                      setSelectedLabel(label);
+                      setIsLabelSearchOpen(true);
                     }}
-                    className="px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                    className={cn(
+                      "px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer",
+                      {
+                        'bg-cyan-medium text-cyan-light': isActive
+                      }
+                    )}
                   >
                     {label}
                   </button>
@@ -395,18 +451,17 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
           </div>
           <div className="flex items-center gap-2">
             {isSelectMode ? (
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={isSelected}
-                onChange={onToggleSelect}
-                className="w-4 h-4 cursor-pointer"
+                onCheckedChange={onToggleSelect}
+                className="cursor-pointer"
               />
             ) : (
               <>
                 {block.type && (
                   <button
                     onClick={() => setIsTypeSearchOpen(true)}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors cursor-pointer"
+                    className="px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors cursor-pointer"
                   >
                     {block.type.name}
                   </button>
@@ -458,13 +513,13 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                 enableTooltips={true}
                 onWildcardPathChange={(displayId, oldPath, newPath) => {
                   // Replace the wildcard marker in the text
-                  const oldMarker = `{{wildcard:${displayId}:${oldPath}}}`
-                  const newMarker = `{{wildcard:${displayId}:${newPath}}}`
-                  const updatedText = block.text.replace(oldMarker, newMarker)
+                  const oldMarker = `{{wildcard:${displayId}:${oldPath}}}`;
+                  const newMarker = `{{wildcard:${displayId}:${newPath}}}`;
+                  const updatedText = block.text.replace(oldMarker, newMarker);
 
                   // Trigger transform to create a new revision
                   if (onTransform) {
-                    onTransform(block.id, updatedText)
+                    onTransform(block.id, updatedText);
                   }
                 }}
               />
@@ -488,7 +543,9 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
               onClick={handleMoreDescriptive}
               disabled={transformMutation.isPending}
             >
-              {transformMutation.isPending ? 'Transforming...' : 'More Descriptive'}
+              {transformMutation.isPending
+                ? "Transforming..."
+                : "More Descriptive"}
             </AnimatedButton>
             <AnimatedButton
               variant="secondary"
@@ -497,7 +554,9 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
               onClick={handleLessDescriptive}
               disabled={transformMutation.isPending}
             >
-              {transformMutation.isPending ? 'Transforming...' : 'Less Descriptive'}
+              {transformMutation.isPending
+                ? "Transforming..."
+                : "Less Descriptive"}
             </AnimatedButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -507,17 +566,25 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                   active={isActive}
                   disabled={transformMutation.isPending}
                 >
-                  {transformMutation.isPending ? 'Transforming...' : 'Variation'}
+                  {transformMutation.isPending
+                    ? "Transforming..."
+                    : "Variation"}
                 </AnimatedButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleVariation('variation-slight')}>
+                <DropdownMenuItem
+                  onClick={() => handleVariation("variation-slight")}
+                >
                   Slightly Different
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleVariation('variation-fair')}>
+                <DropdownMenuItem
+                  onClick={() => handleVariation("variation-fair")}
+                >
                   Fairly Different
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleVariation('variation-very')}>
+                <DropdownMenuItem
+                  onClick={() => handleVariation("variation-very")}
+                >
                   Very Different
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -529,7 +596,9 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
               onClick={handleExplore}
               disabled={exploreMutation.isPending}
             >
-              {exploreMutation.isPending ? 'Exploring...' : 'Explore Variations'}
+              {exploreMutation.isPending
+                ? "Exploring..."
+                : "Explore Variations"}
             </AnimatedButton>
             <AnimatedButton
               variant="secondary"
@@ -563,11 +632,13 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
             <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
               {revisionsQuery.isLoading ? (
                 <div className="flex items-center justify-center w-full">
-                  <p className="text-sm text-cyan-medium">Loading revisions...</p>
+                  <p className="text-sm text-cyan-medium">
+                    Loading revisions...
+                  </p>
                 </div>
               ) : sortedRevisions.length > 0 ? (
                 sortedRevisions.map((revision) => {
-                  const isActive = revision.id === block.activeRevisionId
+                  const isActive = revision.id === block.activeRevisionId;
                   return (
                     <div
                       key={revision.id}
@@ -577,10 +648,13 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                           await setActiveRevisionMutation.mutateAsync({
                             blockId: block.id,
                             revisionId: revision.id,
-                          })
-                          setShowRevisions(false)
+                          });
+                          setShowRevisions(false);
                         } catch (error) {
-                          console.error('Failed to set active revision:', error)
+                          console.error(
+                            "Failed to set active revision:",
+                            error
+                          );
                         }
                       }}
                     >
@@ -593,10 +667,13 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         {new Date(revision.createdAt).toLocaleString()}
                       </p>
                       <div className="flex-1 overflow-auto">
-                        <TextWithWildcards text={revision.text} className="text-sm whitespace-pre-wrap" />
+                        <TextWithWildcards
+                          text={revision.text}
+                          className="text-sm whitespace-pre-wrap"
+                        />
                       </div>
                     </div>
-                  )
+                  );
                 })
               ) : (
                 <div className="flex items-center justify-center w-full">
@@ -613,7 +690,9 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
           <DialogHeader>
             <DialogTitle>Explore Variations</DialogTitle>
             <DialogDescription>
-              {exploreMutation.isPending ? 'Generating variations...' : `${exploreVariations.length} variations generated`}
+              {exploreMutation.isPending
+                ? "Generating variations..."
+                : `${exploreVariations.length} variations generated`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 flex items-center justify-center p-8">
@@ -623,20 +702,23 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
               <div className="relative w-full h-full">
                 {/* Spokes from center to variations */}
                 {exploreVariations.map((_, index) => {
-                  const position = variationPositions[index]
-                  if (!position) return null
+                  const position = variationPositions[index];
+                  if (!position) return null;
 
                   // Calculate angle and length for the line
-                  const angle = Math.atan2(position.y, position.x) * 180 / Math.PI
-                  const length = Math.sqrt(position.x * position.x + position.y * position.y)
+                  const angle =
+                    (Math.atan2(position.y, position.x) * 180) / Math.PI;
+                  const length = Math.sqrt(
+                    position.x * position.x + position.y * position.y
+                  );
 
                   return (
                     <motion.div
                       key={`spoke-${index}`}
                       className="absolute origin-left pointer-events-none border-t-2 border-dashed border-cyan-medium"
                       style={{
-                        top: '50%',
-                        left: '50%',
+                        top: "50%",
+                        left: "50%",
                         zIndex: 5,
                       }}
                       initial={{ width: 0, opacity: 0, rotate: angle }}
@@ -647,11 +729,14 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         ease: "easeOut",
                       }}
                     />
-                  )
+                  );
                 })}
 
                 {/* Original text in center */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[100px] flex items-center justify-center" style={{ zIndex: 10 }}>
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[100px] flex items-center justify-center"
+                  style={{ zIndex: 10 }}
+                >
                   <div className="p-4 border-2 border-magenta-medium rounded-md bg-background w-full h-full flex items-center justify-center relative">
                     <button
                       onClick={handleExplore}
@@ -669,8 +754,8 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
 
                 {/* Variations shooting out in a star pattern */}
                 {exploreVariations.map((variation, index) => {
-                  const position = variationPositions[index]
-                  if (!position) return null
+                  const position = variationPositions[index];
+                  if (!position) return null;
 
                   return (
                     <motion.div
@@ -682,7 +767,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         x: position.x - 225,
                         y: position.y - 50,
                         scale: 1,
-                        opacity: 1
+                        opacity: 1,
                       }}
                       transition={{
                         delay: index * 0.1,
@@ -700,7 +785,7 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
                         </p>
                       </div>
                     </motion.div>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -728,5 +813,5 @@ export function TextBlock({ block, onEdit, onDelete, onTransform, onSelectBlock,
         onSelect={handleWildcardSelect}
       />
     </motion.div>
-  )
+  );
 }
