@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Pencil, X, Info, Clock, Save, RefreshCw } from "lucide-react";
+import { X, Info, Clock, Save, RefreshCw } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -506,10 +506,9 @@ export function TextBlock({
               className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 transition-colors"
               onClick={handleTextClick}
             >
-              <Pencil className="h-4 w-4 text-cyan-medium opacity-0 group-hover:opacity-100 transition-opacity absolute -left-5 top-2" />
               <TextWithWildcards
                 text={block.text}
-                className="text-sm whitespace-pre-wrap"
+                className="text-sm whitespace-pre-wrap cursor-text"
                 enableTooltips={true}
                 onWildcardPathChange={(displayId, oldPath, newPath) => {
                   // Replace the wildcard marker in the text
