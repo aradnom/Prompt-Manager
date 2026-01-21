@@ -52,9 +52,6 @@ export function MainMenu() {
         <SheetContent side="left" className="w-64 inset-y-0 left-0 h-full border-r">
         <SheetHeader>
           <SheetTitle>Prompt Manager</SheetTitle>
-          <SheetDescription>
-            Navigate your prompt workspace
-          </SheetDescription>
         </SheetHeader>
         <nav className="mt-8 flex flex-col gap-2">
           {menuItems.map((item) => (

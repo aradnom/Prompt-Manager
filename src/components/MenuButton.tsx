@@ -8,7 +8,7 @@ export function MenuButton({ onClick }: MenuButtonProps) {
   return (
     <motion.button
       onClick={onClick}
-      className="fixed top-4 left-4 z-50 flex items-center justify-center group relative cursor-pointer"
+      className="fixed top-4 left-4 z-50 flex items-center justify-center group cursor-pointer"
       style={{ width: '50px', height: '50px' }}
       whileHover="hover"
       initial="initial"
