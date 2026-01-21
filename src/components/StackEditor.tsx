@@ -404,10 +404,12 @@ export function StackEditor({ stack }: StackEditorProps) {
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-2xl">Active Stack: {stack.displayId}</CardTitle>
-              <CardDescription className="font-mono text-xs mt-1">
-                {stack.uuid}
-              </CardDescription>
+              <CardTitle className="text-2xl">Active Stack: {stack.name || stack.displayId}</CardTitle>
+              {stack.name &&
+                <CardDescription className="font-mono text-xs mt-1">
+                  {stack.displayId}
+                </CardDescription>
+              }
             </div>
             <div className="flex gap-2">
               <Button
