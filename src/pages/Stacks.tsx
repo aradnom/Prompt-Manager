@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
+import { cn } from "@/lib/utils";
 import { api, RouterOutput } from '@/lib/api'
 import { generateDisplayId } from '@/lib/generate-display-id'
 import { generateUUID } from '@/lib/uuid'
@@ -19,6 +20,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 export default function Stacks() {
@@ -264,7 +271,10 @@ export default function Stacks() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   data-stack-card
-                  className="relative"
+                  className={cn(
+                    "relative border-2 border-cyan-dark rounded-lg",
+                    index === 0 && "accent-border-gradient"
+                  )}
                 >
                   <Card
                     className={`cursor-pointer transition-all ${isActive ? 'ring-2 ring-magenta-dark' : ''}`}
@@ -280,16 +290,25 @@ export default function Stacks() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <CardTitle className="text-xl">{stack.name || stack.displayId}</CardTitle>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setShowRevisionsForStack(stack.id)
-                              }}
-                              className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                              aria-label="Show revisions"
-                            >
-                              <Clock className="h-4 w-4" />
-                            </button>
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setShowRevisionsForStack(stack.id)
+                                    }}
+                                    className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                                    aria-label="Show revisions"
+                                  >
+                                    <Clock className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  View stack history
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                           <CardDescription className="text-xs mt-2 opacity-50">
                             {stack.blockIds.length} block{stack.blockIds.length !== 1 ? 's' : ''}
