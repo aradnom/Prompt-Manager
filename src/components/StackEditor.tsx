@@ -404,7 +404,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-2xl">Active Stack: {stack.name || stack.displayId}</CardTitle>
+              <CardTitle className="text-2xl">Active Prompt: {stack.name || stack.displayId}</CardTitle>
               {stack.name &&
                 <CardDescription className="font-mono text-xs mt-1">
                   {stack.displayId}
@@ -427,7 +427,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                 size="sm"
                 onClick={() => setActiveStack(null)}
               >
-                Close Stack
+                Close Prompt
               </Button>
             </div>
           </div>
@@ -531,7 +531,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                     </SortableContext>
                   ) : !isCreatingNew && (
                     <div className="text-center py-12 text-cyan-medium border-2 border-dashed rounded-lg">
-                      <p>No blocks in this stack yet.</p>
+                      <p>No blocks in this prompt yet.</p>
                       <p className="text-xs mt-2">Add blocks using the toolbar below.</p>
                     </div>
                   )}

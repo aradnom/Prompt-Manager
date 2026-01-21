@@ -187,7 +187,7 @@ export function StackOutputBlock() {
     <Card className={`border-2 border-magenta-medium shadow-lg bg-background ${isMinimized ? 'w-fit ml-auto' : ''}`}>
       <CardHeader className="bg-magenta-dark/5">
         <div className={`flex items-center ${isMinimized ? 'justify-end' : 'justify-between'}`}>
-          {!isMinimized && <CardTitle className="text-xl font-bold">Stack Output</CardTitle>}
+          {!isMinimized && <CardTitle className="text-xl font-bold">Prompt Output</CardTitle>}
           <div className="flex gap-2 items-center">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <Checkbox

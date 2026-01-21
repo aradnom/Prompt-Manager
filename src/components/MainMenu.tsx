@@ -25,7 +25,7 @@ export function MainMenu() {
 
   const baseMenuItems: MenuItem[] = [
     { path: '/', label: 'Home', icon: '🏠' },
-    { path: '/stacks', label: 'Stacks', icon: '📚' },
+    { path: '/stacks', label: 'Prompts', icon: '📚' },
     { path: '/blocks', label: 'Blocks', icon: '🧱' },
     { path: '/wildcards', label: 'Wildcards', icon: '🎲' },
   ]

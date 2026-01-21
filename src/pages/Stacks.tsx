@@ -184,18 +184,18 @@ export default function Stacks() {
   return (
     <main className="container mx-auto p-8 pt-20">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Stacks</h1>
+          <h1 className="text-4xl font-bold mb-2">Prompts</h1>
           <p className="text-cyan-medium">
-            Manage your prompt stacks
+            Manage your prompts
           </p>
         </div>
 
         {isCreating ? (
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>Create New Stack</CardTitle>
+              <CardTitle>Create New Prompt</CardTitle>
               <CardDescription>
-                Enter a memorable ID for your new stack
+                Enter a memorable ID for your new prompt
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -251,14 +251,14 @@ export default function Stacks() {
               setIsCreating(true)
               setDisplayId(generateDisplayId())
             }}>
-              Create New Stack
+              Create New Prompt
             </Button>
           </div>
         )}
 
         {isLoading ? (
           <div className="text-center py-12 text-cyan-medium">
-            Loading stacks...
+            Loading prompts...
           </div>
         ) : stacks && stacks.length > 0 ? (
           <div className="space-y-4">
@@ -305,7 +305,7 @@ export default function Stacks() {
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  View stack history
+                                  View prompt history
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -391,7 +391,7 @@ export default function Stacks() {
                             </div>
                             <div>
                               <label className="text-sm font-medium mb-2 block">
-                                Stack Output
+                                Prompt Output
                               </label>
                               <Card className="border-2 border-magenta-medium shadow-lg bg-background">
                                 <CardContent className="pt-6 max-h-48 overflow-y-auto">
@@ -402,7 +402,7 @@ export default function Stacks() {
                                       valueOnly={true}
                                     />
                                   ) : (
-                                    <p className="text-cyan-medium text-sm">No blocks in this stack</p>
+                                    <p className="text-cyan-medium text-sm">No blocks in this prompt</p>
                                   )}
                                 </CardContent>
                               </Card>
@@ -505,9 +505,9 @@ export default function Stacks() {
           <Card>
             <CardContent className="py-12">
               <div className="text-center text-cyan-medium">
-                <p className="mb-4">No stacks yet</p>
+                <p className="mb-4">No prompts yet</p>
                 <Button onClick={() => setIsCreating(true)}>
-                  Create Your First Stack
+                  Create Your First Prompt
                 </Button>
               </div>
             </CardContent>
@@ -518,8 +518,8 @@ export default function Stacks() {
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
           onConfirm={confirmDelete}
-          title="Delete Stack"
-          description="Are you sure you want to delete this stack? This action cannot be undone."
+          title="Delete Prompt"
+          description="Are you sure you want to delete this prompt? This action cannot be undone."
           confirmText="Delete"
           variant="destructive"
         />
