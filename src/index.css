@@ -36,4 +36,8 @@
 
 @layer components {}
 
-@layer utilities {}
+@layer utilities {
+  .text-alt {
+    @apply bg-magenta-medium text-white;
+  }
+}
