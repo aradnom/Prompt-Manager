@@ -69,4 +69,19 @@ export const wildcardsRouter = router({
   list: publicProcedure.query(async ({ ctx }) => {
     return ctx.storage.listWildcards(ctx.userId)
   }),
+
+  search: publicProcedure
+    .input(
+      z.object({
+        query: z.string().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.searchWildcards(
+        {
+          query: input.query,
+        },
+        ctx.userId
+      )
+    }),
 })

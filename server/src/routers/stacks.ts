@@ -101,6 +101,21 @@ export const stacksRouter = router({
     return ctx.storage.listStacks(ctx.userId)
   }),
 
+  search: publicProcedure
+    .input(
+      z.object({
+        query: z.string().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.searchStacks(
+        {
+          query: input.query,
+        },
+        ctx.userId
+      )
+    }),
+
   addBlock: publicProcedure
     .input(
       z.object({

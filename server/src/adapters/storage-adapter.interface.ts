@@ -45,6 +45,7 @@ export interface IStorageAdapter {
   getRenderedPrompt(displayId: string, userId: number): Promise<string | null>
   deleteStack(id: number): Promise<void>
   listStacks(userId?: number): Promise<BlockStack[]>
+  searchStacks(options: SearchStacksOptions, userId?: number): Promise<BlockStack[]>
 
   addBlockToStack(stackId: number, blockId: number, order?: number, renderedContent?: string): Promise<void>
   removeBlockFromStack(stackId: number, blockId: number, renderedContent?: string): Promise<void>
@@ -61,6 +62,7 @@ export interface IStorageAdapter {
   updateWildcard(id: number, updates: UpdateWildcardInput): Promise<Wildcard>
   deleteWildcard(id: number): Promise<void>
   listWildcards(userId?: number): Promise<Wildcard[]>
+  searchWildcards(options: SearchWildcardsOptions, userId?: number): Promise<Wildcard[]>
 }
 
 export interface GetStackOptions {
@@ -72,4 +74,12 @@ export interface SearchBlocksOptions {
   query?: string
   typeId?: number
   labels?: string[]
+}
+
+export interface SearchStacksOptions {
+  query?: string
+}
+
+export interface SearchWildcardsOptions {
+  query?: string
 }

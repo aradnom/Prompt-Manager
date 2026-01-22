@@ -18,7 +18,7 @@ import type {
   CreateWildcardInput,
   UpdateWildcardInput,
 } from '@/types/schema'
-import type { IStorageAdapter, GetStackOptions, SearchBlocksOptions } from '@server/adapters/storage-adapter.interface'
+import type { IStorageAdapter, GetStackOptions, SearchBlocksOptions, SearchStacksOptions, SearchWildcardsOptions } from '@server/adapters/storage-adapter.interface'
 
 export class PostgresStorageAdapter implements IStorageAdapter {
   private db: Kysely<Database>
@@ -802,6 +802,56 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     })
   }
 
+  async searchStacks(options: SearchStacksOptions, userId?: number): Promise<BlockStack[]> {
+    let query = this.db
+      .selectFrom('stacks')
+      .leftJoin('stack_revisions', 'stacks.active_revision_id', 'stack_revisions.id')
+      .selectAll('stacks')
+      .select((eb) => [
+        // First try to get block_ids from active_revision_id if set, otherwise get latest revision
+        eb.fn.coalesce(
+          eb
+            .selectFrom('stack_revisions as active_rev')
+            .select('active_rev.block_ids')
+            .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+            .limit(1),
+          eb
+            .selectFrom('stack_revisions')
+            .select('block_ids')
+            .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+            .orderBy('created_at', 'desc')
+            .limit(1)
+        ).as('block_ids'),
+      ])
+
+    // Text search filter
+    if (options.query) {
+      const searchPattern = `%${options.query}%`
+      query = query.where((eb) =>
+        eb.or([
+          eb('stacks.uuid', 'ilike', searchPattern),
+          eb('stacks.display_id', 'ilike', searchPattern),
+          eb('stacks.name', 'ilike', searchPattern),
+          eb('stack_revisions.rendered_content', 'ilike', searchPattern),
+        ])
+      )
+    }
+
+    // User filter
+    if (userId !== undefined) {
+      query = query.where('stacks.user_id', '=', userId)
+    }
+
+    query = query.orderBy('stacks.updated_at', 'desc')
+
+    const results = await query.execute()
+    return results.map((r) => {
+        const stack = this.mapStack(r)
+        stack.blockIds = r.block_ids || []
+        return stack
+    })
+  }
+
   async getCompiledPrompt(displayId: string, userId: number): Promise<string | null> {
     // 1. Get Stack by displayId and userId with block_ids from active or latest revision
     const result = await this.db
@@ -1240,6 +1290,35 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     if (userId !== undefined) {
       query = query.where('user_id', '=', userId)
     }
+
+    const results = await query.execute()
+    return results.map((r) => this.mapWildcard(r))
+  }
+
+  async searchWildcards(options: SearchWildcardsOptions, userId?: number): Promise<Wildcard[]> {
+    let query = this.db
+      .selectFrom('wildcards')
+      .selectAll()
+
+    // Text search filter
+    if (options.query) {
+      const searchPattern = `%${options.query}%`
+      query = query.where((eb) =>
+        eb.or([
+          eb('wildcards.uuid', 'ilike', searchPattern),
+          eb('wildcards.display_id', 'ilike', searchPattern),
+          eb('wildcards.name', 'ilike', searchPattern),
+          eb('wildcards.content', 'ilike', searchPattern),
+        ])
+      )
+    }
+
+    // User filter
+    if (userId !== undefined) {
+      query = query.where('wildcards.user_id', '=', userId)
+    }
+
+    query = query.orderBy('wildcards.updated_at', 'desc')
 
     const results = await query.execute()
     return results.map((r) => this.mapWildcard(r))
