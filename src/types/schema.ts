@@ -34,12 +34,15 @@ export interface BlockRevision {
   blockId: number | null
 }
 
+export type OutputStyle = 't5' | 'clip' | null
+
 export interface BlockStack {
   id: number
   uuid: string
   displayId: string
   name: string | null
   commaSeparated: boolean
+  style: OutputStyle
   createdAt: Date
   updatedAt: Date
   userId: number | null
@@ -91,6 +94,7 @@ export interface CreateStackInput {
   name?: string
   displayId: string
   commaSeparated?: boolean
+  style?: OutputStyle
   userId?: number
   blockIds?: number[]
 }
@@ -99,6 +103,7 @@ export interface UpdateStackInput {
   name?: string
   displayId?: string
   commaSeparated?: boolean
+  style?: OutputStyle
 }
 
 export interface CreateRevisionInput {

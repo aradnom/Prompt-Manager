@@ -41,6 +41,7 @@ export interface BlockStacksTable {
   display_id: string
   name: string | null
   comma_separated: boolean
+  style: ColumnType<'t5' | 'clip' | null, 't5' | 'clip' | null, 't5' | 'clip' | null>
   created_at: ColumnType<Date, Date | undefined, Date | undefined>
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>
   user_id: number | null
