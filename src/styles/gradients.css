@@ -1,6 +1,10 @@
 @layer utilities {
-  .radial-gradient {
-    background: radial-gradient(circle at top left, color-mix(in srgb, var(--color-magenta-light), transparent 50%) 0%, rgba(0, 0, 0, 0) 70%);
+  .radial-gradient-magenta {
+    background: radial-gradient(circle at top left, rgb(from var(--color-magenta-light) r g b / 60%) 0%, rgba(0, 0, 0, 0) 70%);
+  }
+
+  .radial-gradient-cyan {
+    background: radial-gradient(circle at top left, rgb(from var(--color-cyan-medium) r g b / 40%) 0%, rgba(0, 0, 0, 0) 30%);
   }
 
   .accent-border-gradient {

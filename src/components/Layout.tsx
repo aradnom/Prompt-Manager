@@ -16,7 +16,7 @@ function LayoutContent({ children }: LayoutProps) {
     <div className={`min-h-screen bg-background ${
           isOpen ? "blur-sm" : ""
         }`}>
-      <div className="fixed w-250 h-250 radial-gradient" />
+      <div className="fixed w-250 h-250 radial-gradient-magenta" />
       <ParallaxCircle
         minScale={0.2}
         size={900}
