@@ -4,6 +4,7 @@ import yaml from 'js-yaml'
 import { Sparkles } from 'lucide-react'
 import { api } from '@/lib/api'
 import { generateUUID } from '@/lib/uuid'
+import { cn } from "@/lib/utils";
 import { generateDisplayId } from '@/lib/generate-display-id'
 import { useErrors } from '@/contexts/ErrorContext'
 import { validateWildcardContent } from '@/lib/wildcard-validation'
@@ -361,6 +362,10 @@ export default function Wildcards() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
+              className={cn(
+                "relative border-2 border-cyan-dark rounded-lg",
+                index === 0 && "accent-border-gradient"
+              )}
             >
               {editingId === wildcard.id ? (
                 <WildcardForm
