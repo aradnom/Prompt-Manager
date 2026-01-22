@@ -1,0 +1,9 @@
+@layer utilities {
+  .text-alt {
+    @apply bg-magenta-medium text-white;
+  }
+
+  .highlighted-text {
+    @apply bg-magenta-medium text-white px-2 py-1 mt-1 inline-block;
+  }
+}
