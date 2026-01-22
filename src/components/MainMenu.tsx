@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet'
 import { useMenu } from '@/contexts/MenuContext'
 import { MenuButton } from '@/components/MenuButton'
+import { MainMenuBorder } from '@/components/MainMenuBorder'
 
 export function MainMenu() {
   const { isOpen: open, setIsOpen: setOpen } = useMenu()
@@ -49,7 +50,8 @@ export function MainMenu() {
     <>
       <MenuButton onClick={() => setOpen(true)} />
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-64 inset-y-0 left-0 h-full border-r">
+        <SheetContent side="left" className="w-64 inset-y-0 left-0 h-full border-none" bgOpacity={0.7}>
+        <MainMenuBorder isOpen={open} />
         <SheetHeader>
           <SheetTitle>Prompt Manager</SheetTitle>
         </SheetHeader>
