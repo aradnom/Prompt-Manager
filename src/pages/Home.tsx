@@ -18,7 +18,7 @@ function HomeContent() {
         >
           <h1 className="text-4xl font-bold mb-2">Prompt Manager</h1>
           <p className="text-magenta-dark mb-8">
-            <mark className="text-alt px-2 py-1 mt-1 inline-block">Manage your diffusion model prompts with ease</mark>
+            <mark className="highlighted-text">Manage your diffusion model prompts with ease</mark>
           </p>
         </motion.div>
 

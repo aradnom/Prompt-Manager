@@ -186,12 +186,12 @@ export default function Stacks() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Prompts</h1>
           <p className="text-cyan-medium">
-            Manage your prompts
+            <mark className="highlighted-text">Manage your prompts</mark>
           </p>
         </div>
 
         {isCreating ? (
-          <Card className="mb-8">
+          <Card className="mb-8 bg-cyan-dark">
             <CardHeader>
               <CardTitle>Create New Prompt</CardTitle>
               <CardDescription>
@@ -246,7 +246,7 @@ export default function Stacks() {
             </CardContent>
           </Card>
         ) : (
-          <div className="mb-8">
+          <div className="mb-8 flex justify-end">
             <Button onClick={() => {
               setIsCreating(true)
               setDisplayId(generateDisplayId())
@@ -310,7 +310,7 @@ export default function Stacks() {
                               </Tooltip>
                             </TooltipProvider>
                           </div>
-                          <CardDescription className="text-xs mt-2 opacity-50">
+                          <CardDescription className="text-xs mt-2">
                             {stack.blockIds.length} block{stack.blockIds.length !== 1 ? 's' : ''}
                           </CardDescription>
                         </div>

@@ -318,7 +318,7 @@ export default function Wildcards() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Wildcards</h1>
         <p className="text-cyan-medium">
-          Manage your wildcard templates
+          <mark className="highlighted-text">Manage your wildcard templates</mark>
         </p>
       </div>
 
@@ -332,7 +332,7 @@ export default function Wildcards() {
           />
         </div>
       ) : (
-        <div className="mb-8 flex gap-2">
+        <div className="mb-8 flex gap-2 justify-end">
           <Button onClick={() => setIsCreating(true)}>
             Create New Wildcard
           </Button>

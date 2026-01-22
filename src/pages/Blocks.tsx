@@ -76,7 +76,9 @@ export default function Blocks() {
     <main className="container mx-auto p-8 pt-20">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Blocks</h1>
-        <p className="text-cyan-medium">Manage your text blocks</p>
+        <p className="text-cyan-medium">
+          <mark className="highlighted-text">Manage your text blocks</mark>
+        </p>
       </div>
 
       {isCreating ? (
@@ -89,7 +91,7 @@ export default function Blocks() {
           />
         </div>
       ) : (
-        <div className="mb-8">
+        <div className="mb-8 flex justify-end">
           <Button onClick={() => setIsCreating(true)}>Create New Block</Button>
         </div>
       )}
