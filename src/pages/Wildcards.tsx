@@ -224,11 +224,13 @@ export default function Wildcards() {
           text: generateConcept,
           operation: 'generate-wildcard',
           target: llmTarget,
+          style: undefined,
         }),
         autoLabelMutation.mutateAsync({
           text: generateConcept,
           operation: 'auto-label',
           target: llmTarget,
+          style: undefined,
         })
       ])
 
