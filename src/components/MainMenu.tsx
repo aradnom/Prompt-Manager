@@ -11,6 +11,7 @@ import {
 import { useMenu } from '@/contexts/MenuContext'
 import { MenuButton } from '@/components/MenuButton'
 import { MainMenuBorder } from '@/components/MainMenuBorder'
+import { RasterIcon } from '@/components/RasterIcon'
 
 export function MainMenu() {
   const { isOpen: open, setIsOpen: setOpen } = useMenu()
@@ -25,17 +26,17 @@ export function MainMenu() {
   }
 
   const baseMenuItems: MenuItem[] = [
-    { path: '/', label: 'Home', icon: '🏠' },
-    { path: '/stacks', label: 'Prompts', icon: '📚' },
-    { path: '/blocks', label: 'Blocks', icon: '🧱' },
-    { path: '/wildcards', label: 'Wildcards', icon: '🎲' },
+    { path: '/', label: 'Home', icon: 'home' },
+    { path: '/stacks', label: 'Prompts', icon: 'books' },
+    { path: '/blocks', label: 'Blocks', icon: 'blocks' },
+    { path: '/wildcards', label: 'Wildcards', icon: 'dice' },
   ]
 
   // Only add dev settings if explicitly enabled (not during loading)
   const menuItems = !isLoading && config?.devSettingsEnabled
     ? [
         ...baseMenuItems,
-        { path: '/developer-settings', label: 'Developer Settings', icon: '⚙️' },
+        { path: '/developer-settings', label: 'Developer Settings', icon: 'gear' },
       ]
     : baseMenuItems
 
@@ -52,9 +53,6 @@ export function MainMenu() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 inset-y-0 left-0 h-full border-none" bgOpacity={0.7}>
         <MainMenuBorder isOpen={open} />
-        <SheetHeader>
-          <SheetTitle>Prompt Manager</SheetTitle>
-        </SheetHeader>
         <nav className="mt-8 flex flex-col gap-2">
           {menuItems.map((item) => (
             <Link
@@ -68,7 +66,7 @@ export function MainMenu() {
                 className="w-full justify-start"
                 disabled={item.disabled}
               >
-                <span className="mr-2">{item.icon}</span>
+                <RasterIcon name={item.icon} size={20} className="mr-2" />
                 {item.label}
                 {item.disabled && (
                   <span className="ml-auto text-xs text-cyan-medium">
