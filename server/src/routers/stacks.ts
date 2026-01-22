@@ -8,6 +8,7 @@ export const stacksRouter = router({
         uuid: z.string(),
         name: z.string().optional(),
         displayId: z.string(),
+        commaSeparated: z.boolean().optional(),
         blockIds: z.array(z.number()).optional(),
       })
     )
@@ -54,6 +55,7 @@ export const stacksRouter = router({
         id: z.number(),
         name: z.string().optional(),
         displayId: z.string().optional(),
+        commaSeparated: z.boolean().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

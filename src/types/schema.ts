@@ -39,6 +39,7 @@ export interface BlockStack {
   uuid: string
   displayId: string
   name: string | null
+  commaSeparated: boolean
   createdAt: Date
   updatedAt: Date
   userId: number | null
@@ -89,6 +90,7 @@ export interface CreateStackInput {
   uuid: string
   name?: string
   displayId: string
+  commaSeparated?: boolean
   userId?: number
   blockIds?: number[]
 }
@@ -96,6 +98,7 @@ export interface CreateStackInput {
 export interface UpdateStackInput {
   name?: string
   displayId?: string
+  commaSeparated?: boolean
 }
 
 export interface CreateRevisionInput {

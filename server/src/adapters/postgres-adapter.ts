@@ -566,6 +566,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           uuid: input.uuid,
           name: input.name ?? null,
           display_id: input.displayId,
+          comma_separated: input.commaSeparated ?? false,
           created_at: now,
           updated_at: now,
           user_id: input.userId ?? null,
@@ -610,6 +611,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
     if (updates.name !== undefined) updateData.name = updates.name ?? null
     if (updates.displayId !== undefined) updateData.display_id = updates.displayId
+    if (updates.commaSeparated !== undefined) updateData.comma_separated = updates.commaSeparated
 
     const stackResult = await this.db
       .updateTable('stacks')
@@ -1358,6 +1360,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       uuid: row.uuid,
       name: row.name,
       displayId: row.display_id,
+      commaSeparated: row.comma_separated,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       userId: row.user_id,

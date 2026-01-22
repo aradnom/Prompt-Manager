@@ -40,6 +40,7 @@ export interface BlockStacksTable {
   uuid: string
   display_id: string
   name: string | null
+  comma_separated: boolean
   created_at: ColumnType<Date, Date | undefined, Date | undefined>
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>
   user_id: number | null

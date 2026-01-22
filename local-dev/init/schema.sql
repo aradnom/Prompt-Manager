@@ -52,6 +52,7 @@ CREATE TABLE stacks (
     uuid character varying(255) UNIQUE,
     display_id character varying(255) UNIQUE,
     name character varying(255),
+    comma_separated boolean DEFAULT true,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,

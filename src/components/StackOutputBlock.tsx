@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -24,7 +23,39 @@ export function StackOutputBlock() {
   const { data: wildcards } = api.wildcards.list.useQuery()
   const { addError } = useErrors()
   const utils = api.useUtils()
-  const [commaSeparated, setCommaSeparated] = useState(true)
+
+  const commaSeparated = activeStack?.commaSeparated ?? false
+
+  const updateStackMutation = api.stacks.update.useMutation({
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await utils.stacks.get.cancel({ id: variables.id })
+
+      // Snapshot the previous value
+      const previousStack = utils.stacks.get.getData({ id: variables.id })
+
+      // Optimistically update to the new value
+      if (previousStack) {
+        utils.stacks.get.setData({ id: variables.id }, {
+          ...previousStack,
+          commaSeparated: variables.commaSeparated ?? previousStack.commaSeparated,
+        })
+      }
+
+      return { previousStack }
+    },
+    onError: (_err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousStack) {
+        utils.stacks.get.setData({ id: variables.id }, context.previousStack)
+      }
+    },
+    onSuccess: (_data, variables) => {
+      if (activeStack) {
+        utils.stacks.get.invalidate({ id: variables.id })
+      }
+    },
+  })
 
   const updateBlockMutation = api.blocks.update.useMutation({
     onSuccess: () => {
@@ -34,6 +65,14 @@ export function StackOutputBlock() {
       }
     },
   })
+
+  const handleCommaSeparatedChange = (checked: boolean) => {
+    if (!activeStack) return
+    updateStackMutation.mutate({
+      id: activeStack.id,
+      commaSeparated: checked,
+    })
+  }
 
   // Process content to add trailing commas if enabled
   const getProcessedContent = (content: string): string => {
@@ -192,7 +231,7 @@ export function StackOutputBlock() {
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <Checkbox
                 checked={commaSeparated}
-                onCheckedChange={setCommaSeparated}
+                onCheckedChange={handleCommaSeparatedChange}
                 className="cursor-pointer"
               />
               Comma Separated
