@@ -231,7 +231,7 @@ Output: {"title": "Emotions", "code": "emotions"}`
       basePrompt += '\n\n**Output Formatting:**\nFormat your output for **CLIP-encoded diffusion models** such as Stable Diffusion. Your goal is to convert concepts into **token-efficient, comma-separated keyword lists**.\n\n**Core Constraints:**\n1. **Format:** Output strictly as a comma-separated list of tags. Remove all linguistic "glue" (articles, prepositions, conjunctions) unless essential for composition.\n2. **Ordering Strategy:** Utilize **Weighted Ordering**. Place the most semantically significant keywords at the start of the string. Do not enforce a fixed category template (e.g., do not force "Subject first" if the input is purely about lighting); simply prioritize the most defining aspects of the specific request.\n3. **Economy of Tokens:** Be concise. Maximize information density per token. Avoid flowery prose or redundant synonyms.\n4. **Strict Visual Adherence:** Describe **only observable physical attributes**.\n* *Negative Example:* "Anxious personality," "Ancient history," "Evil aura."\n* *Positive Correction:* "Sweating brow, wide eyes, trembling hands," "Cracked stone, moss overgrowth," "Sharp angular shadows, red rim lighting."\n* *Rule:* If it cannot be captured by a camera lens, do not include it.'
       console.debug('CLIP style used in LLM transform')
     } else {
-      console.lodebugg('No style used in LLM transform')
+      console.debug('No style used in LLM transform')
     }
 
     return basePrompt
