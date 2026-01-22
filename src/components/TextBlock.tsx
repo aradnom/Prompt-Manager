@@ -6,6 +6,7 @@ import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { ExpandingIcon } from "@/components/ui/expanding-icon";
+import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { TEXT_BLOCK_ANIMATION } from "@/lib/text-block-animation-settings";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { resolveWildcardsInText } from "@/lib/wildcard-resolver";
@@ -37,6 +38,7 @@ import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 
 import { useSettings } from "@/contexts/SettingsContext";
+import type { OutputStyle } from "@/types/schema";
 
 type Block = RouterOutput["blocks"]["list"][number];
 
@@ -52,6 +54,7 @@ interface TextBlockProps {
   onToggleSelect?: () => void;
   defaultActive?: boolean;
   alwaysActive?: boolean;
+  style?: OutputStyle;
 }
 
 export function TextBlock({
@@ -66,6 +69,7 @@ export function TextBlock({
   onToggleSelect,
   defaultActive = false,
   alwaysActive = false,
+  style,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
@@ -214,6 +218,7 @@ export function TextBlock({
         text: getResolvedText(block.text),
         operation: "more-descriptive",
         target: llmTarget,
+        style,
       });
 
       if (onTransform) {
@@ -230,6 +235,7 @@ export function TextBlock({
         text: getResolvedText(block.text),
         operation: "less-descriptive",
         target: llmTarget,
+        style,
       });
 
       if (onTransform) {
@@ -248,6 +254,7 @@ export function TextBlock({
         text: getResolvedText(block.text),
         operation,
         target: llmTarget,
+        style,
       });
 
       if (onTransform) {
@@ -266,6 +273,7 @@ export function TextBlock({
         text: getResolvedText(block.text),
         operation: "explore",
         target: llmTarget,
+        style,
       });
 
       if (Array.isArray(result.result)) {
@@ -527,78 +535,76 @@ export function TextBlock({
         </div>
         <div className="border-t pt-4">
           <div className="flex gap-2 flex-wrap">
-            <AnimatedButton
-              variant="secondary"
-              size="sm"
-              active={isActive}
-              onClick={onEdit}
-            >
-              Edit Block
-            </AnimatedButton>
-            <AnimatedButton
-              variant="secondary"
-              size="sm"
-              active={isActive}
-              onClick={handleMoreDescriptive}
-              disabled={transformMutation.isPending}
-            >
-              {transformMutation.isPending
-                ? "Transforming..."
-                : "More Descriptive"}
-            </AnimatedButton>
-            <AnimatedButton
-              variant="secondary"
-              size="sm"
-              active={isActive}
-              onClick={handleLessDescriptive}
-              disabled={transformMutation.isPending}
-            >
-              {transformMutation.isPending
-                ? "Transforming..."
-                : "Less Descriptive"}
-            </AnimatedButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <AnimatedButton
-                  variant="secondary"
-                  size="sm"
-                  active={isActive}
-                  disabled={transformMutation.isPending}
-                >
-                  {transformMutation.isPending
-                    ? "Transforming..."
-                    : "Variation"}
-                </AnimatedButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => handleVariation("variation-slight")}
-                >
-                  Slightly Different
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleVariation("variation-fair")}
-                >
-                  Fairly Different
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleVariation("variation-very")}
-                >
-                  Very Different
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <AnimatedButton
-              variant="secondary"
-              size="sm"
-              active={isActive}
-              onClick={handleExplore}
-              disabled={exploreMutation.isPending}
-            >
-              {exploreMutation.isPending
-                ? "Exploring..."
-                : "Explore Variations"}
-            </AnimatedButton>
+            <ButtonGroup>
+              <AnimatedButton
+                variant="secondary"
+                size="sm"
+                active={isActive}
+                onClick={handleMoreDescriptive}
+                disabled={transformMutation.isPending}
+              >
+                {transformMutation.isPending
+                  ? "Transforming..."
+                  : "More Descriptive"}
+              </AnimatedButton>
+              <ButtonGroupSeparator />
+              <AnimatedButton
+                variant="secondary"
+                size="sm"
+                active={isActive}
+                onClick={handleLessDescriptive}
+                disabled={transformMutation.isPending}
+              >
+                {transformMutation.isPending
+                  ? "Transforming..."
+                  : "Less Descriptive"}
+              </AnimatedButton>
+            </ButtonGroup>
+            <ButtonGroup>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <AnimatedButton
+                    variant="secondary"
+                    size="sm"
+                    active={isActive}
+                    disabled={transformMutation.isPending}
+                  >
+                    {transformMutation.isPending
+                      ? "Transforming..."
+                      : "Variation"}
+                  </AnimatedButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleVariation("variation-slight")}
+                  >
+                    Slightly Different
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleVariation("variation-fair")}
+                  >
+                    Fairly Different
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleVariation("variation-very")}
+                  >
+                    Very Different
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ButtonGroupSeparator />
+              <AnimatedButton
+                variant="secondary"
+                size="sm"
+                active={isActive}
+                onClick={handleExplore}
+                disabled={exploreMutation.isPending}
+              >
+                {exploreMutation.isPending
+                  ? "Exploring..."
+                  : "Explore Variations"}
+              </AnimatedButton>
+            </ButtonGroup>
             <AnimatedButton
               variant="secondary"
               size="sm"
@@ -606,6 +612,15 @@ export function TextBlock({
               onClick={() => setIsWildcardBrowserOpen(true)}
             >
               Insert Wildcard
+            </AnimatedButton>
+            <AnimatedButton
+              variant="secondary"
+              size="sm"
+              active={isActive}
+              onClick={onEdit}
+              className="ml-auto"
+            >
+              Edit Block
             </AnimatedButton>
           </div>
         </div>

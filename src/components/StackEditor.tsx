@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Sparkles, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
@@ -29,6 +30,7 @@ import { BlockForm, BlockFormValues } from '@/components/BlockForm'
 import { BlockSearchDialog } from '@/components/BlockSearchDialog'
 import { SortableBlock } from '@/components/SortableBlock'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import {
   Dialog,
@@ -52,6 +54,7 @@ interface StackEditorProps {
 }
 
 export function StackEditor({ stack }: StackEditorProps) {
+  const navigate = useNavigate()
   const { setActiveStack, setActiveStackBlocks } = useActiveStack()
   const { setRenderedContent, setRenderedContentWithMarkers } = useStackContent()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -360,6 +363,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         text: generateConcept,
         operation: 'generate',
         target: llmTarget,
+        style: stack.style,
       })
 
       if (Array.isArray(result.result)) {
@@ -411,7 +415,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                 </CardDescription>
               }
             </div>
-            <div className="flex gap-2">
+            <ButtonGroup>
               <Button
                 variant="outline"
                 size="sm"
@@ -425,11 +429,18 @@ export function StackEditor({ stack }: StackEditorProps) {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => navigate(`/prompts/${stack.displayId}`)}
+              >
+                Prompt Settings
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setActiveStack(null)}
               >
                 Close Prompt
               </Button>
-            </div>
+            </ButtonGroup>
           </div>
         </CardHeader>
         <AnimatePresence>
@@ -525,6 +536,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                                 isSelectMode={isSelectMode}
                                 isSelected={selectedBlockIndices.has(index)}
                                 onToggleSelect={() => handleToggleBlockSelection(index)}
+                                style={stack.style}
                               />
                             </div>
                           )}
