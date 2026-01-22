@@ -8,6 +8,7 @@ import { generateDisplayId } from '@/lib/generate-display-id'
 import { useErrors } from '@/contexts/ErrorContext'
 import { validateWildcardContent } from '@/lib/wildcard-validation'
 import { useSettings } from '@/contexts/SettingsContext'
+import { RasterIcon } from '@/components/RasterIcon'
 import { Button } from '@/components/ui/button'
 import { DisplayIdInput } from '@/components/ui/display-id-input'
 import {
@@ -318,7 +319,10 @@ export default function Wildcards() {
   return (
     <main className="container mx-auto p-8 pt-20">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Wildcards</h1>
+        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+          <RasterIcon name="dice" size={36} />
+          Wildcards
+        </h1>
         <p className="text-cyan-medium">
           <mark className="highlighted-text">Manage your wildcard templates</mark>
         </p>

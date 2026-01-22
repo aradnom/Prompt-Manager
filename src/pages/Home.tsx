@@ -4,6 +4,7 @@ import { StackContentProvider } from '@/contexts/StackContentContext'
 import { StackOutputProvider, useStackOutput } from '@/contexts/StackOutputContext'
 import { StackEditor } from '@/components/StackEditor'
 import { StackOutputBlock } from '@/components/StackOutputBlock'
+import { RasterIcon } from '@/components/RasterIcon'
 
 function HomeContent() {
   const { activeStack } = useActiveStack()
@@ -16,7 +17,10 @@ function HomeContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl font-bold mb-2">Prompt Manager</h1>
+          <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+            <RasterIcon name="home" size={36} />
+            Prompt Manager
+          </h1>
           <p className="text-magenta-dark mb-8">
             <mark className="highlighted-text">Manage your diffusion model prompts with ease</mark>
           </p>

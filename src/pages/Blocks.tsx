@@ -6,6 +6,7 @@ import { generateUUID } from "@/lib/uuid";
 
 import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
+import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -75,7 +76,10 @@ export default function Blocks() {
   return (
     <main className="container mx-auto p-8 pt-20">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Blocks</h1>
+        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+          <RasterIcon name="blocks" size={36} />
+          Blocks
+        </h1>
         <p className="text-cyan-medium">
           <mark className="highlighted-text">Manage your text blocks</mark>
         </p>
