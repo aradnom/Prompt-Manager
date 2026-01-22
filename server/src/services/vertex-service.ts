@@ -9,7 +9,7 @@ export class VertexService {
 
   constructor(private config: LLMConfig) {
     if (this.config.vertex.projectId) {
-      console.log('Initializing Vertex AI with config:', {
+      console.debug('Initializing Vertex AI with config:', {
         project: this.config.vertex.projectId,
         location: this.config.vertex.location,
         keyFile: this.config.vertex.serviceAccountJson || 'undefined'
@@ -19,10 +19,10 @@ export class VertexService {
 
       if (this.config.vertex.serviceAccountJson) {
         const resolvedPath = path.resolve(process.cwd(), this.config.vertex.serviceAccountJson)
-        console.log(`Debug: CWD is ${process.cwd()}`)
-        console.log(`Checking key file at: ${resolvedPath}`)
+        console.debug(`Debug: CWD is ${process.cwd()}`)
+        console.debug(`Checking key file at: ${resolvedPath}`)
         if (fs.existsSync(resolvedPath)) {
-          console.log('✓ Key file found')
+          console.debug('✓ Key file found')
           // Read the file content directly to pass as object, avoiding potential path resolution issues in SDK
           try {
             const keyFileContent = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'))
@@ -33,7 +33,7 @@ export class VertexService {
               },
               scopes: ['https://www.googleapis.com/auth/cloud-platform']
             }
-            console.log('✓ Credentials loaded from file')
+            console.debug('✓ Credentials loaded from file')
           } catch (e) {
             console.error('✗ Failed to read key file:', e)
           }
@@ -69,7 +69,7 @@ export class VertexService {
     })
 
     try {
-      console.log(`Attempting to generate content with model: ${this.config.vertex.model} in project: ${this.config.vertex.projectId}, location: ${this.config.vertex.location}`)
+      console.debug(`Attempting to generate content with model: ${this.config.vertex.model} in project: ${this.config.vertex.projectId}, location: ${this.config.vertex.location}`)
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: request.text }] }],
       })

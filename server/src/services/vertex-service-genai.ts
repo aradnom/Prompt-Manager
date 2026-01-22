@@ -7,7 +7,7 @@ export class VertexServiceGenAI {
 
   constructor(private config: LLMConfig) {
     if (this.config.vertex.apiKey) {
-      console.log('Initializing Vertex AI (GenAI SDK) with API Key')
+      console.debug('Initializing Vertex AI (GenAI SDK) with API Key')
       try {
         // Casting to any because 'vertexai' and 'apiVersion' might not be in the public types yet
         // but are required for this specific auth flow to work.
@@ -19,7 +19,7 @@ export class VertexServiceGenAI {
           apiVersion: 'v1'
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
-        console.log('✓ GoogleGenAI client initialized')
+        console.debug('✓ GoogleGenAI client initialized')
       } catch (e) {
         console.error('Failed to initialize GenAI client:', e)
       }
@@ -34,7 +34,7 @@ export class VertexServiceGenAI {
     }
 
     try {
-      console.log(`GenAI SDK: Generating content with model: ${this.config.vertex.model}`)
+      console.debug(`GenAI SDK: Generating content with model: ${this.config.vertex.model}`)
       
       const modelId = this.config.vertex.model
       

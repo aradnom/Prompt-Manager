@@ -157,7 +157,7 @@ export function WildcardBrowserLists({ wildcard, currentPath, onSelectValue }: W
       }
 
       const result = buildTree(data)
-      console.log('Built tree:', result)
+      
       return result
     } catch (error) {
       console.error('Error building wildcard tree:', error)

@@ -69,9 +69,9 @@ async function main() {
   const llmService = new LLMService(config.llm)
 
   await storage.initialize()
-  console.log('✓ Database connection established')
-  console.log('✓ LLM service initialized')
-  console.log(`  Allowed targets: ${Array.from(config.llm.allowedTargets).join(', ')}`)
+  console.debug('✓ Database connection established')
+  console.debug('✓ LLM service initialized')
+  console.debug(`  Allowed targets: ${Array.from(config.llm.allowedTargets).join(', ')}`)
 
   app.use(
     '/trpc',
@@ -162,7 +162,7 @@ async function main() {
     }
     sseClients.get(userId)!.add(res)
 
-    console.log(`SSE client connected for user ${userId}`)
+    console.debug(`SSE client connected for user ${userId}`)
 
     // Send initial connection message
     res.write('data: {"connected": true}\n\n')
@@ -176,7 +176,7 @@ async function main() {
           sseClients.delete(userId)
         }
       }
-      console.log(`SSE client disconnected for user ${userId}`)
+      console.debug(`SSE client disconnected for user ${userId}`)
     })
   })
 
@@ -185,8 +185,8 @@ async function main() {
   })
 
   app.listen(config.port, () => {
-    console.log(`✓ Server listening on http://localhost:${config.port}`)
-    console.log(`✓ tRPC endpoint: http://localhost:${config.port}/trpc`)
+    console.debug(`✓ Server listening on http://localhost:${config.port}`)
+    console.debug(`✓ tRPC endpoint: http://localhost:${config.port}/trpc`)
   })
 }
 
