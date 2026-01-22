@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from '@/lib/api'
 import { generateDisplayId } from '@/lib/generate-display-id'
 import { generateUUID } from '@/lib/uuid'
 import { useActiveStack } from '@/contexts/ActiveStackContext'
-import { resolveWildcardsInText, resolveWildcardsWithMarkers } from '@/lib/wildcard-resolver'
-import { TextWithWildcards } from '@/components/TextWithWildcards'
+import { StackEditForm } from '@/components/StackEditForm'
 import { X, Clock } from 'lucide-react'
 
 type Stack = RouterOutput['stacks']['list'][number]
@@ -35,9 +34,8 @@ export default function Stacks() {
   const [stackToDelete, setStackToDelete] = useState<number | null>(null)
   const [activeStackId, setActiveStackId] = useState<number | null>(null)
   const [showRevisionsForStack, setShowRevisionsForStack] = useState<number | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editDisplayId, setEditDisplayId] = useState('')
   const navigate = useNavigate()
+  const { displayId: urlDisplayId } = useParams<{ displayId: string }>()
   const { setActiveStack } = useActiveStack()
 
   const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery()
@@ -45,7 +43,6 @@ export default function Stacks() {
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
     { enabled: activeStackId !== null }
   )
-  const { data: wildcards } = api.wildcards.list.useQuery()
   const { data: blocks } = api.blocks.list.useQuery()
   const revisionsQuery = api.stacks.getRevisions.useQuery(
     { stackId: showRevisionsForStack! },
@@ -59,15 +56,11 @@ export default function Stacks() {
       setDisplayId('')
     },
   })
-  const updateMutation = api.stacks.update.useMutation({
-    onSuccess: () => {
-      refetch()
-    },
-  })
   const deleteMutation = api.stacks.delete.useMutation({
     onSuccess: () => {
       refetch()
       setActiveStackId(null)
+      navigate('/prompts')
     },
   })
   const setActiveRevisionMutation = api.stacks.setActiveRevision.useMutation({
@@ -106,39 +99,12 @@ export default function Stacks() {
   const handleStackClick = (stackId: number, stack: Stack) => {
     if (activeStackId === stackId) {
       setActiveStackId(null)
+      navigate('/prompts')
     } else {
       setActiveStackId(stackId)
-      setEditName(stack.name || '')
-      setEditDisplayId(stack.displayId)
+      navigate(`/prompts/${stack.displayId}`)
     }
   }
-
-  const handleUpdate = () => {
-    if (!activeStackId) return
-    updateMutation.mutate({
-      id: activeStackId,
-      name: editName.trim() || undefined,
-      displayId: editDisplayId.trim(),
-    })
-  }
-
-  // Compile stack content
-  const stackContent = useMemo(() => {
-    if (!activeStackDetails || !('blocks' in activeStackDetails)) {
-      return { rendered: '', withMarkers: '' }
-    }
-
-    const rawText = activeStackDetails.blocks.map(b => b.text).join('\n\n')
-
-    if (!wildcards) {
-      return { rendered: rawText, withMarkers: rawText }
-    }
-
-    const rendered = resolveWildcardsInText(rawText, wildcards)
-    const withMarkers = resolveWildcardsWithMarkers(rawText, wildcards)
-
-    return { rendered, withMarkers }
-  }, [activeStackDetails, wildcards])
 
   // Sort revisions to put active one first
   const sortedRevisions = useMemo(() => {
@@ -165,16 +131,39 @@ export default function Stacks() {
     return block ? (block.name || block.displayId) : `Block ${blockId}`
   }
 
+  // Open stack from URL parameter
+  useEffect(() => {
+    if (urlDisplayId && stacks) {
+      const matchingStack = stacks.find(s => s.displayId === urlDisplayId)
+      if (matchingStack) {
+        setActiveStackId(matchingStack.id)
+      }
+    } else if (!urlDisplayId) {
+      setActiveStackId(null)
+    }
+  }, [urlDisplayId, stacks])
+
   // Close active state and revisions when clicking outside
   useEffect(() => {
     if (!activeStackId && !showRevisionsForStack) return
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (!target.closest('[data-stack-card]')) {
-        setActiveStackId(null)
-        setShowRevisionsForStack(null)
-      }
+
+      // Don't close if clicking inside the stack card
+      if (target.closest('[data-stack-card]')) return
+
+      // Don't close if clicking inside a dropdown menu
+      if (target.closest('[role="menu"]')) return
+
+      // Don't close if there's an open dropdown (let the dropdown handle the click first)
+      // Check for Radix UI dropdown portal
+      const hasOpenDropdown = document.querySelector('[data-radix-popper-content-wrapper]')
+      if (hasOpenDropdown) return
+
+      setActiveStackId(null)
+      setShowRevisionsForStack(null)
+      navigate('/prompts')
     }
 
     document.addEventListener('mousedown', handleClickOutside)
@@ -277,15 +266,17 @@ export default function Stacks() {
                   )}
                 >
                   <Card
-                    className={`cursor-pointer transition-all ${isActive ? 'ring-2 ring-magenta-dark' : ''}`}
-                    onClick={(e) => {
-                      // Don't toggle if clicking on buttons
-                      if (!(e.target as HTMLElement).closest('button')) {
-                        handleStackClick(stack.id, stack)
-                      }
-                    }}
+                    className={`transition-all ${isActive ? 'ring-2 ring-magenta-dark' : ''}`}
                   >
-                    <CardHeader>
+                    <CardHeader
+                      className="cursor-pointer"
+                      onClick={(e) => {
+                        // Don't toggle if clicking on buttons
+                        if (!(e.target as HTMLElement).closest('button')) {
+                          handleStackClick(stack.id, stack)
+                        }
+                      }}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -341,74 +332,11 @@ export default function Stacks() {
                     </CardHeader>
                     <AnimatePresence>
                       {isActive && activeStackDetails && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <CardContent className="space-y-4 pt-0">
-                            <div className="text-xs text-cyan-medium">
-                              <div>Created: {new Date(stack.createdAt).toLocaleString()}</div>
-                              <div>Updated: {new Date(stack.updatedAt).toLocaleString()}</div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <label className="text-sm font-medium mb-2 block">
-                                  Name (optional)
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g., Summer Landscapes"
-                                  className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
-                                  value={editName}
-                                  onChange={(e) => setEditName(e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium mb-2 block">
-                                  Display ID
-                                </label>
-                                <DisplayIdInput
-                                  placeholder="e.g., summer-landscape-v1"
-                                  className="w-full"
-                                  value={editDisplayId}
-                                  onChange={setEditDisplayId}
-                                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                />
-                              </div>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUpdate()
-                                }}
-                                disabled={updateMutation.isPending || !editDisplayId.trim()}
-                                size="sm"
-                              >
-                                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                              </Button>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium mb-2 block">
-                                Prompt Output
-                              </label>
-                              <Card className="border-2 border-magenta-medium shadow-lg bg-background">
-                                <CardContent className="pt-6 max-h-48 overflow-y-auto">
-                                  {stackContent.rendered ? (
-                                    <TextWithWildcards
-                                      text={stackContent.withMarkers}
-                                      className="text-base whitespace-pre-wrap font-mono"
-                                      valueOnly={true}
-                                    />
-                                  ) : (
-                                    <p className="text-cyan-medium text-sm">No blocks in this prompt</p>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            </div>
-                          </CardContent>
-                        </motion.div>
+                        <StackEditForm
+                          stack={stack}
+                          stackDetails={activeStackDetails}
+                          onClose={() => setActiveStackId(null)}
+                        />
                       )}
                     </AnimatePresence>
                   </Card>

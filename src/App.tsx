@@ -8,6 +8,7 @@ import Stacks from './pages/Stacks'
 import Blocks from './pages/Blocks'
 import Wildcards from './pages/Wildcards'
 import DeveloperSettings from './pages/DeveloperSettings'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
@@ -18,10 +19,12 @@ function App() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/stacks" element={<Stacks />} />
+                <Route path="/prompts" element={<Stacks />} />
+                <Route path="/prompts/:displayId" element={<Stacks />} />
                 <Route path="/blocks" element={<Blocks />} />
                 <Route path="/wildcards" element={<Wildcards />} />
                 <Route path="/developer-settings" element={<DeveloperSettings />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
           </ActiveStackProvider>
