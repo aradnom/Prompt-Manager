@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -9,6 +9,7 @@ import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function Blocks() {
@@ -16,8 +17,31 @@ export default function Blocks() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [blockToDelete, setBlockToDelete] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const { data: blocks, isLoading, refetch } = api.blocks.list.useQuery();
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Fetch search results when there's a search query
+  const { data: searchResults, isLoading: isSearching } = api.blocks.search.useQuery(
+    {
+      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+    },
+    { enabled: debouncedSearch.length > 0 }
+  );
+
+  // Use search results if searching, otherwise use all blocks
+  const displayBlocks = debouncedSearch.length > 0 ? searchResults : blocks;
+  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
 
   const createMutation = api.blocks.create.useMutation({
     onSuccess: () => {
@@ -100,16 +124,25 @@ export default function Blocks() {
         </div>
       )}
 
-      {isLoading ? (
+      {/* Search */}
+      <div className="mb-8">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search blocks by name, display ID, or text content..."
+        />
+      </div>
+
+      {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          Loading blocks...
+          {debouncedSearch.length > 0 ? 'Searching...' : 'Loading blocks...'}
         </div>
-      ) : blocks && blocks.length > 0 ? (
+      ) : displayBlocks && displayBlocks.length > 0 ? (
         <div className="space-y-4">
-          {blocks.map((block, index) => (
+          {displayBlocks.map((block, index) => (
             <motion.div
               className={cn(
-                "border-2 border-cyan-dark rounded-lg",
+                "border-standard-dark-cyan",
                 index === 0 && "accent-border-gradient"
               )}
               key={block.id}
@@ -152,6 +185,17 @@ export default function Blocks() {
             </motion.div>
           ))}
         </div>
+      ) : debouncedSearch.length > 0 ? (
+        <Card>
+          <CardContent className="py-12 border-standard-dark-cyan">
+            <div className="text-center text-cyan-medium">
+              <p className="mb-4">No blocks found matching "{debouncedSearch}"</p>
+              <Button onClick={() => setSearch("")} variant="outline">
+                Clear Search
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="py-12">
