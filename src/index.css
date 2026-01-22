@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/gradients.css";
+@import "./styles/borders.css";
 @import "@fontsource/pitagon-sans-mono/200.css";
 @import "@fontsource/pitagon-sans-mono/700.css";
 @import "@fontsource/quicksand/300.css";

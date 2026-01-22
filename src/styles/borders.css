@@ -1,0 +1,5 @@
+@layer utilities {
+    .border-standard-dark-cyan {
+        @apply border-2 border-cyan-dark rounded;
+    }
+}

@@ -12,7 +12,7 @@ export default function NotFound() {
   return (
     <main className="container mx-auto p-8 pt-20">
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md w-2/4 border-2 border-cyan-dark">
+        <Card className="max-w-md w-2/4 border-standard-dark-cyan">
           <CardHeader>
             <CardTitle className="text-4xl">404</CardTitle>
             <CardDescription>Page not found</CardDescription>
