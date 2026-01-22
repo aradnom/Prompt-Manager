@@ -506,25 +506,27 @@ export function StackEditor({ stack }: StackEditorProps) {
                               />
                             </motion.div>
                           ) : (
-                            <TextBlock
-                              block={block}
-                              onEdit={() => setEditingBlockId(block.id)}
-                              onDelete={() => handleRemoveBlock(block.id)}
-                              onTransform={(blockId, transformedText) =>
-                                handleUpdateBlock(blockId, {
-                                  name: block.name ?? undefined,
-                                  displayId: block.displayId,
-                                  text: transformedText,
-                                  labels: block.labels,
-                                  typeId: block.typeId ?? undefined,
-                                })
-                              }
-                              onSelectBlock={handleAddExistingBlock}
-                              isDeleting={removeBlockMutation.isPending}
-                              isSelectMode={isSelectMode}
-                              isSelected={selectedBlockIndices.has(index)}
-                              onToggleSelect={() => handleToggleBlockSelection(index)}
-                            />
+                            <div onDoubleClick={() => setEditingBlockId(block.id)}>
+                              <TextBlock
+                                block={block}
+                                onEdit={() => setEditingBlockId(block.id)}
+                                onDelete={() => handleRemoveBlock(block.id)}
+                                onTransform={(blockId, transformedText) =>
+                                  handleUpdateBlock(blockId, {
+                                    name: block.name ?? undefined,
+                                    displayId: block.displayId,
+                                    text: transformedText,
+                                    labels: block.labels,
+                                    typeId: block.typeId ?? undefined,
+                                  })
+                                }
+                                onSelectBlock={handleAddExistingBlock}
+                                isDeleting={removeBlockMutation.isPending}
+                                isSelectMode={isSelectMode}
+                                isSelected={selectedBlockIndices.has(index)}
+                                onToggleSelect={() => handleToggleBlockSelection(index)}
+                              />
+                            </div>
                           )}
                         </SortableBlock>
                       ))}
