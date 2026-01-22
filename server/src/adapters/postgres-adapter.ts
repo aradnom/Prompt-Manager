@@ -979,7 +979,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return result?.rendered_content || null
   }
 
-  async addBlockToStack(stackId: number, blockId: number, _order?: number, renderedContent?: string): Promise<void> {
+  async addBlockToStack(stackId: number, blockId: number, order?: number, renderedContent?: string): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       const now = new Date()
 
@@ -1004,7 +1004,20 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .where('stacks.id', '=', stackId)
         .executeTakeFirst()
 
-      const newBlockIds = currentRev?.block_ids ? [...currentRev.block_ids, blockId] : [blockId]
+      let newBlockIds: number[]
+      if (!currentRev?.block_ids) {
+        newBlockIds = [blockId]
+      } else if (order !== undefined && order >= 0 && order <= currentRev.block_ids.length) {
+        // Insert at specific position
+        newBlockIds = [
+          ...currentRev.block_ids.slice(0, order),
+          blockId,
+          ...currentRev.block_ids.slice(order)
+        ]
+      } else {
+        // Append to end if order not specified or out of bounds
+        newBlockIds = [...currentRev.block_ids, blockId]
+      }
 
       // Create new revision
       const newRevision = await trx

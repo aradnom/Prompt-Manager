@@ -46,6 +46,7 @@ interface TextBlockProps {
   block: Block;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
   onTransform?: (blockId: number, transformedText: string) => void;
   onSelectBlock?: (blockId: number) => void;
   isDeleting?: boolean;
@@ -61,6 +62,7 @@ export function TextBlock({
   block,
   onEdit,
   onDelete,
+  onDuplicate,
   onTransform,
   onSelectBlock,
   isDeleting,
@@ -613,15 +615,29 @@ export function TextBlock({
             >
               Insert Wildcard
             </AnimatedButton>
-            <AnimatedButton
-              variant="secondary"
-              size="sm"
-              active={isActive}
-              onClick={onEdit}
-              className="ml-auto"
-            >
-              Edit Block
-            </AnimatedButton>
+            <ButtonGroup className="ml-auto">
+              {onDuplicate && (
+                <>
+                  <AnimatedButton
+                    variant="secondary"
+                    size="sm"
+                    active={isActive}
+                    onClick={onDuplicate}
+                  >
+                    Duplicate Block
+                  </AnimatedButton>
+                  <ButtonGroupSeparator />
+                </>
+              )}
+              <AnimatedButton
+                variant="secondary"
+                size="sm"
+                active={isActive}
+                onClick={onEdit}
+              >
+                Edit Block
+              </AnimatedButton>
+            </ButtonGroup>
           </div>
         </div>
       </CardContent>

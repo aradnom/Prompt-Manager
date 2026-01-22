@@ -258,6 +258,33 @@ export function StackEditor({ stack }: StackEditorProps) {
     })
   }
 
+  const handleDuplicateBlock = async (blockIndex: number) => {
+    if (!stackWithBlocks?.blocks) return
+
+    const originalBlock = stackWithBlocks.blocks[blockIndex]
+
+    try {
+      // 1. Create the new block with same properties but new UUID and displayId
+      const newBlock = await createBlockMutation.mutateAsync({
+        uuid: generateUUID(),
+        name: originalBlock.name ?? undefined,
+        displayId: generateDisplayId(),
+        text: originalBlock.text,
+        labels: originalBlock.labels,
+        typeId: originalBlock.typeId ?? undefined,
+      })
+
+      // 2. Add to stack right after the original block
+      await addBlockMutation.mutateAsync({
+        stackId: stack.id,
+        blockId: newBlock.id,
+        order: blockIndex + 1,
+      })
+    } catch (error) {
+      console.error('Failed to duplicate block:', error)
+    }
+  }
+
   const handleToggleBlockSelection = (index: number) => {
     setSelectedBlockIndices((prev) => {
       const next = new Set(prev)
@@ -522,6 +549,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                                 block={block}
                                 onEdit={() => setEditingBlockId(block.id)}
                                 onDelete={() => handleRemoveBlock(block.id)}
+                                onDuplicate={() => handleDuplicateBlock(index)}
                                 onTransform={(blockId, transformedText) =>
                                   handleUpdateBlock(blockId, {
                                     name: block.name ?? undefined,
