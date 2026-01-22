@@ -60,6 +60,7 @@ export function MainMenu() {
           className="w-64 inset-y-0 left-0 h-full border-none radial-gradient-cyan"
           bgOpacity={0.7}
         >
+          <div className="absolute w-full h-full top-0 left-0 -z-1 film-grain opacity-20" />
           <MainMenuBorder isOpen={open} />
           <SheetHeader>
             <SheetTitle className="sr-only">Main Menu</SheetTitle>

@@ -13,7 +13,7 @@ function LayoutContent({ children }: LayoutProps) {
   const { isOpen } = useMenu();
 
   return (
-    <div className={`min-h-screen bg-background ${
+    <div className={`min-h-screen bg-background film-grain ${
           isOpen ? "blur-sm" : ""
         }`}>
       <div className="fixed w-250 h-250 radial-gradient-magenta" />
