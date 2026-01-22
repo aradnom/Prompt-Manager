@@ -59,7 +59,7 @@ const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
             ...TEXT_BLOCK_FADE,
             delay: active ? 0.1 : 0,
           }}
-          className="inline-flex items-center gap-2 p-2"
+          className="inline-flex items-center gap-2 px-2.5 py-1.5 text-sm"
         >
           {children}
         </motion.span>
