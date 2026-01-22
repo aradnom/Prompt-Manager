@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import yaml from 'js-yaml'
 import { Sparkles } from 'lucide-react'
@@ -12,6 +12,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { RasterIcon } from '@/components/RasterIcon'
 import { Button } from '@/components/ui/button'
 import { DisplayIdInput } from '@/components/ui/display-id-input'
+import { SearchInput } from '@/components/ui/search-input'
 import {
   Card,
   CardContent,
@@ -169,9 +170,32 @@ export default function Wildcards() {
   const [generatedDisplayId, setGeneratedDisplayId] = useState('')
   const [generatedContent, setGeneratedContent] = useState('')
   const [showGenerateForm, setShowGenerateForm] = useState(false)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   const { data: wildcards, isLoading, refetch } = api.wildcards.list.useQuery()
   const { data: serverConfig } = api.config.getSettings.useQuery()
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Fetch search results when there's a search query
+  const { data: searchResults, isLoading: isSearching } = api.wildcards.search.useQuery(
+    {
+      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+    },
+    { enabled: debouncedSearch.length > 0 }
+  )
+
+  // Use search results if searching, otherwise use all wildcards
+  const displayWildcards = debouncedSearch.length > 0 ? searchResults : wildcards
+  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading
 
   const llmTarget = (() => {
     const targets = serverConfig?.llm?.allowedTargets
@@ -350,20 +374,29 @@ export default function Wildcards() {
         </div>
       )}
 
-      {isLoading ? (
+      {/* Search */}
+      <div className="mb-8">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search wildcards by name, display ID, UUID, or content..."
+        />
+      </div>
+
+      {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          Loading wildcards...
+          {debouncedSearch.length > 0 ? 'Searching...' : 'Loading wildcards...'}
         </div>
-      ) : wildcards && wildcards.length > 0 ? (
+      ) : displayWildcards && displayWildcards.length > 0 ? (
         <div className="space-y-4">
-          {wildcards.map((wildcard, index) => (
+          {displayWildcards.map((wildcard, index) => (
             <motion.div
               key={wildcard.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
               className={cn(
-                "relative border-2 border-cyan-dark rounded-lg",
+                "relative border-standard-dark-cyan",
                 index === 0 && "accent-border-gradient"
               )}
             >
@@ -421,6 +454,17 @@ export default function Wildcards() {
             </motion.div>
           ))}
         </div>
+      ) : debouncedSearch.length > 0 ? (
+        <Card>
+          <CardContent className="py-12 border-standard-dark-cyan">
+            <div className="text-center text-cyan-medium">
+              <p className="mb-4">No wildcards found matching "{debouncedSearch}"</p>
+              <Button onClick={() => setSearch("")} variant="outline">
+                Clear Search
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="py-12">

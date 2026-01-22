@@ -8,6 +8,7 @@ import { generateUUID } from '@/lib/uuid'
 import { useActiveStack } from '@/contexts/ActiveStackContext'
 import { StackEditForm } from '@/components/StackEditForm'
 import { RasterIcon } from '@/components/RasterIcon'
+import { SearchInput } from '@/components/ui/search-input'
 import { X, Clock } from 'lucide-react'
 
 type Stack = RouterOutput['stacks']['list'][number]
@@ -35,11 +36,34 @@ export default function Stacks() {
   const [stackToDelete, setStackToDelete] = useState<number | null>(null)
   const [activeStackId, setActiveStackId] = useState<number | null>(null)
   const [showRevisionsForStack, setShowRevisionsForStack] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const navigate = useNavigate()
   const { displayId: urlDisplayId } = useParams<{ displayId: string }>()
   const { setActiveStack } = useActiveStack()
 
   const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery()
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Fetch search results when there's a search query
+  const { data: searchResults, isLoading: isSearching } = api.stacks.search.useQuery(
+    {
+      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+    },
+    { enabled: debouncedSearch.length > 0 }
+  )
+
+  // Use search results if searching, otherwise use all stacks
+  const displayStacks = debouncedSearch.length > 0 ? searchResults : stacks
+  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading
   const { data: activeStackDetails } = api.stacks.get.useQuery(
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
     { enabled: activeStackId !== null }
@@ -249,13 +273,22 @@ export default function Stacks() {
           </div>
         )}
 
-        {isLoading ? (
+        {/* Search */}
+        <div className="mb-8">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search prompts by name, display ID, UUID, or content..."
+          />
+        </div>
+
+        {showLoading ? (
           <div className="text-center py-12 text-cyan-medium">
-            Loading prompts...
+            {debouncedSearch.length > 0 ? 'Searching...' : 'Loading prompts...'}
           </div>
-        ) : stacks && stacks.length > 0 ? (
+        ) : displayStacks && displayStacks.length > 0 ? (
           <div className="space-y-4">
-            {stacks.map((stack, index) => {
+            {displayStacks.map((stack, index) => {
               const isActive = activeStackId === stack.id
               return (
                 <motion.div
@@ -265,7 +298,7 @@ export default function Stacks() {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   data-stack-card
                   className={cn(
-                    "relative border-2 border-cyan-dark rounded-lg",
+                    "relative border-standard-dark-cyan",
                     index === 0 && "accent-border-gradient"
                   )}
                 >
@@ -433,6 +466,17 @@ export default function Stacks() {
               )
             })}
           </div>
+        ) : debouncedSearch.length > 0 ? (
+          <Card>
+            <CardContent className="py-12 border-standard-dark-cyan">
+              <div className="text-center text-cyan-medium">
+                <p className="mb-4">No prompts found matching "{debouncedSearch}"</p>
+                <Button onClick={() => setSearch("")} variant="outline">
+                  Clear Search
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardContent className="py-12">
