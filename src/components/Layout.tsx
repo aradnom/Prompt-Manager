@@ -13,9 +13,11 @@ function LayoutContent({ children }: LayoutProps) {
   const { isOpen } = useMenu();
 
   return (
-    <div className={`min-h-screen bg-background film-grain ${
-          isOpen ? "blur-sm" : ""
-        }`}>
+    <div
+      className={`min-h-screen bg-background ${
+        isOpen ? "blur-sm" : ""
+      }`}
+    >
       <div className="fixed w-250 h-250 radial-gradient-magenta" />
       <ParallaxCircle
         minScale={0.2}
@@ -24,11 +26,7 @@ function LayoutContent({ children }: LayoutProps) {
         minLineWidth={0}
         maxLineWidth={3}
       />
-      <ParallaxCircle
-      size={600}
-        maxLineWidth={4}
-        minLineWidth={0}
-      />
+      <ParallaxCircle size={600} maxLineWidth={4} minLineWidth={0} />
       <ParallaxCircle
         minScale={0.2}
         size={400}
@@ -44,10 +42,9 @@ function LayoutContent({ children }: LayoutProps) {
         minLineWidth={0}
         maxLineWidth={3}
       />
+      <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
       <MainMenu />
-      <div
-        className={`pl-0 relative transition-all duration-200`}
-      >
+      <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>
       <ErrorBanner />
