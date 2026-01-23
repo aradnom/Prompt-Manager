@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import Stacks from './pages/Stacks'
 import Blocks from './pages/Blocks'
 import Wildcards from './pages/Wildcards'
+import Account from './pages/Account'
 import DeveloperSettings from './pages/DeveloperSettings'
 import NotFound from './pages/NotFound'
 
@@ -23,6 +24,7 @@ function App() {
                 <Route path="/prompts/:displayId" element={<Stacks />} />
                 <Route path="/blocks" element={<Blocks />} />
                 <Route path="/wildcards" element={<Wildcards />} />
+                <Route path="/account" element={<Account />} />
                 <Route path="/developer-settings" element={<DeveloperSettings />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

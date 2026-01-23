@@ -1,9 +1,12 @@
 import { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainMenu } from "./MainMenu";
 import { ErrorBanner } from "./ErrorBanner";
 import { ParallaxCircle } from "./ParallaxCircle";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
+import { AnimatedBorderButton } from './AnimatedBorderButton'
+import { RasterIcon } from './RasterIcon'
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,6 +14,7 @@ interface LayoutProps {
 
 function LayoutContent({ children }: LayoutProps) {
   const { isOpen } = useMenu();
+  const navigate = useNavigate();
 
   return (
     <div
@@ -44,6 +48,11 @@ function LayoutContent({ children }: LayoutProps) {
       />
       <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
       <MainMenu />
+      <AnimatedBorderButton onClick={() => navigate('/account')} position="right">
+        <div className="group-hover:opacity-80 transition-opacity duration-300">
+          <RasterIcon name="user" size={20} />
+        </div>
+      </AnimatedBorderButton>
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>
