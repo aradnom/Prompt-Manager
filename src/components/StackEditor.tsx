@@ -264,11 +264,17 @@ export function StackEditor({ stack }: StackEditorProps) {
     const originalBlock = stackWithBlocks.blocks[blockIndex]
 
     try {
+      // Generate random suffix for display_id (6 character hex string)
+      const randomSuffix = Array.from(crypto.getRandomValues(new Uint8Array(3)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+      const newDisplayId = `${originalBlock.displayId}-${randomSuffix}`
+
       // 1. Create the new block with same properties but new UUID and displayId
       const newBlock = await createBlockMutation.mutateAsync({
         uuid: generateUUID(),
         name: originalBlock.name ?? undefined,
-        displayId: generateDisplayId(),
+        displayId: newDisplayId,
         text: originalBlock.text,
         labels: originalBlock.labels,
         typeId: originalBlock.typeId ?? undefined,
