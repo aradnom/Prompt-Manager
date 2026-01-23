@@ -13,7 +13,10 @@ export interface LLMConfig {
 
 export interface ServerConfig {
   port: number
+  nodeEnv: string
   databaseUrl: string
+  sessionDatabaseUrl: string
+  sessionSecret: string
   llm: LLMConfig
 }
 
@@ -25,9 +28,16 @@ function parseAllowedTargets(envValue: string | undefined): Set<string> {
 export function loadConfig(): ServerConfig {
   return {
     port: parseInt(process.env.PORT || '3001', 10),
+    nodeEnv: process.env.NODE_ENV || 'development',
     databaseUrl:
       process.env.DATABASE_URL ||
       'postgresql://promptuser:promptpass@localhost:5432/prompt_manager',
+    sessionDatabaseUrl:
+      process.env.SESSION_DATABASE_URL ||
+      'redis://localhost:6379/0',
+    sessionSecret:
+      process.env.SESSION_SECRET ||
+      'change-this-to-a-random-secret-in-production',
     llm: {
       allowedTargets: parseAllowedTargets(process.env.LLM_ALLOWED_TARGETS),
       lmStudioUrl: process.env.LM_STUDIO_URL || 'http://localhost:11434/v1',
