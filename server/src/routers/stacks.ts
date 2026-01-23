@@ -65,6 +65,16 @@ export const stacksRouter = router({
       return ctx.storage.updateStack(id, updates)
     }),
 
+  duplicate: publicProcedure
+    .input(
+      z.object({
+        id: z.number(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return ctx.storage.duplicateStack(input.id)
+    }),
+
   setActiveRevision: publicProcedure
     .input(
       z.object({

@@ -39,6 +39,7 @@ export interface IStorageAdapter {
   getStack(id: number, options?: GetStackOptions): Promise<BlockStack | StackWithBlocks | null>
   getStackByUuid(uuid: string, options?: GetStackOptions): Promise<BlockStack | StackWithBlocks | null>
   updateStack(id: number, updates: UpdateStackInput): Promise<BlockStack>
+  duplicateStack(id: number): Promise<BlockStack>
   setActiveStackRevision(stackId: number, revisionId: number): Promise<BlockStack>
   getStackRevisions(stackId: number): Promise<StackRevision[]>
   getCompiledPrompt(displayId: string, userId: number): Promise<string | null>

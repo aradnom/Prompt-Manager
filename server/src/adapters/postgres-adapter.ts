@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect, Selectable, Updateable, sql } from 'kysely'
 import { Pool } from 'pg'
+import crypto from 'crypto'
 import type { Database } from '@/types/database'
 import type {
   Block,
@@ -646,6 +647,97 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const stack = this.mapStack(stackResult)
     stack.blockIds = revQuery?.block_ids || []
     return stack
+  }
+
+  async duplicateStack(id: number): Promise<BlockStack> {
+    return await this.db.transaction().execute(async (trx) => {
+      const now = new Date()
+
+      // 1. Get the original stack with its active revision
+      const originalStack = await trx
+        .selectFrom('stacks')
+        .selectAll()
+        .select((eb) => [
+          eb.fn.coalesce(
+            eb
+              .selectFrom('stack_revisions as active_rev')
+              .select('active_rev.block_ids')
+              .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+              .limit(1),
+            eb
+              .selectFrom('stack_revisions')
+              .select('block_ids')
+              .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+              .orderBy('created_at', 'desc')
+              .limit(1)
+          ).as('block_ids'),
+          eb.fn.coalesce(
+            eb
+              .selectFrom('stack_revisions as active_rev')
+              .select('active_rev.rendered_content')
+              .whereRef('active_rev.id', '=', 'stacks.active_revision_id')
+              .limit(1),
+            eb
+              .selectFrom('stack_revisions')
+              .select('rendered_content')
+              .whereRef('stack_revisions.stack_id', '=', 'stacks.id')
+              .orderBy('created_at', 'desc')
+              .limit(1)
+          ).as('rendered_content')
+        ])
+        .where('stacks.id', '=', id)
+        .executeTakeFirstOrThrow()
+
+      // 2. Generate new UUID and display_id with random suffix
+      const newUuid = crypto.randomUUID()
+      const randomSuffix = crypto.randomBytes(3).toString('hex') // 6 character hex string
+      const newDisplayId = `${originalStack.display_id}-${randomSuffix}`
+
+      // 3. Create the new stack
+      const newStackResult = await trx
+        .insertInto('stacks')
+        .values({
+          uuid: newUuid,
+          name: originalStack.name,
+          display_id: newDisplayId,
+          comma_separated: originalStack.comma_separated,
+          style: originalStack.style,
+          created_at: now,
+          updated_at: now,
+          user_id: originalStack.user_id,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      // 4. Create initial revision with same block_ids and rendered_content
+      const newRevisionResult = await trx
+        .insertInto('stack_revisions')
+        .values({
+          stack_id: newStackResult.id,
+          block_ids: originalStack.block_ids || [],
+          rendered_content: originalStack.rendered_content || null,
+          created_at: now,
+          updated_at: now,
+          user_id: originalStack.user_id,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      // 5. Set the active_revision_id
+      const updatedStackResult = await trx
+        .updateTable('stacks')
+        .set({
+          active_revision_id: newRevisionResult.id,
+          updated_at: now,
+        })
+        .where('id', '=', newStackResult.id)
+        .returningAll()
+        .executeTakeFirstOrThrow()
+
+      const stack = this.mapStack(updatedStackResult)
+      stack.blockIds = originalStack.block_ids || []
+      return stack
+    })
   }
 
   async setActiveStackRevision(stackId: number, revisionId: number): Promise<BlockStack> {

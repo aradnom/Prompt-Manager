@@ -88,6 +88,11 @@ export default function Stacks() {
       navigate('/prompts')
     },
   })
+  const duplicateMutation = api.stacks.duplicate.useMutation({
+    onSuccess: () => {
+      refetch()
+    },
+  })
   const setActiveRevisionMutation = api.stacks.setActiveRevision.useMutation({
     onSuccess: () => {
       utils.stacks.list.invalidate()
@@ -119,6 +124,10 @@ export default function Stacks() {
   const handleMakeActive = (stack: Stack) => {
     setActiveStack(stack)
     navigate('/')
+  }
+
+  const handleDuplicate = (id: number) => {
+    duplicateMutation.mutate({ id })
   }
 
   const handleStackClick = (stackId: number, stack: Stack) => {
@@ -343,6 +352,28 @@ export default function Stacks() {
                           </CardDescription>
                         </div>
                         <div className="flex gap-2 items-center">
+                          
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDuplicate(stack.id)
+                                  }}
+                                  disabled={duplicateMutation.isPending}
+                                  className="cursor-pointer"
+                                >
+                                  Duplicate Prompt
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Creates a shallow copy (references same blocks)
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <Button
                             variant="default"
                             size="sm"
