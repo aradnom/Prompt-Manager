@@ -4,6 +4,7 @@ CREATE TABLE users (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username character varying(255),
     email character varying(255),
+    token character varying(255) UNIQUE,
     api_key character varying(255),
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
