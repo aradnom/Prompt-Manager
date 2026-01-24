@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { HeroInput } from '@/components/ui/hero-input';
 import { Button } from '@/components/ui/button';
+import { useSession } from '@/contexts/SessionContext';
 
-export function CreateAccountOrLogin() {
+interface CreateAccountOrLoginProps {
+  onAccountCreated?: (token: string) => void;
+}
+
+export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginProps) {
   const [token, setToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { checkSession } = useSession();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +28,9 @@ export function CreateAccountOrLogin() {
       if (!response.ok) {
         throw new Error('Failed to log in');
       }
+
+      // Update session context
+      await checkSession();
     } catch (error) {
       console.error('Error logging in:', error);
     } finally {
@@ -45,7 +54,14 @@ export function CreateAccountOrLogin() {
       }
 
       const data = await response.json();
-      console.log('Account created successfully:', data);
+
+      // Update session context
+      await checkSession();
+
+      // Notify parent component
+      if (onAccountCreated) {
+        onAccountCreated(data.token);
+      }
     } catch (error) {
       console.error('Error creating account:', error);
     } finally {
@@ -61,7 +77,7 @@ export function CreateAccountOrLogin() {
           <HeroInput
             value={token}
             onChange={setToken}
-            placeholder="Enter your token (XXXX-XXXX-XXXX)"
+            placeholder="Enter your Account ID (XXXX-XXXX-XXXX)"
             className="flex-1"
             tokenFormatting
           />
@@ -79,10 +95,10 @@ export function CreateAccountOrLogin() {
       {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-cyan-medium/30"></div>
+          <div className="w-full border-t border-cyan-medium/50"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-background text-cyan-medium">or</span>
+          <span className="px-4 bg-background text-cyan-medium font-bold">or</span>
         </div>
       </div>
 
