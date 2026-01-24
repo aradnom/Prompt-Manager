@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import type { BlockStack, BlockWithRevisions } from '@/types/schema'
 import { api } from '@/lib/api'
 import { storage } from '@/lib/storage'
+import { useSession } from '@/contexts/SessionContext'
 
 interface ActiveStackContextType {
   activeStack: BlockStack | null
@@ -16,12 +17,25 @@ export function ActiveStackProvider({ children }: { children: ReactNode }) {
   const [activeStack, _setActiveStack] = useState<BlockStack | null>(null)
   const [activeStackBlocks, setActiveStackBlocks] = useState<BlockWithRevisions[]>([])
   const [storedId, setStoredId] = useState<number | null>(null)
+  const { userId, isAuthenticated } = useSession()
+
+  // Clear active stack when user changes or logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      _setActiveStack(null)
+      setActiveStackBlocks([])
+      setStoredId(null)
+      storage.clearActiveStackId()
+    }
+  }, [userId, isAuthenticated])
 
   useEffect(() => {
-    storage.getActiveStackId().then((id) => {
-      if (id) setStoredId(id)
-    })
-  }, [])
+    if (isAuthenticated) {
+      storage.getActiveStackId().then((id) => {
+        if (id) setStoredId(id)
+      })
+    }
+  }, [isAuthenticated])
 
   const { data: fetchedStack } = api.stacks.get.useQuery(
     { id: storedId! },
