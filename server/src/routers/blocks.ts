@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { router, publicProcedure } from '@server/trpc'
+import { router, protectedProcedure } from '@server/trpc'
 
 export const blocksRouter = router({
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
@@ -21,47 +21,76 @@ export const blocksRouter = router({
       })
     }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getBlock(input.id)
+      const block = await ctx.storage.getBlock(input.id)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return block
     }),
 
-  getByUuid: publicProcedure
+  getByUuid: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getBlockByUuid(input.uuid)
+      const block = await ctx.storage.getBlockByUuid(input.uuid)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return block
     }),
 
-  getWithRevisions: publicProcedure
+  getWithRevisions: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getBlockWithRevisions(input.id)
+      const blockWithRevisions = await ctx.storage.getBlockWithRevisions(input.id)
+      if (!blockWithRevisions) {
+        throw new Error('Block not found')
+      }
+      if (blockWithRevisions.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return blockWithRevisions
     }),
 
-  getRevisions: publicProcedure
+  getRevisions: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .query(async ({ input, ctx }) => {
+      // Check block ownership first
+      const block = await ctx.storage.getBlock(input.id)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.getRevisions(input.id)
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -75,10 +104,18 @@ export const blocksRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, ...updates } = input
+      // Check ownership first
+      const block = await ctx.storage.getBlock(id)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.updateBlock(id, updates)
     }),
 
-  setActiveRevision: publicProcedure
+  setActiveRevision: protectedProcedure
     .input(
       z.object({
         blockId: z.number(),
@@ -86,25 +123,41 @@ export const blocksRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check ownership first
+      const block = await ctx.storage.getBlock(input.blockId)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.setActiveRevision(input.blockId, input.revisionId)
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check ownership first
+      const block = await ctx.storage.getBlock(input.id)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       await ctx.storage.deleteBlock(input.id)
       return { success: true }
     }),
 
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.storage.listBlocks(ctx.userId)
   }),
 
-  search: publicProcedure
+  search: protectedProcedure
     .input(
       z.object({
         query: z.string().optional(),

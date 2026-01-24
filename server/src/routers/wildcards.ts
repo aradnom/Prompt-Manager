@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { router, publicProcedure } from '@server/trpc'
+import { router, protectedProcedure } from '@server/trpc'
 
 export const wildcardsRouter = router({
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
@@ -20,27 +20,41 @@ export const wildcardsRouter = router({
       })
     }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getWildcard(input.id)
+      const wildcard = await ctx.storage.getWildcard(input.id)
+      if (!wildcard) {
+        throw new Error('Wildcard not found')
+      }
+      if (wildcard.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return wildcard
     }),
 
-  getByUuid: publicProcedure
+  getByUuid: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getWildcardByUuid(input.uuid)
+      const wildcard = await ctx.storage.getWildcardByUuid(input.uuid)
+      if (!wildcard) {
+        throw new Error('Wildcard not found')
+      }
+      if (wildcard.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return wildcard
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -52,25 +66,41 @@ export const wildcardsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, ...updates } = input
+      // Check ownership first
+      const wildcard = await ctx.storage.getWildcard(id)
+      if (!wildcard) {
+        throw new Error('Wildcard not found')
+      }
+      if (wildcard.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.updateWildcard(id, updates)
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check ownership first
+      const wildcard = await ctx.storage.getWildcard(input.id)
+      if (!wildcard) {
+        throw new Error('Wildcard not found')
+      }
+      if (wildcard.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       await ctx.storage.deleteWildcard(input.id)
       return { success: true }
     }),
 
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.storage.listWildcards(ctx.userId)
   }),
 
-  search: publicProcedure
+  search: protectedProcedure
     .input(
       z.object({
         query: z.string().optional(),

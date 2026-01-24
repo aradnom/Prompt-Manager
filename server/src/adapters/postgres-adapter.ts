@@ -1135,10 +1135,11 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db.transaction().execute(async (trx) => {
       const now = new Date()
 
-      // Get current block_ids (from active revision if set, otherwise latest)
+      // Get current block_ids and user_id (from active revision if set, otherwise latest)
       const currentRev = await trx
         .selectFrom('stacks')
         .select((eb) => [
+          'stacks.user_id',
           eb.fn.coalesce(
             eb
               .selectFrom('stack_revisions as active_rev')
@@ -1180,7 +1181,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           rendered_content: renderedContent || null,
           created_at: now,
           updated_at: now,
-          user_id: null
+          user_id: currentRev?.user_id ?? null
         })
         .returningAll()
         .executeTakeFirstOrThrow()
@@ -1201,10 +1202,11 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db.transaction().execute(async (trx) => {
       const now = new Date()
 
-      // Get current block_ids (from active revision if set, otherwise latest)
+      // Get current block_ids and user_id (from active revision if set, otherwise latest)
       const currentRev = await trx
         .selectFrom('stacks')
         .select((eb) => [
+          'stacks.user_id',
           eb.fn.coalesce(
             eb
               .selectFrom('stack_revisions as active_rev')
@@ -1235,7 +1237,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           rendered_content: renderedContent || null,
           created_at: now,
           updated_at: now,
-          user_id: null
+          user_id: currentRev?.user_id ?? null
         })
         .returningAll()
         .executeTakeFirstOrThrow()

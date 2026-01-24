@@ -1,11 +1,11 @@
 import { z } from 'zod'
-import { router, publicProcedure } from '@server/trpc'
+import { router, protectedProcedure } from '@server/trpc'
 
 const llmTargetSchema = z.enum(['lm-studio', 'openai', 'anthropic', 'vertex'])
 const outputStyleSchema = z.enum(['t5', 'clip']).nullable().optional()
 
 export const llmRouter = router({
-  transform: publicProcedure
+  transform: protectedProcedure
     .input(
       z.object({
         text: z.string(),

@@ -2,16 +2,18 @@ import { z } from 'zod'
 import { router, publicProcedure } from '@server/trpc'
 
 export const typesRouter = router({
-  create: publicProcedure
-    .input(
-      z.object({
-        name: z.string(),
-        description: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      return ctx.storage.createType(input.name, input.description)
-    }),
+  // For the moment I think we'll just add new types manually in the DB as
+  // needed, which shouldn't be often
+  // create: protectedProcedure
+  //   .input(
+  //     z.object({
+  //       name: z.string(),
+  //       description: z.string().optional(),
+  //     })
+  //   )
+  //   .mutation(async ({ input, ctx }) => {
+  //     return ctx.storage.createType(input.name, input.description)
+  //   }),
 
   get: publicProcedure
     .input(

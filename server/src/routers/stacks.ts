@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { router, publicProcedure } from '@server/trpc'
+import { router, protectedProcedure } from '@server/trpc'
 
 export const stacksRouter = router({
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
@@ -20,7 +20,7 @@ export const stacksRouter = router({
       })
     }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -29,13 +29,20 @@ export const stacksRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getStack(input.id, {
+      const stack = await ctx.storage.getStack(input.id, {
         includeBlocks: input.includeBlocks,
         includeRevisions: input.includeRevisions,
       })
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return stack
     }),
 
-  getByUuid: publicProcedure
+  getByUuid: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
@@ -44,13 +51,20 @@ export const stacksRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getStackByUuid(input.uuid, {
+      const stack = await ctx.storage.getStackByUuid(input.uuid, {
         includeBlocks: input.includeBlocks,
         includeRevisions: input.includeRevisions,
       })
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+      return stack
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -62,20 +76,36 @@ export const stacksRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, ...updates } = input
+      // Check ownership first
+      const stack = await ctx.storage.getStack(id)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.updateStack(id, updates)
     }),
 
-  duplicate: publicProcedure
+  duplicate: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check ownership first
+      const stack = await ctx.storage.getStack(input.id)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.duplicateStack(input.id)
     }),
 
-  setActiveRevision: publicProcedure
+  setActiveRevision: protectedProcedure
     .input(
       z.object({
         stackId: z.number(),
@@ -83,35 +113,59 @@ export const stacksRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check ownership first
+      const stack = await ctx.storage.getStack(input.stackId)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.setActiveStackRevision(input.stackId, input.revisionId)
     }),
 
-  getRevisions: publicProcedure
+  getRevisions: protectedProcedure
     .input(
       z.object({
         stackId: z.number(),
       })
     )
     .query(async ({ input, ctx }) => {
+      // Check stack ownership first
+      const stack = await ctx.storage.getStack(input.stackId)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.getStackRevisions(input.stackId)
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.number(),
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check ownership first
+      const stack = await ctx.storage.getStack(input.id)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       await ctx.storage.deleteStack(input.id)
       return { success: true }
     }),
 
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.storage.listStacks(ctx.userId)
   }),
 
-  search: publicProcedure
+  search: protectedProcedure
     .input(
       z.object({
         query: z.string().optional(),
@@ -126,7 +180,7 @@ export const stacksRouter = router({
       )
     }),
 
-  addBlock: publicProcedure
+  addBlock: protectedProcedure
     .input(
       z.object({
         stackId: z.number(),
@@ -136,11 +190,19 @@ export const stacksRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check stack ownership first
+      const stack = await ctx.storage.getStack(input.stackId)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       await ctx.storage.addBlockToStack(input.stackId, input.blockId, input.order, input.renderedContent)
       return { success: true }
     }),
 
-  removeBlock: publicProcedure
+  removeBlock: protectedProcedure
     .input(
       z.object({
         stackId: z.number(),
@@ -149,11 +211,19 @@ export const stacksRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check stack ownership first
+      const stack = await ctx.storage.getStack(input.stackId)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       await ctx.storage.removeBlockFromStack(input.stackId, input.blockId, input.renderedContent)
       return { success: true }
     }),
 
-  reorderBlocks: publicProcedure
+  reorderBlocks: protectedProcedure
     .input(
       z.object({
         stackId: z.number(),
@@ -162,11 +232,19 @@ export const stacksRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check stack ownership first
+      const stack = await ctx.storage.getStack(input.stackId)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       await ctx.storage.reorderStackBlocks(input.stackId, input.blockIds, input.renderedContent)
       return { success: true }
     }),
 
-  updateContent: publicProcedure
+  updateContent: protectedProcedure
     .input(
       z.object({
         stackId: z.number(),
@@ -174,12 +252,19 @@ export const stacksRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      // Check stack ownership first
+      const stack = await ctx.storage.getStack(input.stackId)
+      if (!stack) {
+        throw new Error('Stack not found')
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
+
       await ctx.storage.updateStackRevisionContent(input.stackId, input.renderedContent)
 
-      // Get stack info for SSE notification
-      const stack = await ctx.storage.getStack(input.stackId)
-      if (stack && ctx.userId) {
-        // Import notifyStackUpdate from index
+      // Send SSE notification
+      if (ctx.userId) {
         const { notifyStackUpdate } = await import('@server/index')
         notifyStackUpdate(ctx.userId, stack.displayId, input.renderedContent)
       }

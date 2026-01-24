@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { router, publicProcedure } from '@server/trpc'
+import { router, protectedProcedure } from '@server/trpc'
 
 export const revisionsRouter = router({
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         blockId: z.number(),
@@ -17,13 +17,21 @@ export const revisionsRouter = router({
       })
     }),
 
-  list: publicProcedure
+  list: protectedProcedure
     .input(
       z.object({
         blockId: z.number(),
       })
     )
     .query(async ({ input, ctx }) => {
+      // Check block ownership first
+      const block = await ctx.storage.getBlock(input.blockId)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+      if (block.userId !== ctx.userId) {
+        throw new Error('Unauthorized')
+      }
       return ctx.storage.getRevisions(input.blockId)
     }),
 })
