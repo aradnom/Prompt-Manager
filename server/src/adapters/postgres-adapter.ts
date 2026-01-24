@@ -19,7 +19,7 @@ import type {
   CreateWildcardInput,
   UpdateWildcardInput,
 } from '@/types/schema'
-import type { IStorageAdapter, GetStackOptions, SearchBlocksOptions, SearchStacksOptions, SearchWildcardsOptions } from '@server/adapters/storage-adapter.interface'
+import type { IStorageAdapter, GetStackOptions, SearchBlocksOptions, SearchStacksOptions, SearchWildcardsOptions, User, CreateUserInput } from '@server/adapters/storage-adapter.interface'
 
 export class PostgresStorageAdapter implements IStorageAdapter {
   private db: Kysely<Database>
@@ -46,6 +46,66 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .executeTakeFirst()
 
     return result?.id ?? null
+  }
+
+  async getUserById(id: number): Promise<User | null> {
+    const result = await this.db
+      .selectFrom('users')
+      .selectAll()
+      .where('id', '=', id)
+      .executeTakeFirst()
+
+    if (!result) {
+      return null
+    }
+
+    return {
+      id: result.id,
+      tokenHash: result.token_hash,
+      accountData: result.account_data as Record<string, string> | null,
+      apiKey: result.api_key,
+    }
+  }
+
+  async getUserByTokenHash(tokenHash: string): Promise<User | null> {
+    const result = await this.db
+      .selectFrom('users')
+      .selectAll()
+      .where('token_hash', '=', tokenHash)
+      .executeTakeFirst()
+
+    if (!result) {
+      return null
+    }
+
+    return {
+      id: result.id,
+      tokenHash: result.token_hash,
+      accountData: result.account_data as Record<string, string> | null,
+      apiKey: result.api_key,
+    }
+  }
+
+  async createUser(input: CreateUserInput): Promise<User> {
+    const now = new Date()
+
+    const result = await this.db
+      .insertInto('users')
+      .values({
+        token_hash: input.tokenHash,
+        account_data: JSON.stringify(input.accountData),
+        created_at: now,
+        updated_at: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    return {
+      id: result.id,
+      tokenHash: result.token_hash,
+      accountData: result.account_data as Record<string, string> | null,
+      apiKey: result.api_key,
+    }
   }
 
   async createBlock(input: CreateBlockInput): Promise<Block> {

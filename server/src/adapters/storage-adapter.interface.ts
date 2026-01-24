@@ -16,9 +16,24 @@ import type {
   UpdateWildcardInput,
 } from '@/types/schema'
 
+export interface User {
+  id: number
+  tokenHash: string | null
+  accountData: Record<string, string> | null
+  apiKey: string | null
+}
+
+export interface CreateUserInput {
+  tokenHash: string
+  accountData: Record<string, string>
+}
+
 export interface IStorageAdapter {
   initialize(): Promise<void>
 
+  createUser(input: CreateUserInput): Promise<User>
+  getUserById(id: number): Promise<User | null>
+  getUserByTokenHash(tokenHash: string): Promise<User | null>
   getUserIdByApiKey(apiKey: string): Promise<number | null>
 
   createBlock(input: CreateBlockInput): Promise<Block>
