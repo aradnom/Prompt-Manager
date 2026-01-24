@@ -1,5 +1,7 @@
 import { motion } from 'motion/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { RasterIcon } from '@/components/RasterIcon'
+
 
 export default function WhatIsThis() {
   return (
@@ -9,7 +11,10 @@ export default function WhatIsThis() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold mb-2">What is This Thing?</h1>
+        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+          <RasterIcon name="question-mark" size={36} />
+          What is This Thing?
+        </h1>
         <p className="text-cyan-medium mb-8">
           <mark className="highlighted-text">A brief guide to Prompt Manager</mark>
         </p>
