@@ -4,10 +4,11 @@ import { ReactNode } from 'react'
 interface AnimatedBorderButtonProps {
   onClick: () => void
   position: 'left' | 'right'
+  color?: string,
   children: ReactNode
 }
 
-export function AnimatedBorderButton({ onClick, position, children }: AnimatedBorderButtonProps) {
+export function AnimatedBorderButton({ onClick, position, color = 'border-magenta-dark', children }: AnimatedBorderButtonProps) {
   const positionClass = position === 'left' ? 'left-4' : 'right-4'
 
   return (
@@ -20,7 +21,7 @@ export function AnimatedBorderButton({ onClick, position, children }: AnimatedBo
     >
       {/* Animated circular border using scale instead of border-width for smooth animation */}
       <motion.div
-        className="absolute inset-0 rounded-full border-2 border-magenta-dark"
+        className={`absolute inset-0 rounded-full border-2 ${color}`}
         variants={{
           initial: { scale: 0, opacity: 0 },
           hover: { scale: 1, opacity: 1 },
