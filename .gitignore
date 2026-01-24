@@ -30,3 +30,5 @@ server/auth/*.json
 *.njsproj
 *.sln
 *.sw?
+
+design-dump
