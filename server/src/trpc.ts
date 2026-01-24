@@ -37,8 +37,6 @@ const isAuthed = t.middleware(({ ctx, next }) => {
     throw new Error('Not authenticated')
   }
 
-  console.log(ctx.userId);
-
   return next({
     ctx: {
       ...ctx,

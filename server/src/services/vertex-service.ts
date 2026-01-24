@@ -1,3 +1,8 @@
+/**
+ * This works, but deprecated in favor of vertex-service-genai.ts, which is
+ * newer and easier to live with.
+ */
+
 import { VertexAI } from '@google-cloud/vertexai'
 import { LLMConfig } from '@server/config'
 import fs from 'fs'
