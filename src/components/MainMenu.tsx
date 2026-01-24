@@ -29,6 +29,7 @@ export function MainMenu() {
     { path: "/prompts", label: "Prompts", icon: "books" },
     { path: "/blocks", label: "Blocks", icon: "blocks" },
     { path: "/wildcards", label: "Wildcards", icon: "dice" },
+    { path: "/what-is-this", label: "What is This Thing?", icon: "" },
   ];
 
   // Only add dev settings if explicitly enabled (not during loading)
@@ -97,7 +98,7 @@ export function MainMenu() {
                   className="w-full justify-start hover:bg-cyan-medium/30"
                   disabled={item.disabled}
                 >
-                  <RasterIcon name={item.icon} size={20} className="mr-2" />
+                  {item.icon && <RasterIcon name={item.icon} size={20} className="mr-2" />}
                   {item.label}
                   {item.disabled && (
                     <span className="ml-auto text-xs text-cyan-medium">
