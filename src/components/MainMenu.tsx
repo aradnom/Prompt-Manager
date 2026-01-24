@@ -29,7 +29,7 @@ export function MainMenu() {
     { path: "/prompts", label: "Prompts", icon: "books" },
     { path: "/blocks", label: "Blocks", icon: "blocks" },
     { path: "/wildcards", label: "Wildcards", icon: "dice" },
-    { path: "/what-is-this", label: "What is This Thing?", icon: "" },
+    { path: "/what-is-this", label: "What is This Thing?", icon: "question-mark" },
   ];
 
   // Only add dev settings if explicitly enabled (not during loading)
