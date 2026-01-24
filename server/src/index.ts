@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import session from 'express-session'
 import { RedisStore } from 'connect-redis'
 import { createClient } from 'redis'
@@ -11,7 +12,8 @@ import { appRouter } from '@server/routers'
 import { loadConfig } from '@server/config'
 import { LLMService } from '@server/services/llm-service'
 import { validateKey } from '@server/lib/api-key'
-import { generateToken } from '@server/lib/token-generator'
+import { generateToken, hashToken, encryptAccountData, decryptAccountData, generateSessionKey, encryptDerivedKey, deriveEncryptionKey, decrypt } from '@server/lib/auth'
+import { withDerivedKey } from '@server/middleware/account-data'
 
 // SSE connection manager
 const sseClients = new Map<number, Set<express.Response>>()
@@ -76,6 +78,7 @@ async function main() {
     app.use(cors())
   }
   app.use(express.json())
+  app.use(cookieParser())
 
   // Initialize Redis client for sessions
   const redisClient = createClient({
@@ -97,7 +100,7 @@ async function main() {
       store: redisStore,
       secret: config.sessionSecret,
       resave: false,
-      saveUninitialized: true,
+      saveUninitialized: false,
       cookie: {
         secure: config.nodeEnv !== 'development',
         httpOnly: true,
@@ -105,15 +108,6 @@ async function main() {
       },
     })
   )
-
-  // Token initialization middleware - generate token for new sessions
-  app.use((req, _res, next) => {
-    if (!req.session.token) {
-      req.session.token = generateToken()
-      console.debug(`Generated new token for session: ${req.session.token}`)
-    }
-    next()
-  })
 
   const storage = new PostgresStorageAdapter(config.databaseUrl)
   const llmService = new LLMService(config.llm)
@@ -230,13 +224,200 @@ async function main() {
     })
   })
 
-  // Token endpoint - returns current session token
-  app.get('/api/auth/token', (req, res) => {
-    if (!req.session.token) {
-      return res.status(500).json({ error: 'No token in session' })
+  // ============================================================================
+  // Authentication Endpoints
+  // ============================================================================
+
+  // Register new account - generates token, creates user, establishes session
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      // Generate new token
+      const token = generateToken()
+
+      // Hash token for database lookup (HMAC-SHA256 - deterministic)
+      const tokenHash = hashToken(token, config.tokenSecret)
+
+      // Create account data with encrypted fields
+      const accountData = await encryptAccountData(
+        {
+          token, // Store plaintext token encrypted so user can retrieve it later
+        },
+        token,
+        config.encryptionSalt
+      )
+
+      // Create user in database
+      const user = await storage.createUser({
+        tokenHash,
+        accountData,
+      })
+
+      // Generate session encryption key
+      const sessionKey = generateSessionKey()
+
+      // Derive the encryption key from the token
+      const derivedKey = await deriveEncryptionKey(token, config.encryptionSalt)
+
+      // Encrypt the derived key with the session key and store in session
+      const encryptedDerivedKey = encryptDerivedKey(derivedKey, sessionKey)
+
+      // Establish session with encrypted derived key
+      req.session.userId = user.id
+      req.session.encryptedDerivedKey = encryptedDerivedKey
+
+      // Send session key in httpOnly cookie
+      res.cookie('sessionKey', sessionKey, {
+        httpOnly: true,
+        secure: config.nodeEnv !== 'development',
+        sameSite: 'strict',
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+      })
+
+      console.debug(`Created new user account: ${user.id}`)
+
+      // Return plaintext token to user (only time they'll see it unless they log in)
+      res.json({ token })
+    } catch (error) {
+      console.error('Error creating account:', error)
+      res.status(500).json({ error: 'Failed to create account' })
     }
-    res.json({ token: req.session.token })
   })
+
+  // Login - authenticates token, establishes session, returns decrypted account data
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { token } = req.body
+
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ error: 'Token is required' })
+      }
+
+      // Hash the provided token to look up the user (HMAC-SHA256 - deterministic)
+      const tokenHash = hashToken(token, config.tokenSecret)
+
+      // Find user by token hash
+      const user = await storage.getUserByTokenHash(tokenHash)
+
+      if (!user) {
+        console.debug('Unable to find user for passed token')
+        return res.status(401).json({ error: 'Invalid token' })
+      }
+
+      // Decrypt account data using the token
+      if (!user.accountData) {
+        console.debug('Unable to decrypt user account data');
+
+        return res.status(500).json({ error: 'Account data not found' })
+      }
+
+      const decryptedData = await decryptAccountData(user.accountData, token, config.encryptionSalt)
+
+      // Generate session encryption key
+      const sessionKey = generateSessionKey()
+
+      // Derive the encryption key from the token
+      const derivedKey = await deriveEncryptionKey(token, config.encryptionSalt)
+
+      // Encrypt the derived key with the session key and store in session
+      const encryptedDerivedKey = encryptDerivedKey(derivedKey, sessionKey)
+
+      // Establish session with encrypted derived key
+      req.session.userId = user.id
+      req.session.encryptedDerivedKey = encryptedDerivedKey
+
+      // Send session key in httpOnly cookie
+      res.cookie('sessionKey', sessionKey, {
+        httpOnly: true,
+        secure: config.nodeEnv !== 'development',
+        sameSite: 'strict',
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+      })
+
+      console.debug(`User logged in: ${user.id}`)
+
+      // Return decrypted account data so user can view their token
+      res.json({ accountData: decryptedData })
+    } catch (error) {
+      console.error('Error during login:', error)
+      res.status(500).json({ error: 'Failed to log in' })
+    }
+  })
+
+  // Logout - destroys session
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      const userId = req.session.userId
+
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err)
+          return res.status(500).json({ error: 'Failed to log out' })
+        }
+
+        // Clear the session key cookie
+        res.clearCookie('sessionKey')
+        res.clearCookie('connect.sid')
+
+        if (userId) {
+          console.debug(`User logged out: ${userId}`)
+        }
+
+        res.json({ success: true })
+      })
+    } catch (error) {
+      console.error('Error during logout:', error)
+      res.status(500).json({ error: 'Failed to log out' })
+    }
+  })
+
+  // Get current session status
+  app.get('/api/auth/session', async (req, res) => {
+    try {
+      const userId = req.session.userId
+
+      if (!userId) {
+        return res.json({ authenticated: false })
+      }
+
+      res.json({ authenticated: true, userId })
+    } catch (error) {
+      console.error('Error checking session:', error)
+      res.status(500).json({ error: 'Failed to check session' })
+    }
+  })
+
+  // Get account data (requires authenticated session with sessionKey cookie)
+  app.get('/api/auth/account', withDerivedKey, async (req, res) => {
+    try {
+      const userId = req.session.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
+
+      // Get user from database
+      const user = await storage.getUserById(userId)
+      if (!user || !user.accountData) {
+        return res.status(404).json({ error: 'User or account data not found' })
+      }
+
+      // Decrypt account data using the derived key from middleware
+      const derivedKey = req.derivedKey!
+      const decryptedData: Record<string, string> = {}
+
+      for (const [field, encryptedValue] of Object.entries(user.accountData)) {
+        decryptedData[field] = decrypt(encryptedValue, derivedKey)
+      }
+
+      res.json({ accountData: decryptedData })
+    } catch (error) {
+      console.error('Error fetching account data:', error)
+      res.status(500).json({ error: 'Failed to fetch account data' })
+    }
+  })
+
+  // ============================================================================
+  // Health Check
+  // ============================================================================
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' })
