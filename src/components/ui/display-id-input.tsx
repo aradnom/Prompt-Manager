@@ -15,7 +15,8 @@ export const DisplayIdInput = forwardRef<HTMLInputElement, DisplayIdInputProps>(
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const normalized = e.target.value
         .toLowerCase()
-        .replace(/\s+/g, '-')
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .replace(/[^\p{L}\p{N}-]/gu, '') // Remove anything that's not a letter, number, or dash
       onChange(normalized)
     }
 
