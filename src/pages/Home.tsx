@@ -47,7 +47,7 @@ function HomeContent() {
           </p>
         </motion.div>
 
-        <HorizontalRule parallax />
+        {!activeStack && <HorizontalRule parallax />}
 
         {isLoading ? (
           <div className="mt-12">
