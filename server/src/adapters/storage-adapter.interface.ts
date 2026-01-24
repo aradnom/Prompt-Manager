@@ -42,6 +42,7 @@ export interface IStorageAdapter {
   updateBlock(id: number, updates: UpdateBlockInput): Promise<Block>
   deleteBlock(id: number): Promise<void>
   listBlocks(userId?: number): Promise<Block[]>
+  countBlocks(userId?: number): Promise<number>
   searchBlocks(options: SearchBlocksOptions, userId?: number): Promise<Block[]>
 
   createRevision(input: CreateRevisionInput): Promise<BlockRevision>
@@ -61,6 +62,7 @@ export interface IStorageAdapter {
   getRenderedPrompt(displayId: string, userId: number): Promise<string | null>
   deleteStack(id: number): Promise<void>
   listStacks(userId?: number): Promise<BlockStack[]>
+  countStacks(userId?: number): Promise<number>
   searchStacks(options: SearchStacksOptions, userId?: number): Promise<BlockStack[]>
 
   addBlockToStack(stackId: number, blockId: number, order?: number, renderedContent?: string): Promise<void>

@@ -427,6 +427,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     })
   }
 
+  async countBlocks(userId?: number): Promise<number> {
+    let query = this.db
+      .selectFrom('blocks')
+      .select((eb) => eb.fn.countAll<number>().as('count'))
+
+    if (userId !== undefined) {
+      query = query.where('blocks.user_id', '=', userId)
+    }
+
+    const result = await query.executeTakeFirst()
+    return Number(result?.count ?? 0)
+  }
+
   async searchBlocks(options: SearchBlocksOptions, userId?: number): Promise<Block[]> {
     let qb = this.db
       .selectFrom('blocks')
@@ -952,6 +965,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         stack.blockIds = r.block_ids || []
         return stack
     })
+  }
+
+  async countStacks(userId?: number): Promise<number> {
+    let query = this.db
+      .selectFrom('stacks')
+      .select((eb) => eb.fn.countAll<number>().as('count'))
+
+    if (userId !== undefined) {
+      query = query.where('stacks.user_id', '=', userId)
+    }
+
+    const result = await query.executeTakeFirst()
+    return Number(result?.count ?? 0)
   }
 
   async searchStacks(options: SearchStacksOptions, userId?: number): Promise<BlockStack[]> {
