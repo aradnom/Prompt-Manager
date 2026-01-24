@@ -16,11 +16,13 @@ export const buttonVariants = cva(
           "border border-cyan-medium bg-background hover:bg-cyan-dark hover:text-foreground",
         ghost: "hover:bg-cyan-dark hover:text-foreground",
         link: "text-foreground underline-offset-4 hover:underline",
+        hero: "bg-gradient-to-r from-magenta-dark to-magenta-light/75 text-foreground hover:from-magenta-medium/90 hover:to-magenta-light/90 hover:border-2 hover:border-magenta-light text-lg font-semibold shadow-lg hover:shadow-xl",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
+        hero: "h-16 rounded-lg px-12",
         icon: "h-10 w-10",
       },
     },
