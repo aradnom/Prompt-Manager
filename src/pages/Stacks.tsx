@@ -32,6 +32,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 export default function Stacks() {
   const [isCreating, setIsCreating] = useState(false)
   const [displayId, setDisplayId] = useState('')
+  const [name, setName] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [stackToDelete, setStackToDelete] = useState<number | null>(null)
   const [activeStackId, setActiveStackId] = useState<number | null>(null)
@@ -42,7 +43,7 @@ export default function Stacks() {
   const { displayId: urlDisplayId } = useParams<{ displayId: string }>()
   const { setActiveStack } = useActiveStack()
 
-  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery()
+  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery({})
 
   // Debounce search input
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function Stacks() {
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
     { enabled: activeStackId !== null }
   )
-  const { data: blocks } = api.blocks.list.useQuery()
+  const { data: blocks } = api.blocks.list.useQuery({})
   const revisionsQuery = api.stacks.getRevisions.useQuery(
     { stackId: showRevisionsForStack! },
     { enabled: showRevisionsForStack !== null }
@@ -79,6 +80,7 @@ export default function Stacks() {
       refetch()
       setIsCreating(false)
       setDisplayId('')
+      setName('')
     },
   })
   const deleteMutation = api.stacks.delete.useMutation({
@@ -106,6 +108,7 @@ export default function Stacks() {
     createMutation.mutate({
       uuid: generateUUID(),
       displayId: displayId.trim(),
+      name: name.trim() || undefined,
     })
   }
 
@@ -228,6 +231,27 @@ export default function Stacks() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">
+                    Name (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Summer Landscape"
+                    className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreate()
+                      if (e.key === 'Escape') {
+                        setIsCreating(false)
+                        setDisplayId('')
+                        setName('')
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
                     Display ID
                   </label>
                   <div className="flex gap-2">
@@ -241,9 +265,9 @@ export default function Stacks() {
                         if (e.key === 'Escape') {
                           setIsCreating(false)
                           setDisplayId('')
+                          setName('')
                         }
                       }}
-                      autoFocus
                     />
                     <Button
                       variant="outline"

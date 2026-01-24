@@ -20,7 +20,7 @@ export default function Blocks() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const { data: blocks, isLoading, refetch } = api.blocks.list.useQuery();
+  const { data: blocks, isLoading, refetch } = api.blocks.list.useQuery({});
 
   // Debounce search input
   useEffect(() => {
