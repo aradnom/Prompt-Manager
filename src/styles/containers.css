@@ -1,0 +1,5 @@
+@layer utilities {
+    .standard-content {
+        @apply p-8 bg-background rounded-lg border-2 border-cyan-dark;
+    }
+}

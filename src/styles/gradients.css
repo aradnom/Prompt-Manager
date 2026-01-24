@@ -27,4 +27,22 @@
     pointer-events: none;
     z-index: 1;
   }
+
+  /* Animated gradient - creates a flowing effect by animating background position */
+  .animate-gradient {
+    background-size: 200% 100%;
+    animation: gradient-flow 3s ease infinite;
+  }
+
+  @keyframes gradient-flow {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
 }

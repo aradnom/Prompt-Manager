@@ -8,6 +8,7 @@
 @import "./styles/borders.css";
 @import "./styles/backgrounds.css";
 @import "./styles/text-styles.css";
+@import "./styles/containers.css";
 @config "../tailwind.config.js";
 
 @theme {
