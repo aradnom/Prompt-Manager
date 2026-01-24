@@ -3,13 +3,14 @@ interface RasterIconProps {
   size?: number
   className?: string
   alt?: string
+  opacity?: number
 }
 
 const icons = import.meta.glob<{ default: string }>('/src/assets/icons/*.webp', {
   eager: true,
 })
 
-export function RasterIcon({ name, size = 20, className = '', alt }: RasterIconProps) {
+export function RasterIcon({ name, size = 20, className = '', alt, opacity }: RasterIconProps) {
   const iconPath = `/src/assets/icons/${name}.webp`
   const iconModule = icons[iconPath]
 
@@ -25,7 +26,7 @@ export function RasterIcon({ name, size = 20, className = '', alt }: RasterIconP
       width={size}
       height={size}
       className={className}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, opacity }}
     />
   )
 }
