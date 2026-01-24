@@ -15,9 +15,8 @@ export interface Context {
 
 export const createContext = (storage: IStorageAdapter, llmService: LLMService, config: ServerConfig) => {
   return ({ req }: CreateExpressContextOptions): Context => {
-    const userId = req.headers['x-user-id']
-      ? parseInt(req.headers['x-user-id'] as string, 10)
-      : 1
+    // Get userId from session (established via login/register)
+    const userId = req.session?.userId
 
     return {
       storage,
@@ -32,5 +31,19 @@ const t = initTRPC.context<Context>().create({
   transformer: superjson,
 })
 
+// Middleware to check if user is authenticated
+const isAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new Error('Not authenticated')
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      userId: ctx.userId, // Now guaranteed to be defined
+    },
+  })
+})
+
 export const router = t.router
 export const publicProcedure = t.procedure
+export const protectedProcedure = t.procedure.use(isAuthed)

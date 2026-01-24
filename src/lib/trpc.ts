@@ -9,6 +9,12 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: '/trpc',
       transformer: superjson,
+      fetch(url, options) {
+        return fetch(url, {
+          ...options,
+          credentials: 'include', // Send cookies with requests
+        })
+      },
     }),
   ],
 })
