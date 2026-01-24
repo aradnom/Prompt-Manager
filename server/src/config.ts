@@ -17,6 +17,8 @@ export interface ServerConfig {
   databaseUrl: string
   sessionDatabaseUrl: string
   sessionSecret: string
+  encryptionSalt: string
+  tokenSecret: string
   llm: LLMConfig
 }
 
@@ -38,6 +40,12 @@ export function loadConfig(): ServerConfig {
     sessionSecret:
       process.env.SESSION_SECRET ||
       'change-this-to-a-random-secret-in-production',
+    encryptionSalt:
+      process.env.ENCRYPTION_SALT ||
+      'change-this-to-a-random-32-char-string',
+    tokenSecret:
+      process.env.TOKEN_SECRET ||
+      'change-this-to-a-random-secret-for-token-hashing',
     llm: {
       allowedTargets: parseAllowedTargets(process.env.LLM_ALLOWED_TARGETS),
       lmStudioUrl: process.env.LM_STUDIO_URL || 'http://localhost:11434/v1',
