@@ -2,7 +2,8 @@ import type { ColumnType } from 'kysely'
 
 export interface UsersTable {
   id: ColumnType<number, never, never>
-  token: ColumnType<string | null, string | null, string | null>
+  token_hash: ColumnType<string | null, string | null, string | null>
+  account_data: ColumnType<Record<string, string> | null, string | null, string | null>
   api_key: ColumnType<string | null, string | null, string | null>
 }
 
