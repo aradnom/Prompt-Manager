@@ -108,6 +108,17 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     }
   }
 
+  async updateUserAccountData(userId: number, accountData: Record<string, string>): Promise<void> {
+    await this.db
+      .updateTable('users')
+      .set({
+        account_data: JSON.stringify(accountData),
+        updated_at: new Date(),
+      })
+      .where('id', '=', userId)
+      .execute()
+  }
+
   async createBlock(input: CreateBlockInput): Promise<Block> {
     const now = new Date()
     

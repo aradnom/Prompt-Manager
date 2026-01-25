@@ -35,6 +35,7 @@ export interface IStorageAdapter {
   getUserById(id: number): Promise<User | null>
   getUserByTokenHash(tokenHash: string): Promise<User | null>
   getUserIdByApiKey(apiKey: string): Promise<number | null>
+  updateUserAccountData(userId: number, accountData: Record<string, string>): Promise<void>
 
   createBlock(input: CreateBlockInput): Promise<Block>
   getBlock(id: number): Promise<Block | null>
