@@ -17,25 +17,25 @@ export function ActiveStackProvider({ children }: { children: ReactNode }) {
   const [activeStack, _setActiveStack] = useState<BlockStack | null>(null)
   const [activeStackBlocks, setActiveStackBlocks] = useState<BlockWithRevisions[]>([])
   const [storedId, setStoredId] = useState<number | null>(null)
-  const { userId, isAuthenticated } = useSession()
+  const { userId, isAuthenticated, isLoading } = useSession()
 
   // Clear active stack when user changes or logs out
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !isLoading) {
       _setActiveStack(null)
       setActiveStackBlocks([])
       setStoredId(null)
       storage.clearActiveStackId()
     }
-  }, [userId, isAuthenticated])
+  }, [userId, isAuthenticated, isLoading])
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && storedId === null) {
       storage.getActiveStackId().then((id) => {
         if (id) setStoredId(id)
       })
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, storedId])
 
   const { data: fetchedStack } = api.stacks.get.useQuery(
     { id: storedId! },
