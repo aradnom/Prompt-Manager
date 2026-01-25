@@ -12,7 +12,7 @@ import { appRouter } from '@server/routers'
 import { loadConfig } from '@server/config'
 import { LLMService } from '@server/services/llm-service'
 import { validateKey } from '@server/lib/api-key'
-import { generateToken, hashToken, encryptAccountData, decryptAccountData, generateSessionKey, encryptDerivedKey, deriveEncryptionKey, decrypt } from '@server/lib/auth'
+import { generateToken, hashToken, encryptAccountData, decryptAccountData, generateSessionKey, encryptDerivedKey, deriveEncryptionKey, decrypt, encrypt } from '@server/lib/auth'
 import { withDerivedKey } from '@server/middleware/account-data'
 
 // SSE connection manager
@@ -405,13 +405,125 @@ async function main() {
       const decryptedData: Record<string, string> = {}
 
       for (const [field, encryptedValue] of Object.entries(user.accountData)) {
+        // Skip apiKeys field - we'll handle it separately
+        if (field === 'apiKeys') continue
         decryptedData[field] = decrypt(encryptedValue, derivedKey)
       }
 
-      res.json({ accountData: decryptedData })
+      // Check which API keys are configured and return model info (without exposing the actual keys)
+      const apiKeyInfo: Record<string, { configured: boolean; model?: string }> = {
+        vertex: { configured: false },
+        openai: { configured: false },
+        anthropic: { configured: false },
+      }
+
+      if (user.accountData.apiKeys) {
+        try {
+          const decryptedApiKeys = decrypt(user.accountData.apiKeys as string, derivedKey)
+          const apiKeys = JSON.parse(decryptedApiKeys) as Record<string, any>
+
+          // Set configuration status and model for each provider
+          for (const provider of Object.keys(apiKeyInfo)) {
+            const providerData = apiKeys[provider]
+            if (providerData && typeof providerData === 'object' && providerData.key) {
+              apiKeyInfo[provider] = {
+                configured: true,
+                model: providerData.model,
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error decrypting API keys for flags:', error)
+          // Leave all as unconfigured if decryption fails
+        }
+      }
+
+      res.json({ accountData: decryptedData, apiKeys: apiKeyInfo })
     } catch (error) {
       console.error('Error fetching account data:', error)
       res.status(500).json({ error: 'Failed to fetch account data' })
+    }
+  })
+
+  // Save API keys (encrypted in account_data.apiKeys)
+  app.post('/api/auth/api-keys', withDerivedKey, async (req, res) => {
+    try {
+      const userId = req.session.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
+
+      const { provider, apiKey, model } = req.body
+      if (!provider) {
+        return res.status(400).json({ error: 'Provider is required' })
+      }
+
+      // Valid providers
+      const validProviders = ['vertex', 'openai', 'anthropic']
+      if (!validProviders.includes(provider)) {
+        return res.status(400).json({ error: 'Invalid provider' })
+      }
+
+      // Get user from database
+      const user = await storage.getUserById(userId)
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' })
+      }
+
+      // Get current account data (already encrypted)
+      const currentAccountData = user.accountData || {}
+
+      // Decrypt apiKeys field if it exists
+      const derivedKey = req.derivedKey!
+      let apiKeys: Record<string, any> = {}
+
+      if (currentAccountData.apiKeys) {
+        try {
+          const decryptedApiKeys = decrypt(currentAccountData.apiKeys as string, derivedKey)
+          apiKeys = JSON.parse(decryptedApiKeys)
+        } catch (error) {
+          console.error('Error decrypting existing API keys:', error)
+          // If decryption fails, start fresh
+          apiKeys = {}
+        }
+      }
+
+      // Check if we're updating an existing provider or creating new
+      const existingProvider = apiKeys[provider]
+
+      // If apiKey is '__PRESERVE__', keep the existing key (for model-only updates)
+      if (apiKey === '__PRESERVE__' && existingProvider && existingProvider.key) {
+        // Just update the model, preserve the key
+        apiKeys[provider] = {
+          key: existingProvider.key,
+          ...(model && { model }),
+        }
+      } else if (apiKey) {
+        // Update or set new API key
+        apiKeys[provider] = {
+          key: apiKey,
+          ...(model && { model }),
+        }
+      } else {
+        return res.status(400).json({ error: 'apiKey is required for new configurations' })
+      }
+
+      // Encrypt the updated apiKeys object
+      const encryptedApiKeys = encrypt(JSON.stringify(apiKeys), derivedKey)
+
+      // Update account data with encrypted apiKeys
+      const updatedAccountData = {
+        ...currentAccountData,
+        apiKeys: encryptedApiKeys,
+      }
+
+      // Update user in database
+      await storage.updateUserAccountData(userId, updatedAccountData)
+
+      res.json({ success: true })
+    } catch (error) {
+      console.error('Error saving API key:', error)
+      res.status(500).json({ error: 'Failed to save API key' })
     }
   })
 
