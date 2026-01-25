@@ -23,7 +23,7 @@ export class LLMService {
     this.vertexService = new VertexServiceGenAI(config)
   }
 
-  async transform(request: TransformRequest): Promise<TransformResponse> {
+  async transform(request: TransformRequest, userApiKey?: string, userModel?: string): Promise<TransformResponse> {
     // Validate target is allowed
     if (!this.config.allowedTargets.has(request.target)) {
       throw new Error(`LLM target '${request.target}' is not enabled`)
@@ -34,7 +34,7 @@ export class LLMService {
       case 'lm-studio':
         return this.transformWithLMStudio(request)
       case 'vertex':
-        return this.vertexService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style))
+        return this.vertexService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       case 'openai':
         throw new Error('OpenAI target not yet implemented')
       case 'anthropic':

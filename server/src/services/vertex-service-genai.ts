@@ -28,17 +28,36 @@ export class VertexServiceGenAI {
     }
   }
 
-  async transform(request: TransformRequest, systemPrompt: string): Promise<TransformResponse> {
-    if (!this.client) {
+  async transform(request: TransformRequest, systemPrompt: string, userApiKey?: string, userModel?: string): Promise<TransformResponse> {
+    // Use user's API key if provided, otherwise use server client
+    let clientToUse: GoogleGenAI | null = this.client
+
+    if (userApiKey) {
+      console.debug('Using user-provided Vertex AI API key')
+      try {
+        clientToUse = new GoogleGenAI({
+          apiKey: userApiKey,
+          vertexai: true,
+          apiVersion: 'v1'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
+      } catch (error) {
+        console.error('Failed to initialize GenAI client with user API key:', error)
+        throw new Error('Failed to initialize with user API key')
+      }
+    }
+
+    if (!clientToUse) {
       throw new Error('Vertex AI (GenAI SDK) is not configured')
     }
 
+    // Use user's model if provided, otherwise use server config model
+    const modelId = userModel || this.config.vertex.model
+
     try {
-      console.debug(`GenAI SDK: Generating content with model: ${this.config.vertex.model}`)
-      
-      const modelId = this.config.vertex.model
-      
-      const response = await this.client.models.generateContent({
+      console.debug(`GenAI SDK: Generating content with model: ${modelId}`)
+
+      const response = await clientToUse.models.generateContent({
         model: modelId,
         contents: [{ role: 'user', parts: [{ text: request.text }] }],
         config: {
