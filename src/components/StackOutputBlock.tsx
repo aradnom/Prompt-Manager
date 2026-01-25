@@ -223,8 +223,8 @@ export function StackOutputBlock() {
   }
 
   return (
-    <Card className={`border-2 border-magenta-medium shadow-lg bg-background ${isMinimized ? 'w-fit ml-auto' : ''}`}>
-      <CardHeader className="bg-magenta-dark/5">
+    <Card className={`border-2 border-magenta-medium shadow-lg bg-background ${isMinimized ? 'w-fit ml-auto border-cyan-medium' : ''}`}>
+      <CardHeader className={`bg-magenta-dark/5 transition-[padding] ${isMinimized ? 'p-2' : ''}`}>
         <div className={`flex items-center ${isMinimized ? 'justify-end' : 'justify-between'}`}>
           {!isMinimized && <CardTitle className="text-xl font-bold">Prompt Output</CardTitle>}
           <div className="flex gap-2 items-center">
@@ -256,15 +256,16 @@ export function StackOutputBlock() {
               Copy
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant={isMinimized ? "outline" : "outline-magenta"}
+              size="xs"
               onClick={() => setIsMinimized(!isMinimized)}
               title={isMinimized ? "Maximize" : "Minimize"}
+              className="absolute -right-2 -top-3"
             >
               {isMinimized ? (
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className="h-4! w-4!" />
               ) : (
-                <Minimize2 className="h-4 w-4" />
+                <Minimize2 className="h-4! w-4!" />
               )}
             </Button>
           </div>
