@@ -26,7 +26,7 @@ export function MainMenu() {
 
   const baseMenuItems: MenuItem[] = [
     { path: "/", label: "Home", icon: "home" },
-    { path: "/prompts", label: "Prompts", icon: "books" },
+    { path: "/prompts", label: "Prompts", icon: "chat" },
     { path: "/blocks", label: "Blocks", icon: "blocks" },
     { path: "/wildcards", label: "Wildcards", icon: "dice" },
     { path: "/what-is-this", label: "What is This Thing?", icon: "question-mark" },
@@ -55,22 +55,9 @@ export function MainMenu() {
   return (
     <>
       <AnimatedBorderButton onClick={() => setOpen(true)} position="left">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-magenta-medium group-hover:text-magenta-light transition-colors duration-300"
-        >
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
+        <div className="opacity-75 group-hover:opacity-100 transition-opacity duration-300">
+          <RasterIcon name="menu" size={20} opacity={0.8} />
+        </div>
       </AnimatedBorderButton>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
