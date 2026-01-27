@@ -54,7 +54,7 @@ export class OpenAIService {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: request.text }
         ],
-        max_completion_tokens: 4096,
+        max_completion_tokens: this.config.maxTokens,
         reasoning_effort: 'minimal'
       }
 

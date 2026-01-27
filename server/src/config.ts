@@ -1,6 +1,7 @@
 export interface LLMConfig {
   allowedTargets: Set<string>
   lmStudioUrl: string
+  maxTokens: number
   vertex: {
     projectId: string
     location: string
@@ -10,6 +11,10 @@ export interface LLMConfig {
     apiKey?: string
   }
   openai: {
+    apiKey?: string
+    model: string
+  }
+  anthropic: {
     apiKey?: string
     model: string
   }
@@ -27,7 +32,7 @@ export interface ServerConfig {
 }
 
 function parseAllowedTargets(envValue: string | undefined): Set<string> {
-  if (!envValue) return new Set(['lm-studio', 'vertex', 'openai'])
+  if (!envValue) return new Set(['lm-studio', 'vertex', 'openai', 'anthropic'])
   return new Set(envValue.split(',').map(t => t.trim()))
 }
 
@@ -53,6 +58,7 @@ export function loadConfig(): ServerConfig {
     llm: {
       allowedTargets: parseAllowedTargets(process.env.LLM_ALLOWED_TARGETS),
       lmStudioUrl: process.env.LM_STUDIO_URL || 'http://localhost:11434/v1',
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192', 10),
       vertex: {
         projectId: process.env.VERTEX_PROJECT_ID || '',
         location: process.env.VERTEX_LOCATION || 'us-central1',
@@ -63,7 +69,11 @@ export function loadConfig(): ServerConfig {
       },
       openai: {
         apiKey: process.env.OPENAI_API_KEY,
-        model: process.env.OPENAI_MODEL || 'gpt-4o',
+        model: process.env.OPENAI_MODEL || 'gpt-5-nano',
+      },
+      anthropic: {
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
       },
     },
   }

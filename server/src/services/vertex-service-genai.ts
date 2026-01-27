@@ -63,7 +63,7 @@ export class VertexServiceGenAI {
         config: {
           systemInstruction: systemPrompt,
           generationConfig: {
-            maxOutputTokens: 2048,
+            maxOutputTokens: this.config.maxTokens,
             temperature: 0.7,
           },
           thinkingConfig: {
