@@ -4,6 +4,7 @@ import type { ServerConfig } from '@server/config'
 import { generateToken, hashToken, encryptAccountData, decryptAccountData, generateSessionKey, encryptDerivedKey, deriveEncryptionKey, decrypt, encrypt } from '@server/lib/auth'
 import { withDerivedKey } from '@server/middleware/account-data'
 import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import Anthropic from '@anthropic-ai/sdk'
 import 'express-session' // Required for session type augmentation
 
 export function registerAuthRoutes(
@@ -474,8 +475,27 @@ export function registerAuthRoutes(
           })
         }
       } else if (provider === 'anthropic') {
-        // TODO: Implement Anthropic key testing
-        res.status(501).json({ error: 'Anthropic key testing not yet implemented' })
+        try {
+          const client = new Anthropic({
+            apiKey: providerData.key,
+          })
+
+          // Minimal message call to test the key
+          await client.messages.create({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'Hi' }],
+          })
+
+          res.json({ success: true, message: 'API key is valid' })
+        } catch (error: any) {
+          console.error('Anthropic API key test failed:', error)
+          res.status(400).json({
+            success: false,
+            error: 'API key test failed',
+            message: error.message || 'Invalid API key or insufficient permissions'
+          })
+        }
       }
     } catch (error) {
       console.error('Error testing API key:', error)

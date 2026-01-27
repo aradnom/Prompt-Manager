@@ -1,6 +1,8 @@
 import { LLMConfig } from '@server/config'
 import { VertexServiceGenAI } from './vertex-service-genai'
 import { OpenAIService } from './openai-service'
+import { AnthropicService } from './anthropic-service'
+import { LMStudioService } from './lm-studio-service'
 
 export type LLMTarget = 'lm-studio' | 'openai' | 'anthropic' | 'vertex'
 export type OutputStyle = 't5' | 'clip' | null
@@ -20,10 +22,14 @@ export interface TransformResponse {
 export class LLMService {
   private vertexService: VertexServiceGenAI
   private openaiService: OpenAIService
+  private anthropicService: AnthropicService
+  private lmStudioService: LMStudioService
 
   constructor(private config: LLMConfig) {
     this.vertexService = new VertexServiceGenAI(config)
     this.openaiService = new OpenAIService(config)
+    this.anthropicService = new AnthropicService(config)
+    this.lmStudioService = new LMStudioService(config)
   }
 
   async transform(request: TransformRequest, userApiKey?: string, userModel?: string): Promise<TransformResponse> {
@@ -35,79 +41,15 @@ export class LLMService {
     // Route to appropriate handler
     switch (request.target) {
       case 'lm-studio':
-        return this.transformWithLMStudio(request)
+        return this.lmStudioService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style))
       case 'vertex':
         return this.vertexService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       case 'openai':
         return this.openaiService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       case 'anthropic':
-        throw new Error('Anthropic target not yet implemented')
+        return this.anthropicService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       default:
         throw new Error(`Unknown LLM target: ${request.target}`)
-    }
-  }
-
-  private async transformWithLMStudio(request: TransformRequest): Promise<TransformResponse> {
-    const systemPrompt = this.buildSystemPrompt(request.operation, request.text, request.style)
-
-    try {
-      const response = await fetch(`${this.config.lmStudioUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt,
-            },
-            {
-              role: 'user',
-              content: request.text,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: -1,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`LM Studio API error: ${response.status} ${response.statusText}`)
-      }
-
-      const data = (await response.json()) as { choices?: { message?: { content?: string } }[] }
-      let result = data.choices?.[0]?.message?.content
-
-      if (!result) {
-        throw new Error('No response from LM Studio')
-      }
-
-      // Strip out <think></think> tags and their contents (reasoning model artifacts)
-      result = result.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
-
-      // For explore and generate operations, parse the numbered list into an array
-      if (request.operation === 'explore' || request.operation === 'generate' || request.operation === 'generate-wildcard') {
-        const lines = result.trim().split('\n')
-        const variations = lines
-          .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-          .filter((line: string) => line.length > 0)
-
-        return {
-          result: variations,
-          target: 'lm-studio',
-        }
-      }
-
-      return {
-        result: result.trim(),
-        target: 'lm-studio',
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`LM Studio request failed: ${error.message}`)
-      }
-      throw error
     }
   }
 
