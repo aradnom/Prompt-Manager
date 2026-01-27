@@ -1,5 +1,10 @@
-import { randomBytes, createCipheriv, createDecipheriv, createHmac } from 'crypto'
-import { hkdf } from '@panva/hkdf'
+import {
+  randomBytes,
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+} from "crypto";
+import { hkdf } from "@panva/hkdf";
 
 /**
  * Generate a user-friendly access token
@@ -7,88 +12,89 @@ import { hkdf } from '@panva/hkdf'
  */
 export function generateToken(): string {
   // 0, 1, I, L, O excluded. U included. Specifically.
-  const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
-  const length = 12
-  let token = ''
+  const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+  const length = 12;
+  let token = "";
 
   // Using randomBytes for cryptographic security
-  const bytes = randomBytes(length)
+  const bytes = randomBytes(length);
 
   for (let i = 0; i < length; i++) {
-    const randomIndex = bytes[i] % chars.length
-    token += chars[randomIndex]
+    const randomIndex = bytes[i] % chars.length;
+    token += chars[randomIndex];
   }
 
   // Output format: XXXX-XXXX-XXXX
-  return token.match(/.{1,4}/g)?.join('-') || token
+  return token.match(/.{1,4}/g)?.join("-") || token;
 }
 
 /**
  * Hash a token using HMAC-BLAKE2b for deterministic database lookup
  */
 export function hashToken(token: string, secret: string): string {
-  return createHmac('blake2b512', secret)
-    .update(token)
-    .digest('hex')
+  return createHmac("blake2b512", secret).update(token).digest("hex");
 }
 
 /**
  * Derive an encryption key from a token using HKDF
  * This creates a strong encryption key without storing it
  */
-export async function deriveEncryptionKey(token: string, saltString: string): Promise<Buffer> {
-  const salt = Buffer.from(saltString)
-  const info = Buffer.from('account-data-encryption')
+export async function deriveEncryptionKey(
+  token: string,
+  saltString: string,
+): Promise<Buffer> {
+  const salt = Buffer.from(saltString);
+  const info = Buffer.from("account-data-encryption");
 
   const key = await hkdf(
-    'sha256',
+    "sha256",
     Buffer.from(token),
     salt,
     info,
-    32 // 256 bits for AES-256
-  )
+    32, // 256 bits for AES-256
+  );
 
-  return Buffer.from(key)
+  return Buffer.from(key);
 }
 
 /**
  * Encrypt a string using AES-256-GCM
  */
 export function encrypt(plaintext: string, key: Buffer): string {
-  const iv = randomBytes(12) // 96-bit IV for GCM
-  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const iv = randomBytes(12); // 96-bit IV for GCM
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
 
-  let encrypted = cipher.update(plaintext, 'utf8', 'base64')
-  encrypted += cipher.final('base64')
+  let encrypted = cipher.update(plaintext, "utf8", "base64");
+  encrypted += cipher.final("base64");
 
-  const authTag = cipher.getAuthTag()
+  const authTag = cipher.getAuthTag();
 
   // Return: iv + authTag + ciphertext (all base64)
   return JSON.stringify({
-    iv: iv.toString('base64'),
-    authTag: authTag.toString('base64'),
+    iv: iv.toString("base64"),
+    authTag: authTag.toString("base64"),
     ciphertext: encrypted,
-  })
+  });
 }
 
 /**
  * Decrypt a string using AES-256-GCM
  */
 export function decrypt(encryptedData: string, key: Buffer): string {
-  const { iv, authTag, ciphertext } = JSON.parse(encryptedData)
+  const { iv, authTag, ciphertext } = JSON.parse(encryptedData);
 
   const decipher = createDecipheriv(
-    'aes-256-gcm',
+    "aes-256-gcm",
     key,
-    Buffer.from(iv, 'base64')
-  )
+    Buffer.from(iv, "base64"),
+  );
 
-  decipher.setAuthTag(Buffer.from(authTag, 'base64'))
+  decipher.setAuthTag(Buffer.from(authTag, "base64"));
 
-  let decrypted = decipher.update(ciphertext, 'base64', 'utf8')
-  decrypted += decipher.final('utf8')
+  let decrypted = decipher.update(ciphertext, "base64", "utf8");
+  decrypted += decipher.final("utf8");
 
-  return decrypted
+  return decrypted;
 }
 
 /**
@@ -97,16 +103,16 @@ export function decrypt(encryptedData: string, key: Buffer): string {
 export async function encryptAccountData(
   data: Record<string, string>,
   token: string,
-  salt: string
+  salt: string,
 ): Promise<Record<string, string>> {
-  const key = await deriveEncryptionKey(token, salt)
-  const encrypted: Record<string, string> = {}
+  const key = await deriveEncryptionKey(token, salt);
+  const encrypted: Record<string, string> = {};
 
   for (const [field, value] of Object.entries(data)) {
-    encrypted[field] = encrypt(value, key)
+    encrypted[field] = encrypt(value, key);
   }
 
-  return encrypted
+  return encrypted;
 }
 
 /**
@@ -115,16 +121,16 @@ export async function encryptAccountData(
 export async function decryptAccountData(
   encryptedData: Record<string, string>,
   token: string,
-  salt: string
+  salt: string,
 ): Promise<Record<string, string>> {
-  const key = await deriveEncryptionKey(token, salt)
-  const decrypted: Record<string, string> = {}
+  const key = await deriveEncryptionKey(token, salt);
+  const decrypted: Record<string, string> = {};
 
   for (const [field, encryptedValue] of Object.entries(encryptedData)) {
-    decrypted[field] = decrypt(encryptedValue, key)
+    decrypted[field] = decrypt(encryptedValue, key);
   }
 
-  return decrypted
+  return decrypted;
 }
 
 /**
@@ -132,23 +138,29 @@ export async function decryptAccountData(
  * This key will be stored in an httpOnly cookie
  */
 export function generateSessionKey(): string {
-  return randomBytes(32).toString('base64')
+  return randomBytes(32).toString("base64");
 }
 
 /**
  * Encrypt the derived key with the session key
  * The encrypted result is stored in the session
  */
-export function encryptDerivedKey(derivedKey: Buffer, sessionKey: string): string {
-  const key = Buffer.from(sessionKey, 'base64')
-  return encrypt(derivedKey.toString('base64'), key)
+export function encryptDerivedKey(
+  derivedKey: Buffer,
+  sessionKey: string,
+): string {
+  const key = Buffer.from(sessionKey, "base64");
+  return encrypt(derivedKey.toString("base64"), key);
 }
 
 /**
  * Decrypt the derived key from the session using the session key
  */
-export function decryptDerivedKey(encryptedDerivedKey: string, sessionKey: string): Buffer {
-  const key = Buffer.from(sessionKey, 'base64')
-  const decrypted = decrypt(encryptedDerivedKey, key)
-  return Buffer.from(decrypted, 'base64')
+export function decryptDerivedKey(
+  encryptedDerivedKey: string,
+  sessionKey: string,
+): Buffer {
+  const key = Buffer.from(sessionKey, "base64");
+  const decrypted = decrypt(encryptedDerivedKey, key);
+  return Buffer.from(decrypted, "base64");
 }

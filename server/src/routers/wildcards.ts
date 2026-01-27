@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { router, protectedProcedure } from '@server/trpc'
+import { z } from "zod";
+import { router, protectedProcedure } from "@server/trpc";
 
 export const wildcardsRouter = router({
   create: protectedProcedure
@@ -11,47 +11,47 @@ export const wildcardsRouter = router({
         format: z.string(),
         content: z.string(),
         meta: z.record(z.string(), z.unknown()).optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       return ctx.storage.createWildcard({
         ...input,
         userId: ctx.userId,
-      })
+      });
     }),
 
   get: protectedProcedure
     .input(
       z.object({
         id: z.number(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
-      const wildcard = await ctx.storage.getWildcard(input.id)
+      const wildcard = await ctx.storage.getWildcard(input.id);
       if (!wildcard) {
-        throw new Error('Wildcard not found')
+        throw new Error("Wildcard not found");
       }
       if (wildcard.userId !== ctx.userId) {
-        throw new Error('Unauthorized')
+        throw new Error("Unauthorized");
       }
-      return wildcard
+      return wildcard;
     }),
 
   getByUuid: protectedProcedure
     .input(
       z.object({
         uuid: z.string(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
-      const wildcard = await ctx.storage.getWildcardByUuid(input.uuid)
+      const wildcard = await ctx.storage.getWildcardByUuid(input.uuid);
       if (!wildcard) {
-        throw new Error('Wildcard not found')
+        throw new Error("Wildcard not found");
       }
       if (wildcard.userId !== ctx.userId) {
-        throw new Error('Unauthorized')
+        throw new Error("Unauthorized");
       }
-      return wildcard
+      return wildcard;
     }),
 
   update: protectedProcedure
@@ -62,56 +62,56 @@ export const wildcardsRouter = router({
         format: z.string().optional(),
         content: z.string().optional(),
         meta: z.record(z.string(), z.unknown()).optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
-      const { id, ...updates } = input
+      const { id, ...updates } = input;
       // Check ownership first
-      const wildcard = await ctx.storage.getWildcard(id)
+      const wildcard = await ctx.storage.getWildcard(id);
       if (!wildcard) {
-        throw new Error('Wildcard not found')
+        throw new Error("Wildcard not found");
       }
       if (wildcard.userId !== ctx.userId) {
-        throw new Error('Unauthorized')
+        throw new Error("Unauthorized");
       }
-      return ctx.storage.updateWildcard(id, updates)
+      return ctx.storage.updateWildcard(id, updates);
     }),
 
   delete: protectedProcedure
     .input(
       z.object({
         id: z.number(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // Check ownership first
-      const wildcard = await ctx.storage.getWildcard(input.id)
+      const wildcard = await ctx.storage.getWildcard(input.id);
       if (!wildcard) {
-        throw new Error('Wildcard not found')
+        throw new Error("Wildcard not found");
       }
       if (wildcard.userId !== ctx.userId) {
-        throw new Error('Unauthorized')
+        throw new Error("Unauthorized");
       }
-      await ctx.storage.deleteWildcard(input.id)
-      return { success: true }
+      await ctx.storage.deleteWildcard(input.id);
+      return { success: true };
     }),
 
   list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.storage.listWildcards(ctx.userId)
+    return ctx.storage.listWildcards(ctx.userId);
   }),
 
   search: protectedProcedure
     .input(
       z.object({
         query: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
       return ctx.storage.searchWildcards(
         {
           query: input.query,
         },
-        ctx.userId
-      )
+        ctx.userId,
+      );
     }),
-})
+});

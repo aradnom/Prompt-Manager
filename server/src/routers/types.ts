@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { router, publicProcedure } from '@server/trpc'
+import { z } from "zod";
+import { router, publicProcedure } from "@server/trpc";
 
 export const typesRouter = router({
   // For the moment I think we'll just add new types manually in the DB as
@@ -19,13 +19,13 @@ export const typesRouter = router({
     .input(
       z.object({
         id: z.number(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.getType(input.id)
+      return ctx.storage.getType(input.id);
     }),
 
   list: publicProcedure.query(async ({ ctx }) => {
-    return ctx.storage.listTypes()
+    return ctx.storage.listTypes();
   }),
-})
+});
