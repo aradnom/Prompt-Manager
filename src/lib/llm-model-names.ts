@@ -19,4 +19,12 @@ export const PREDEFINED_MODELS = {
     'claude-sonnet-4-0': 'Claude 4 Sonnet',
     'claude-opus-4-1': 'Claude 4.1 Opus',
   },
+  grok: {
+    'grok-4-1-fast-non-reasoning': 'Grok 4.1 Fast Non-Reasoning',
+    'grok-4-1-fast-reasoning': 'Grok 4.1 Fast',
+    'grok-4-fast-non-reasoning': 'Grok 4 Fast Non-Reasoning',
+    'grok-4-fast-reasoning': 'Grok 4 Fast',
+    'grok-3-mini': 'Grok 3 Mini',
+    'grok-3': 'Grok 3'
+  }
 } as const

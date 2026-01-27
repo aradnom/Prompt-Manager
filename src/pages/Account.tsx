@@ -28,6 +28,9 @@ export default function Account() {
   const [anthropicApiKey, setAnthropicApiKey] = useState('')
   const [anthropicModel, setAnthropicModel] = useState(Object.keys(PREDEFINED_MODELS.anthropic)[0])
   const [anthropicCustomModel, setAnthropicCustomModel] = useState('')
+  const [grokApiKey, setGrokApiKey] = useState('')
+  const [grokModel, setGrokModel] = useState(Object.keys(PREDEFINED_MODELS.grok)[0])
+  const [grokCustomModel, setGrokCustomModel] = useState('')
   const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>('')
 
   useEffect(() => {
@@ -88,6 +91,18 @@ export default function Account() {
           setAnthropicCustomModel(savedModel)
         }
       }
+
+      if (data.apiKeys?.grok?.model) {
+        const savedModel = data.apiKeys.grok.model
+        // Check if it's one of our predefined models
+        if (savedModel in PREDEFINED_MODELS.grok) {
+          setGrokModel(savedModel)
+        } else {
+          // It's a custom model
+          setGrokModel('custom')
+          setGrokCustomModel(savedModel)
+        }
+      }
     } catch (err) {
       console.error('Error fetching account data:', err)
       setError('Failed to load account data')
@@ -124,6 +139,9 @@ export default function Account() {
       } else if (provider === 'anthropic') {
         setAnthropicApiKey('')
         setAnthropicCustomModel('')
+      } else if (provider === 'grok') {
+        setGrokApiKey('')
+        setGrokCustomModel('')
       }
     } catch (err) {
       console.error('Error saving API key:', err)
@@ -166,6 +184,8 @@ export default function Account() {
         setOpenaiCustomModel('')
       } else if (provider === 'anthropic') {
         setAnthropicCustomModel('')
+      } else if (provider === 'grok') {
+        setGrokCustomModel('')
       }
     } catch (err) {
       console.error('Error saving model:', err)
@@ -311,7 +331,7 @@ export default function Account() {
                                   htmlFor={platform}
                                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                                 >
-                                  {platform === 'vertex' ? 'Google Vertex AI' : platform === 'openai' ? 'OpenAI' : 'Anthropic'}
+                                  {platform === 'vertex' ? 'Google Vertex AI' : platform === 'openai' ? 'OpenAI' : platform === 'anthropic' ? 'Anthropic' : 'Grok'}
                                 </label>
                               </div>
                             ))}
@@ -431,6 +451,42 @@ export default function Account() {
                       },
                     }}
                     enabled={activeLLMPlatform === 'anthropic'}
+                  />
+
+                  <ApiKeyInput
+                    displayName="Grok"
+                    apiKey={grokApiKey}
+                    onApiKeyChange={setGrokApiKey}
+                    configured={apiKeyInfo.grok?.configured || false}
+                    onSave={() => {
+                      const modelToSave = grokModel === 'custom' ? grokCustomModel : grokModel
+                      handleSaveApiKey('grok', grokApiKey, modelToSave)
+                    }}
+                    onTest={() => handleTestApiKey('grok')}
+                    isSaving={isSavingApiKey}
+                    isTesting={isTestingApiKey}
+                    testResult={testResult?.provider === 'grok' ? testResult : null}
+                    modelConfig={{
+                      availableModels: PREDEFINED_MODELS.grok,
+                      selectedModel: grokModel,
+                      onModelChange: (model) => {
+                        setGrokModel(model)
+                        if (model !== 'custom') {
+                          setGrokCustomModel('')
+                          // Save immediately for predefined models
+                          handleSaveModel('grok', model)
+                        }
+                      },
+                      customModel: grokCustomModel,
+                      onCustomModelChange: setGrokCustomModel,
+                      onCustomModelBlur: () => {
+                        // Save when custom input loses focus
+                        if (grokModel === 'custom' && grokCustomModel.trim()) {
+                          handleSaveModel('grok', grokCustomModel)
+                        }
+                      },
+                    }}
+                    enabled={activeLLMPlatform === 'grok'}
                   />
                 </div>
               </CardContent>
