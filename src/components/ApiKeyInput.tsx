@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface ModelConfig {
   availableModels: Record<string, string>
@@ -8,7 +9,7 @@ interface ModelConfig {
   onModelChange: (model: string) => void
   customModel?: string
   onCustomModelChange?: (model: string) => void
-  onSaveModel: () => void
+  onCustomModelBlur?: () => void
 }
 
 interface ApiKeyInputProps {
@@ -91,38 +92,35 @@ export function ApiKeyInput({
           <label className="text-sm font-medium mb-2 block">
             Model
           </label>
-          <select
-            className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background mb-2"
+          <Select
             value={modelConfig.selectedModel}
-            onChange={(e) => modelConfig.onModelChange(e.target.value)}
+            onValueChange={modelConfig.onModelChange}
             disabled={isSaving}
           >
-            {Object.entries(modelConfig.availableModels).map(([modelId, displayName]) => (
-              <option key={modelId} value={modelId}>
-                {displayName}
-              </option>
-            ))}
-            <option value="custom">Custom Model</option>
-          </select>
+            <SelectTrigger className="w-full mb-2">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(modelConfig.availableModels).map(([modelId, displayName]) => (
+                <SelectItem key={modelId} value={modelId}>
+                  {displayName}
+                </SelectItem>
+              ))}
+              <SelectItem value="custom">Custom Model</SelectItem>
+            </SelectContent>
+          </Select>
 
           {modelConfig.selectedModel === 'custom' && modelConfig.onCustomModelChange && (
             <input
               type="text"
               placeholder="Enter custom model ID (e.g., gemini-pro)"
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background mb-2"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={modelConfig.customModel || ''}
               onChange={(e) => modelConfig.onCustomModelChange!(e.target.value)}
+              onBlur={modelConfig.onCustomModelBlur}
               disabled={isSaving}
             />
           )}
-
-          <Button
-            onClick={modelConfig.onSaveModel}
-            disabled={isSaving || (modelConfig.selectedModel === 'custom' && !modelConfig.customModel?.trim())}
-            className="flex ml-auto"
-          >
-            {isSaving ? 'Saving...' : 'Save Model'}
-          </Button>
         </div>
       )}
     </div>
