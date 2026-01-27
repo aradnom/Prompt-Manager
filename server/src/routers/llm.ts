@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '@server/trpc'
 import { decrypt } from '@server/lib/auth'
+import { LLM_TARGETS, type LLMTarget } from '@server/config'
 
-const llmTargetSchema = z.enum(['lm-studio', 'openai', 'anthropic', 'vertex'])
+const llmTargetSchema = z.enum(LLM_TARGETS)
 const outputStyleSchema = z.enum(['t5', 'clip']).nullable().optional()
 
 export const llmRouter = router({
@@ -31,8 +32,8 @@ export const llmRouter = router({
           if (user?.accountData?.activeLLMPlatform) {
             const activePlatform = decrypt(user.accountData.activeLLMPlatform as string, ctx.derivedKey)
             // Use the user's active platform if it's valid
-            if (['lm-studio', 'openai', 'anthropic', 'vertex'].includes(activePlatform)) {
-              targetToUse = activePlatform as 'lm-studio' | 'openai' | 'anthropic' | 'vertex'
+            if (LLM_TARGETS.includes(activePlatform as LLMTarget)) {
+              targetToUse = activePlatform as LLMTarget
             }
           }
 

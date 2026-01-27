@@ -199,10 +199,10 @@ export function registerAuthRoutes(
       }
 
       // Check which API keys are configured and return model info (without exposing the actual keys)
-      const apiKeyInfo: Record<string, { configured: boolean; model?: string }> = {
-        vertex: { configured: false },
-        openai: { configured: false },
-        anthropic: { configured: false },
+      // Initialize with all allowed targets
+      const apiKeyInfo: Record<string, { configured: boolean; model?: string }> = {}
+      for (const target of config.llm.allowedTargets) {
+        apiKeyInfo[target] = { configured: false }
       }
 
       if (user.accountData.apiKeys) {
@@ -246,9 +246,8 @@ export function registerAuthRoutes(
         return res.status(400).json({ error: 'Provider is required' })
       }
 
-      // Valid providers
-      const validProviders = ['vertex', 'openai', 'anthropic']
-      if (!validProviders.includes(provider)) {
+      // Valid providers from config
+      if (!config.llm.allowedTargets.has(provider)) {
         return res.status(400).json({ error: 'Invalid provider' })
       }
 
@@ -333,9 +332,8 @@ export function registerAuthRoutes(
         return res.status(400).json({ error: 'Platform is required' })
       }
 
-      // Valid platforms
-      const validPlatforms = ['vertex', 'openai', 'anthropic']
-      if (!validPlatforms.includes(platform)) {
+      // Valid platforms from config
+      if (!config.llm.allowedTargets.has(platform)) {
         return res.status(400).json({ error: 'Invalid platform' })
       }
 
@@ -381,9 +379,8 @@ export function registerAuthRoutes(
         return res.status(400).json({ error: 'Provider is required' })
       }
 
-      // Valid providers
-      const validProviders = ['vertex', 'openai', 'anthropic']
-      if (!validProviders.includes(provider)) {
+      // Valid providers from config
+      if (!config.llm.allowedTargets.has(provider)) {
         return res.status(400).json({ error: 'Invalid provider' })
       }
 
@@ -490,6 +487,29 @@ export function registerAuthRoutes(
           res.json({ success: true, message: 'API key is valid' })
         } catch (error: any) {
           console.error('Anthropic API key test failed:', error)
+          res.status(400).json({
+            success: false,
+            error: 'API key test failed',
+            message: error.message || 'Invalid API key or insufficient permissions'
+          })
+        }
+      } else if (provider === 'grok') {
+        try {
+          // Test by listing models (doesn't incur inference costs)
+          const response = await fetch('https://api.x.ai/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${providerData.key}`,
+            },
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error?.message || 'Invalid API key')
+          }
+
+          res.json({ success: true, message: 'API key is valid' })
+        } catch (error: any) {
+          console.error('Grok API key test failed:', error)
           res.status(400).json({
             success: false,
             error: 'API key test failed',

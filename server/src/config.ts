@@ -1,3 +1,7 @@
+// Define LLM targets as const array - single source of truth
+export const LLM_TARGETS = ['lm-studio', 'openai', 'anthropic', 'vertex', 'grok'] as const
+export type LLMTarget = typeof LLM_TARGETS[number]
+
 export interface LLMConfig {
   allowedTargets: Set<string>
   lmStudioUrl: string
@@ -18,6 +22,10 @@ export interface LLMConfig {
     apiKey?: string
     model: string
   }
+  grok: {
+    apiKey?: string
+    model: string
+  }
 }
 
 export interface ServerConfig {
@@ -32,7 +40,7 @@ export interface ServerConfig {
 }
 
 function parseAllowedTargets(envValue: string | undefined): Set<string> {
-  if (!envValue) return new Set(['lm-studio', 'vertex', 'openai', 'anthropic'])
+  if (!envValue) return new Set(LLM_TARGETS)
   return new Set(envValue.split(',').map(t => t.trim()))
 }
 
@@ -74,6 +82,10 @@ export function loadConfig(): ServerConfig {
       anthropic: {
         apiKey: process.env.ANTHROPIC_API_KEY,
         model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
+      },
+      grok: {
+        apiKey: process.env.GROK_API_KEY,
+        model: process.env.GROK_MODEL || 'grok-3-mini',
       },
     },
   }

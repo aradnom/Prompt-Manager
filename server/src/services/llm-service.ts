@@ -1,10 +1,11 @@
-import { LLMConfig } from '@server/config'
+import { LLMConfig, type LLMTarget } from '@server/config'
 import { VertexServiceGenAI } from './vertex-service-genai'
 import { OpenAIService } from './openai-service'
 import { AnthropicService } from './anthropic-service'
 import { LMStudioService } from './lm-studio-service'
+import { GrokService } from './grok-service'
 
-export type LLMTarget = 'lm-studio' | 'openai' | 'anthropic' | 'vertex'
+export type { LLMTarget } from '@server/config'
 export type OutputStyle = 't5' | 'clip' | null
 
 export interface TransformRequest {
@@ -24,12 +25,14 @@ export class LLMService {
   private openaiService: OpenAIService
   private anthropicService: AnthropicService
   private lmStudioService: LMStudioService
+  private grokService: GrokService
 
   constructor(private config: LLMConfig) {
     this.vertexService = new VertexServiceGenAI(config)
     this.openaiService = new OpenAIService(config)
     this.anthropicService = new AnthropicService(config)
     this.lmStudioService = new LMStudioService(config)
+    this.grokService = new GrokService(config)
   }
 
   async transform(request: TransformRequest, userApiKey?: string, userModel?: string): Promise<TransformResponse> {
@@ -48,6 +51,8 @@ export class LLMService {
         return this.openaiService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       case 'anthropic':
         return this.anthropicService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
+      case 'grok':
+        return this.grokService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       default:
         throw new Error(`Unknown LLM target: ${request.target}`)
     }
