@@ -44,6 +44,16 @@ export class OpenAIService {
     // Use user's model if provided, otherwise use server config model
     const modelId = userModel || this.config.openai.model
 
+    // Args that only work with specific models
+    let modelSpecificArgs = {};
+
+    if (modelId.startsWith('gpt-5.2')) {
+      modelSpecificArgs = {
+        temperature: 1,
+        reasoning_effort: 'none'
+      }
+    }
+
     try {
       console.debug(`OpenAI: Generating content with model: ${modelId}`)
 
@@ -55,7 +65,12 @@ export class OpenAIService {
           { role: 'user', content: request.text }
         ],
         max_completion_tokens: this.config.maxTokens,
-        reasoning_effort: 'minimal'
+        reasoning_effort: 'minimal',
+        ...modelSpecificArgs
+      }
+
+      if (modelId.startsWith('gpt-4')) {
+        delete requestParams.reasoning_effort;
       }
 
       // Only set temperature for models that support it (GPT-5 models don't support custom temperature)
@@ -64,8 +79,6 @@ export class OpenAIService {
       }
 
       const response = await clientToUse.chat.completions.create(requestParams)
-
-      console.log(response)
 
       const text = response.choices?.[0]?.message?.content
 

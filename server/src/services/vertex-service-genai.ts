@@ -54,6 +54,22 @@ export class VertexServiceGenAI {
     // Use user's model if provided, otherwise use server config model
     const modelId = userModel || this.config.vertex.model
 
+    // Args that only work with specific models
+    let modelSpecificArgs = {};
+
+    // thinkingLevel only applies to Gemini 3 models currently
+    // MINIMAL and MEDIUM only apply to Flash, so in theory LOW and HIGH apply
+    // to Pro...?
+    // Also, you can't turn thinking off in Pro
+    if (modelId.includes('3-flash')) {
+      modelSpecificArgs = {
+        thinkingConfig: {
+          includeThoughts: false,
+          thinkingLevel: ThinkingLevel.MINIMAL
+        }
+      }
+    }
+
     try {
       console.debug(`GenAI SDK: Generating content with model: ${modelId}`)
 
@@ -68,8 +84,8 @@ export class VertexServiceGenAI {
           },
           thinkingConfig: {
             includeThoughts: false,
-            thinkingLevel: ThinkingLevel.MINIMAL
-          }
+          },
+          ...modelSpecificArgs
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any
       })
