@@ -59,6 +59,9 @@ export function MainMenu() {
           <RasterIcon name="menu" size={20} opacity={0.8} />
         </div>
       </AnimatedBorderButton>
+      <Link to="/" className="fixed top-17 left-8 z-100 opacity-75 transition-opacity hover:opacity-100">
+        <RasterIcon name="home" size={20} opacity={0.8} />
+      </Link>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
