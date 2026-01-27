@@ -25,7 +25,7 @@ export interface BlockFormValues {
   displayId: string;
   text: string;
   labels: string[];
-  typeId?: number;
+  typeId?: number | null;
 }
 
 interface BlockFormProps {
@@ -64,7 +64,7 @@ export function BlockForm({
       displayId: displayId.trim(),
       text: text.trim(),
       labels: labels.trim() ? labels.split(",").map((l) => l.trim()) : [],
-      typeId,
+      typeId: typeId ?? null,
     });
   };
 
@@ -137,16 +137,17 @@ export function BlockForm({
           <div>
             <label className="text-sm font-medium mb-2 block">Type</label>
             <Select
-              value={typeId?.toString() || ""}
+              value={typeId?.toString() || "none"}
               onValueChange={(value) =>
-                setTypeId(value ? Number(value) : undefined)
+                setTypeId(value === "none" ? undefined : Number(value))
               }
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="None" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">None</SelectItem>
                 {types.map((type) => (
                   <SelectItem key={type.id} value={type.id.toString()}>
                     {type.name}

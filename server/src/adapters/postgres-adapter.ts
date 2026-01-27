@@ -297,7 +297,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       if (updates.name !== undefined) updateData.name = updates.name ?? null;
       if (updates.displayId !== undefined)
         updateData.display_id = updates.displayId;
-      if (updates.typeId !== undefined) updateData.type_id = updates.typeId;
+      if (updates.typeId !== undefined)
+        updateData.type_id = updates.typeId ?? null;
       if (updates.labels !== undefined) updateData.labels = updates.labels;
       if (updates.meta !== undefined) {
         updateData.meta = updates.meta ? JSON.stringify(updates.meta) : null;
