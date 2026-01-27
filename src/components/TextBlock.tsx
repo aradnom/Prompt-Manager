@@ -6,7 +6,10 @@ import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { ExpandingIcon } from "@/components/ui/expanding-icon";
-import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+} from "@/components/ui/button-group";
 import { TEXT_BLOCK_ANIMATION } from "@/lib/text-block-animation-settings";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { resolveWildcardsInText } from "@/lib/wildcard-resolver";
@@ -98,7 +101,7 @@ export function TextBlock({
   });
   const revisionsQuery = api.blocks.getRevisions.useQuery(
     { id: block.id },
-    { enabled: showRevisions }
+    { enabled: showRevisions },
   );
 
   // Get resolved text (wildcards replaced with actual values)
@@ -249,7 +252,7 @@ export function TextBlock({
   };
 
   const handleVariation = async (
-    operation: "variation-slight" | "variation-fair" | "variation-very"
+    operation: "variation-slight" | "variation-fair" | "variation-very",
   ) => {
     try {
       const result = await transformMutation.mutateAsync({
@@ -299,7 +302,7 @@ export function TextBlock({
       block.text,
       block.text.length,
       displayId,
-      path
+      path,
     );
 
     if (onTransform) {
@@ -312,14 +315,15 @@ export function TextBlock({
       ref={blockRef}
       className={cn(
         "relative rounded-lg bg-background text-foreground shadow-sm cursor-pointer",
-        !alwaysActive && "border"
+        !alwaysActive && "border",
       )}
       onClick={handleBlockClick}
       animate={{
         padding: isActive ? "8px" : "0px",
-        backgroundColor: isActive && !alwaysActive
-          ? "var(--color-cyan-dark)"
-          : "var(--color-background)",
+        backgroundColor:
+          isActive && !alwaysActive
+            ? "var(--color-cyan-dark)"
+            : "var(--color-background)",
         boxShadow: isActive
           ? "0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3)"
           : "0 1px 2px 0 rgb(0 0 0 / 0.05)",
@@ -449,8 +453,8 @@ export function TextBlock({
                     className={cn(
                       "px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer",
                       {
-                        'bg-cyan-medium text-cyan-light': isActive
-                      }
+                        "bg-cyan-medium text-cyan-light": isActive,
+                      },
                     )}
                   >
                     {label}
@@ -683,7 +687,7 @@ export function TextBlock({
                         } catch (error) {
                           console.error(
                             "Failed to set active revision:",
-                            error
+                            error,
                           );
                         }
                       }}
@@ -739,7 +743,7 @@ export function TextBlock({
                   const angle =
                     (Math.atan2(position.y, position.x) * 180) / Math.PI;
                   const length = Math.sqrt(
-                    position.x * position.x + position.y * position.y
+                    position.x * position.x + position.y * position.y,
                   );
 
                   return (

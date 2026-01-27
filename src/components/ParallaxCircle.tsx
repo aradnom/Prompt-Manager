@@ -1,14 +1,14 @@
-import { useScroll } from '@/contexts/ScrollContext'
+import { useScroll } from "@/contexts/ScrollContext";
 
 interface ParallaxCircleProps {
-  size?: number
-  minScale?: number
-  maxScale?: number
-  minLineWidth?: number
-  maxLineWidth?: number
-  transitionDuration?: number
-  backgroundColor?: string
-  scrollMultiplier?: number
+  size?: number;
+  minScale?: number;
+  maxScale?: number;
+  minLineWidth?: number;
+  maxLineWidth?: number;
+  transitionDuration?: number;
+  backgroundColor?: string;
+  scrollMultiplier?: number;
 }
 
 export function ParallaxCircle({
@@ -20,22 +20,25 @@ export function ParallaxCircle({
   transitionDuration = 0.1,
   scrollMultiplier = 1,
 }: ParallaxCircleProps) {
-  const { scrollY } = useScroll()
+  const { scrollY } = useScroll();
 
   // Apply scroll multiplier
-  const effectiveScrollY = scrollY * scrollMultiplier
+  const effectiveScrollY = scrollY * scrollMultiplier;
 
   // Calculate scale based on scroll
-  const scaleRange = maxScale - minScale
-  const scale = Math.max(minScale, maxScale - (effectiveScrollY / 2000) * scaleRange)
+  const scaleRange = maxScale - minScale;
+  const scale = Math.max(
+    minScale,
+    maxScale - (effectiveScrollY / 2000) * scaleRange,
+  );
 
   // Animate line width based on scroll (starts at max, shrinks to min)
-  const lineWidthRange = maxLineWidth - minLineWidth
-  const lineWidth = maxLineWidth - (effectiveScrollY / 500) * lineWidthRange
-  const clampedWidth = Math.max(minLineWidth, lineWidth)
+  const lineWidthRange = maxLineWidth - minLineWidth;
+  const lineWidth = maxLineWidth - (effectiveScrollY / 500) * lineWidthRange;
+  const clampedWidth = Math.max(minLineWidth, lineWidth);
 
   // Position to center at (0, 0)
-  const offset = -size / 2
+  const offset = -size / 2;
 
   return (
     <div
@@ -44,9 +47,9 @@ export function ParallaxCircle({
         top: `${offset}px`,
         left: `${offset}px`,
         transform: `scale(${scale})`,
-        transformOrigin: 'center center',
+        transformOrigin: "center center",
         transition: `transform ${transitionDuration}s ease-out`,
-        willChange: 'transform',
+        willChange: "transform",
         zIndex: 0,
       }}
     >
@@ -63,16 +66,16 @@ export function ParallaxCircle({
           )`,
           padding: `${clampedWidth}px`,
           transition: `padding ${transitionDuration}s ease-out`,
-          willChange: 'padding',
+          willChange: "padding",
         }}
       >
         <div
           className="rounded-full w-full h-full"
           style={{
-            background: 'rgb(from var(--color-background) r g b / 50%)'
+            background: "rgb(from var(--color-background) r g b / 50%)",
           }}
         />
       </div>
     </div>
-  )
+  );
 }

@@ -1,9 +1,9 @@
 @layer utilities {
-    .standard-content {
-        @apply p-8 bg-background rounded-lg border-2 border-cyan-dark;
-    }
+  .standard-content {
+    @apply p-8 bg-background rounded-lg border-2 border-cyan-dark;
+  }
 
-    .standard-page-container {
-        @apply container mx-auto p-8 pt-12;
-    }
+  .standard-page-container {
+    @apply container mx-auto p-8 pt-12;
+  }
 }

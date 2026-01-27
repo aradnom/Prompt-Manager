@@ -1,9 +1,9 @@
-import { motion, AnimatePresence } from 'motion/react'
-import { useErrors } from '@/contexts/ErrorContext'
-import { Button } from '@/components/ui/button'
+import { motion, AnimatePresence } from "motion/react";
+import { useErrors } from "@/contexts/ErrorContext";
+import { Button } from "@/components/ui/button";
 
 export function ErrorBanner() {
-  const { errors, removeError } = useErrors()
+  const { errors, removeError } = useErrors();
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 min-w-96 max-w-2xl">
@@ -17,9 +17,7 @@ export function ErrorBanner() {
             transition={{ duration: 0.2 }}
             className="bg-magenta-light text-foreground px-4 py-3 rounded-md shadow-lg border border-magenta-medium/50 flex items-start gap-3"
           >
-            <div className="flex-1 text-sm">
-              {error.message}
-            </div>
+            <div className="flex-1 text-sm">{error.message}</div>
             <Button
               variant="ghost"
               size="sm"
@@ -32,5 +30,5 @@ export function ErrorBanner() {
         ))}
       </AnimatePresence>
     </div>
-  )
+  );
 }

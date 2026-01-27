@@ -1,559 +1,602 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { motion, AnimatePresence } from 'motion/react'
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
-import { api, RouterOutput } from '@/lib/api'
-import { generateDisplayId } from '@/lib/generate-display-id'
-import { generateUUID } from '@/lib/uuid'
-import { useActiveStack } from '@/contexts/ActiveStackContext'
-import { StackEditForm } from '@/components/StackEditForm'
-import { RasterIcon } from '@/components/RasterIcon'
-import { SearchInput } from '@/components/ui/search-input'
-import { X, Clock } from 'lucide-react'
+import { api, RouterOutput } from "@/lib/api";
+import { generateDisplayId } from "@/lib/generate-display-id";
+import { generateUUID } from "@/lib/uuid";
+import { useActiveStack } from "@/contexts/ActiveStackContext";
+import { StackEditForm } from "@/components/StackEditForm";
+import { RasterIcon } from "@/components/RasterIcon";
+import { SearchInput } from "@/components/ui/search-input";
+import { X, Clock } from "lucide-react";
 
-type Stack = RouterOutput['stacks']['list'][number]
-import { Button } from '@/components/ui/button'
-import { DisplayIdInput } from '@/components/ui/display-id-input'
+type Stack = RouterOutput["stacks"]["list"][number];
+import { Button } from "@/components/ui/button";
+import { DisplayIdInput } from "@/components/ui/display-id-input";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
+} from "@/components/ui/tooltip";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function Stacks() {
-  const [isCreating, setIsCreating] = useState(false)
-  const [displayId, setDisplayId] = useState('')
-  const [name, setName] = useState('')
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [stackToDelete, setStackToDelete] = useState<number | null>(null)
-  const [activeStackId, setActiveStackId] = useState<number | null>(null)
-  const [showRevisionsForStack, setShowRevisionsForStack] = useState<number | null>(null)
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const navigate = useNavigate()
-  const { displayId: urlDisplayId } = useParams<{ displayId: string }>()
-  const { setActiveStack } = useActiveStack()
+  const [isCreating, setIsCreating] = useState(false);
+  const [displayId, setDisplayId] = useState("");
+  const [name, setName] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [stackToDelete, setStackToDelete] = useState<number | null>(null);
+  const [activeStackId, setActiveStackId] = useState<number | null>(null);
+  const [showRevisionsForStack, setShowRevisionsForStack] = useState<
+    number | null
+  >(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const navigate = useNavigate();
+  const { displayId: urlDisplayId } = useParams<{ displayId: string }>();
+  const { setActiveStack } = useActiveStack();
 
-  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery({})
+  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery({});
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search)
-    }, 300)
+      setDebouncedSearch(search);
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [search])
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Fetch search results when there's a search query
-  const { data: searchResults, isLoading: isSearching } = api.stacks.search.useQuery(
-    {
-      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-    },
-    { enabled: debouncedSearch.length > 0 }
-  )
+  const { data: searchResults, isLoading: isSearching } =
+    api.stacks.search.useQuery(
+      {
+        query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+      },
+      { enabled: debouncedSearch.length > 0 },
+    );
 
   // Use search results if searching, otherwise use all stacks
-  const displayStacks = debouncedSearch.length > 0 ? searchResults : stacks
-  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading
+  const displayStacks = debouncedSearch.length > 0 ? searchResults : stacks;
+  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
   const { data: activeStackDetails } = api.stacks.get.useQuery(
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
-    { enabled: activeStackId !== null }
-  )
-  const { data: blocks } = api.blocks.list.useQuery({})
+    { enabled: activeStackId !== null },
+  );
+  const { data: blocks } = api.blocks.list.useQuery({});
   const revisionsQuery = api.stacks.getRevisions.useQuery(
     { stackId: showRevisionsForStack! },
-    { enabled: showRevisionsForStack !== null }
-  )
-  const utils = api.useUtils()
+    { enabled: showRevisionsForStack !== null },
+  );
+  const utils = api.useUtils();
   const createMutation = api.stacks.create.useMutation({
     onSuccess: () => {
-      refetch()
-      setIsCreating(false)
-      setDisplayId('')
-      setName('')
+      refetch();
+      setIsCreating(false);
+      setDisplayId("");
+      setName("");
     },
-  })
+  });
   const deleteMutation = api.stacks.delete.useMutation({
     onSuccess: () => {
-      refetch()
-      setActiveStackId(null)
-      navigate('/prompts')
+      refetch();
+      setActiveStackId(null);
+      navigate("/prompts");
     },
-  })
+  });
   const duplicateMutation = api.stacks.duplicate.useMutation({
     onSuccess: () => {
-      refetch()
+      refetch();
     },
-  })
+  });
   const setActiveRevisionMutation = api.stacks.setActiveRevision.useMutation({
     onSuccess: () => {
-      utils.stacks.list.invalidate()
-      utils.stacks.get.invalidate()
+      utils.stacks.list.invalidate();
+      utils.stacks.get.invalidate();
     },
-  })
+  });
 
   const handleCreate = () => {
-    if (!displayId.trim()) return
+    if (!displayId.trim()) return;
 
     createMutation.mutate({
       uuid: generateUUID(),
       displayId: displayId.trim(),
       name: name.trim() || undefined,
-    })
-  }
+    });
+  };
 
   const handleDelete = (id: number) => {
-    setStackToDelete(id)
-    setDeleteDialogOpen(true)
-  }
+    setStackToDelete(id);
+    setDeleteDialogOpen(true);
+  };
 
   const confirmDelete = () => {
     if (stackToDelete !== null) {
-      deleteMutation.mutate({ id: stackToDelete })
-      setStackToDelete(null)
+      deleteMutation.mutate({ id: stackToDelete });
+      setStackToDelete(null);
     }
-  }
+  };
 
   const handleMakeActive = (stack: Stack) => {
-    setActiveStack(stack)
-    navigate('/')
-  }
+    setActiveStack(stack);
+    navigate("/");
+  };
 
   const handleDuplicate = (id: number) => {
-    duplicateMutation.mutate({ id })
-  }
+    duplicateMutation.mutate({ id });
+  };
 
   const handleStackClick = (stackId: number, stack: Stack) => {
     if (activeStackId === stackId) {
-      setActiveStackId(null)
-      navigate('/prompts')
+      setActiveStackId(null);
+      navigate("/prompts");
     } else {
-      setActiveStackId(stackId)
-      navigate(`/prompts/${stack.displayId}`)
+      setActiveStackId(stackId);
+      navigate(`/prompts/${stack.displayId}`);
     }
-  }
+  };
 
   // Sort revisions to put active one first
   const sortedRevisions = useMemo(() => {
-    if (!revisionsQuery.data || !showRevisionsForStack) return []
+    if (!revisionsQuery.data || !showRevisionsForStack) return [];
 
-    const stack = stacks?.find(s => s.id === showRevisionsForStack)
-    const revisions = [...revisionsQuery.data]
-    const activeRevisionId = stack?.activeRevisionId
+    const stack = stacks?.find((s) => s.id === showRevisionsForStack);
+    const revisions = [...revisionsQuery.data];
+    const activeRevisionId = stack?.activeRevisionId;
 
     if (activeRevisionId) {
       revisions.sort((a, b) => {
-        if (a.id === activeRevisionId) return -1
-        if (b.id === activeRevisionId) return 1
-        return 0
-      })
+        if (a.id === activeRevisionId) return -1;
+        if (b.id === activeRevisionId) return 1;
+        return 0;
+      });
     }
 
-    return revisions
-  }, [revisionsQuery.data, showRevisionsForStack, stacks])
+    return revisions;
+  }, [revisionsQuery.data, showRevisionsForStack, stacks]);
 
   // Helper to get block display name
   const getBlockDisplayName = (blockId: number) => {
-    const block = blocks?.find(b => b.id === blockId)
-    return block ? (block.name || block.displayId) : `Block ${blockId}`
-  }
+    const block = blocks?.find((b) => b.id === blockId);
+    return block ? block.name || block.displayId : `Block ${blockId}`;
+  };
 
   // Open stack from URL parameter
   useEffect(() => {
     if (urlDisplayId && stacks) {
-      const matchingStack = stacks.find(s => s.displayId === urlDisplayId)
+      const matchingStack = stacks.find((s) => s.displayId === urlDisplayId);
       if (matchingStack) {
-        setActiveStackId(matchingStack.id)
+        setActiveStackId(matchingStack.id);
       }
     } else if (!urlDisplayId) {
-      setActiveStackId(null)
+      setActiveStackId(null);
     }
-  }, [urlDisplayId, stacks])
+  }, [urlDisplayId, stacks]);
 
   // Close active state and revisions when clicking outside
   useEffect(() => {
-    if (!activeStackId && !showRevisionsForStack) return
+    if (!activeStackId && !showRevisionsForStack) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
+      const target = e.target as HTMLElement;
 
       // Don't close if clicking inside the stack card
-      if (target.closest('[data-stack-card]')) return
+      if (target.closest("[data-stack-card]")) return;
 
       // Don't close if clicking inside a dropdown menu
-      if (target.closest('[role="menu"]')) return
+      if (target.closest('[role="menu"]')) return;
 
       // Don't close if there's an open dropdown (let the dropdown handle the click first)
       // Check for Radix UI dropdown portal
-      const hasOpenDropdown = document.querySelector('[data-radix-popper-content-wrapper]')
-      if (hasOpenDropdown) return
+      const hasOpenDropdown = document.querySelector(
+        "[data-radix-popper-content-wrapper]",
+      );
+      if (hasOpenDropdown) return;
 
-      setActiveStackId(null)
-      setShowRevisionsForStack(null)
-      navigate('/prompts')
-    }
+      setActiveStackId(null);
+      setShowRevisionsForStack(null);
+      navigate("/prompts");
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [activeStackId, showRevisionsForStack])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [activeStackId, showRevisionsForStack]);
 
   return (
     <main className="standard-page-container">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-            <RasterIcon name="chat" size={36} />
-            Prompts
-          </h1>
-          <p className="text-cyan-medium">
-            <mark className="highlighted-text">Manage your prompts</mark>
-          </p>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+          <RasterIcon name="chat" size={36} />
+          Prompts
+        </h1>
+        <p className="text-cyan-medium">
+          <mark className="highlighted-text">Manage your prompts</mark>
+        </p>
+      </div>
 
-        {isCreating ? (
-          <Card className="mb-8 bg-cyan-dark">
-            <CardHeader>
-              <CardTitle>Create New Prompt</CardTitle>
-              <CardDescription>
-                Enter a memorable ID for your new prompt
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Name (optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Summer Landscape"
-                    className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+      {isCreating ? (
+        <Card className="mb-8 bg-cyan-dark">
+          <CardHeader>
+            <CardTitle>Create New Prompt</CardTitle>
+            <CardDescription>
+              Enter a memorable ID for your new prompt
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Name (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Summer Landscape"
+                  className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreate();
+                    if (e.key === "Escape") {
+                      setIsCreating(false);
+                      setDisplayId("");
+                      setName("");
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Display ID
+                </label>
+                <div className="flex gap-2">
+                  <DisplayIdInput
+                    placeholder="e.g., summer-landscape-v1"
+                    className="flex-1"
+                    value={displayId}
+                    onChange={setDisplayId}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCreate()
-                      if (e.key === 'Escape') {
-                        setIsCreating(false)
-                        setDisplayId('')
-                        setName('')
+                      if (e.key === "Enter") handleCreate();
+                      if (e.key === "Escape") {
+                        setIsCreating(false);
+                        setDisplayId("");
+                        setName("");
                       }
                     }}
-                    autoFocus
                   />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Display ID
-                  </label>
-                  <div className="flex gap-2">
-                    <DisplayIdInput
-                      placeholder="e.g., summer-landscape-v1"
-                      className="flex-1"
-                      value={displayId}
-                      onChange={setDisplayId}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleCreate()
-                        if (e.key === 'Escape') {
-                          setIsCreating(false)
-                          setDisplayId('')
-                          setName('')
-                        }
-                      }}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() => setDisplayId(generateDisplayId())}
-                      type="button"
-                    >
-                      Regenerate
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleCreate} disabled={createMutation.isPending}>
-                    {createMutation.isPending ? 'Creating...' : 'Create'}
-                  </Button>
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setIsCreating(false)
-                      setDisplayId('')
-                    }}
+                    onClick={() => setDisplayId(generateDisplayId())}
+                    type="button"
                   >
-                    Cancel
+                    Regenerate
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="mb-8 flex justify-end">
-            <Button onClick={() => {
-              setIsCreating(true)
-              setDisplayId(generateDisplayId())
-            }}>
-              Create New Prompt
-            </Button>
-          </div>
-        )}
-
-        {/* Search */}
-        <div className="mb-8">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search prompts by name, display ID, UUID, or content..."
-          />
-        </div>
-
-        {showLoading ? (
-          <div className="text-center py-12 text-cyan-medium">
-            {debouncedSearch.length > 0 ? 'Searching...' : 'Loading prompts...'}
-          </div>
-        ) : displayStacks && displayStacks.length > 0 ? (
-          <div className="space-y-4">
-            {displayStacks.map((stack, index) => {
-              const isActive = activeStackId === stack.id
-              return (
-                <motion.div
-                  key={stack.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  data-stack-card
-                  className={cn(
-                    "relative border-standard-dark-cyan",
-                    index === 0 && "accent-border-gradient"
-                  )}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleCreate}
+                  disabled={createMutation.isPending}
                 >
-                  <Card
-                    className={`transition-all ${isActive ? 'ring-2 ring-magenta-dark' : ''}`}
+                  {createMutation.isPending ? "Creating..." : "Create"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setDisplayId("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="mb-8 flex justify-end">
+          <Button
+            onClick={() => {
+              setIsCreating(true);
+              setDisplayId(generateDisplayId());
+            }}
+          >
+            Create New Prompt
+          </Button>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="mb-8">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search prompts by name, display ID, UUID, or content..."
+        />
+      </div>
+
+      {showLoading ? (
+        <div className="text-center py-12 text-cyan-medium">
+          {debouncedSearch.length > 0 ? "Searching..." : "Loading prompts..."}
+        </div>
+      ) : displayStacks && displayStacks.length > 0 ? (
+        <div className="space-y-4">
+          {displayStacks.map((stack, index) => {
+            const isActive = activeStackId === stack.id;
+            return (
+              <motion.div
+                key={stack.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                data-stack-card
+                className={cn(
+                  "relative border-standard-dark-cyan",
+                  index === 0 && "accent-border-gradient",
+                )}
+              >
+                <Card
+                  className={`transition-all ${isActive ? "ring-2 ring-magenta-dark" : ""}`}
+                >
+                  <CardHeader
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      // Don't toggle if clicking on buttons
+                      if (!(e.target as HTMLElement).closest("button")) {
+                        handleStackClick(stack.id, stack);
+                      }
+                    }}
                   >
-                    <CardHeader
-                      className="cursor-pointer"
-                      onClick={(e) => {
-                        // Don't toggle if clicking on buttons
-                        if (!(e.target as HTMLElement).closest('button')) {
-                          handleStackClick(stack.id, stack)
-                        }
-                      }}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-xl">{stack.name || stack.displayId}</CardTitle>
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setShowRevisionsForStack(stack.id)
-                                    }}
-                                    className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                                    aria-label="Show revisions"
-                                  >
-                                    <Clock className="h-4 w-4" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  View prompt history
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <CardDescription className="text-xs mt-2">
-                            {stack.blockIds.length} block{stack.blockIds.length !== 1 ? 's' : ''}
-                          </CardDescription>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-xl">
+                            {stack.name || stack.displayId}
+                          </CardTitle>
                           <TooltipProvider delayDuration={0}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                <button
                                   onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDuplicate(stack.id)
+                                    e.stopPropagation();
+                                    setShowRevisionsForStack(stack.id);
                                   }}
-                                  disabled={duplicateMutation.isPending}
-                                  className="cursor-pointer"
+                                  className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                                  aria-label="Show revisions"
                                 >
-                                  Duplicate Prompt
-                                </Button>
+                                  <Clock className="h-4 w-4" />
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Creates a shallow copy (references same blocks)
+                                View prompt history
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleMakeActive(stack)
-                            }}
-                            className="cursor-pointer"
-                          >
-                            Make Active
-                          </Button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDelete(stack.id)
-                            }}
-                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                            aria-label="Delete stack"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
                         </div>
+                        <CardDescription className="text-xs mt-2">
+                          {stack.blockIds.length} block
+                          {stack.blockIds.length !== 1 ? "s" : ""}
+                        </CardDescription>
                       </div>
-                    </CardHeader>
-                    <AnimatePresence>
-                      {isActive && activeStackDetails && (
-                        <StackEditForm
-                          stack={stack}
-                          stackDetails={activeStackDetails}
-                          onClose={() => setActiveStackId(null)}
-                        />
-                      )}
-                    </AnimatePresence>
-                  </Card>
-
-                  {/* Revisions overlay */}
-                  <AnimatePresence>
-                    {showRevisionsForStack === stack.id && (
-                      <motion.div
-                        className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden border"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
+                      <div className="flex gap-2 items-center">
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicate(stack.id);
+                                }}
+                                disabled={duplicateMutation.isPending}
+                                className="cursor-pointer"
+                              >
+                                Duplicate Prompt
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Creates a shallow copy (references same blocks)
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMakeActive(stack);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          Make Active
+                        </Button>
                         <button
                           onClick={(e) => {
-                            e.stopPropagation()
-                            setShowRevisionsForStack(null)
+                            e.stopPropagation();
+                            handleDelete(stack.id);
                           }}
-                          className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                          aria-label="Close revisions"
+                          className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                          aria-label="Delete stack"
                         >
                           <X className="h-4 w-4" />
                         </button>
-                        <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
-                          {revisionsQuery.isLoading ? (
-                            <div className="flex items-center justify-center w-full">
-                              <p className="text-sm text-cyan-medium">Loading revisions...</p>
-                            </div>
-                          ) : sortedRevisions.length > 0 ? (
-                            sortedRevisions.map((revision) => {
-                              const isActiveRevision = revision.id === stack.activeRevisionId
-                              return (
-                                <div
-                                  key={revision.id}
-                                  className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
-                                  onClick={async (e) => {
-                                    e.stopPropagation()
-                                    try {
-                                      await setActiveRevisionMutation.mutateAsync({
-                                        stackId: stack.id,
-                                        revisionId: revision.id,
-                                      })
-                                      setShowRevisionsForStack(null)
-                                    } catch (error) {
-                                      console.error('Failed to set active revision:', error)
-                                    }
-                                  }}
-                                >
-                                  {isActiveRevision && (
-                                    <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
-                                      Active
-                                    </div>
-                                  )}
-                                  <div className="space-y-1 mb-3">
-                                    <p className="text-xs text-cyan-medium">
-                                      <span className="font-medium">Created:</span> {new Date(revision.createdAt).toLocaleString()}
-                                    </p>
-                                    <p className="text-xs text-cyan-medium">
-                                      <span className="font-medium">Updated:</span> {new Date(revision.updatedAt).toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <div className="flex-1 overflow-auto">
-                                    <p className="text-xs font-medium mb-2">Blocks ({revision.blockIds.length}):</p>
-                                    {revision.blockIds.length > 0 ? (
-                                      <ol className="space-y-1 text-sm list-decimal list-inside">
-                                        {revision.blockIds.map((blockId: number) => (
-                                          <li key={blockId} className="text-foreground">
-                                            {getBlockDisplayName(blockId)}
-                                          </li>
-                                        ))}
-                                      </ol>
-                                    ) : (
-                                      <p className="text-xs text-cyan-medium italic">No blocks</p>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })
-                          ) : (
-                            <div className="flex items-center justify-center w-full">
-                              <p className="text-sm text-cyan-medium">No revisions found</p>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <AnimatePresence>
+                    {isActive && activeStackDetails && (
+                      <StackEditForm
+                        stack={stack}
+                        stackDetails={activeStackDetails}
+                        onClose={() => setActiveStackId(null)}
+                      />
                     )}
                   </AnimatePresence>
-                </motion.div>
-              )
-            })}
-          </div>
-        ) : debouncedSearch.length > 0 ? (
-          <Card>
-            <CardContent className="py-12 border-standard-dark-cyan">
-              <div className="text-center text-cyan-medium">
-                <p className="mb-4">No prompts found matching "{debouncedSearch}"</p>
-                <Button onClick={() => setSearch("")} variant="outline">
-                  Clear Search
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="py-12">
-              <div className="text-center text-cyan-medium">
-                <p className="mb-4">No prompts yet</p>
-                <Button onClick={() => setIsCreating(true)}>
-                  Create Your First Prompt
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </Card>
 
-        <ConfirmDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onConfirm={confirmDelete}
-          title="Delete Prompt"
-          description="Are you sure you want to delete this prompt? This action cannot be undone."
-          confirmText="Delete"
-          variant="destructive"
-        />
+                {/* Revisions overlay */}
+                <AnimatePresence>
+                  {showRevisionsForStack === stack.id && (
+                    <motion.div
+                      className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden border"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowRevisionsForStack(null);
+                        }}
+                        className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                        aria-label="Close revisions"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
+                        {revisionsQuery.isLoading ? (
+                          <div className="flex items-center justify-center w-full">
+                            <p className="text-sm text-cyan-medium">
+                              Loading revisions...
+                            </p>
+                          </div>
+                        ) : sortedRevisions.length > 0 ? (
+                          sortedRevisions.map((revision) => {
+                            const isActiveRevision =
+                              revision.id === stack.activeRevisionId;
+                            return (
+                              <div
+                                key={revision.id}
+                                className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    await setActiveRevisionMutation.mutateAsync(
+                                      {
+                                        stackId: stack.id,
+                                        revisionId: revision.id,
+                                      },
+                                    );
+                                    setShowRevisionsForStack(null);
+                                  } catch (error) {
+                                    console.error(
+                                      "Failed to set active revision:",
+                                      error,
+                                    );
+                                  }
+                                }}
+                              >
+                                {isActiveRevision && (
+                                  <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
+                                    Active
+                                  </div>
+                                )}
+                                <div className="space-y-1 mb-3">
+                                  <p className="text-xs text-cyan-medium">
+                                    <span className="font-medium">
+                                      Created:
+                                    </span>{" "}
+                                    {new Date(
+                                      revision.createdAt,
+                                    ).toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-cyan-medium">
+                                    <span className="font-medium">
+                                      Updated:
+                                    </span>{" "}
+                                    {new Date(
+                                      revision.updatedAt,
+                                    ).toLocaleString()}
+                                  </p>
+                                </div>
+                                <div className="flex-1 overflow-auto">
+                                  <p className="text-xs font-medium mb-2">
+                                    Blocks ({revision.blockIds.length}):
+                                  </p>
+                                  {revision.blockIds.length > 0 ? (
+                                    <ol className="space-y-1 text-sm list-decimal list-inside">
+                                      {revision.blockIds.map(
+                                        (blockId: number) => (
+                                          <li
+                                            key={blockId}
+                                            className="text-foreground"
+                                          >
+                                            {getBlockDisplayName(blockId)}
+                                          </li>
+                                        ),
+                                      )}
+                                    </ol>
+                                  ) : (
+                                    <p className="text-xs text-cyan-medium italic">
+                                      No blocks
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="flex items-center justify-center w-full">
+                            <p className="text-sm text-cyan-medium">
+                              No revisions found
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+        </div>
+      ) : debouncedSearch.length > 0 ? (
+        <Card>
+          <CardContent className="py-12 border-standard-dark-cyan">
+            <div className="text-center text-cyan-medium">
+              <p className="mb-4">
+                No prompts found matching "{debouncedSearch}"
+              </p>
+              <Button onClick={() => setSearch("")} variant="outline">
+                Clear Search
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-cyan-medium">
+              <p className="mb-4">No prompts yet</p>
+              <Button onClick={() => setIsCreating(true)}>
+                Create Your First Prompt
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete Prompt"
+        description="Are you sure you want to delete this prompt? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+      />
     </main>
-  )
+  );
 }

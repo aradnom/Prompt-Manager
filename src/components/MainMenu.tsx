@@ -30,7 +30,11 @@ export function MainMenu() {
     { path: "/blocks", label: "Blocks", icon: "blocks" },
     { path: "/wildcards", label: "Wildcards", icon: "dice" },
     { path: "/account", label: "Account", icon: "user" },
-    { path: "/what-is-this", label: "What is This Thing?", icon: "question-mark" },
+    {
+      path: "/what-is-this",
+      label: "What is This Thing?",
+      icon: "question-mark",
+    },
   ];
 
   // Only add dev settings if explicitly enabled (not during loading)
@@ -60,11 +64,14 @@ export function MainMenu() {
           <RasterIcon name="menu" size={20} opacity={0.8} />
         </div>
       </AnimatedBorderButton>
-      {location.pathname !== '/' &&
-        <Link to="/" className="fixed top-17 left-8 z-100 opacity-75 transition-opacity hover:opacity-100">
+      {location.pathname !== "/" && (
+        <Link
+          to="/"
+          className="fixed top-17 left-8 z-100 opacity-75 transition-opacity hover:opacity-100"
+        >
           <RasterIcon name="home" size={20} opacity={0.8} />
         </Link>
-      }
+      )}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
@@ -91,7 +98,9 @@ export function MainMenu() {
                   className="w-full justify-start hover:bg-cyan-medium/30"
                   disabled={item.disabled}
                 >
-                  {item.icon && <RasterIcon name={item.icon} size={20} className="mr-2" />}
+                  {item.icon && (
+                    <RasterIcon name={item.icon} size={20} className="mr-2" />
+                  )}
                   {item.label}
                   {item.disabled && (
                     <span className="ml-auto text-xs text-cyan-medium">

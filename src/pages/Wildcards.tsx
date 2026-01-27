@@ -1,104 +1,116 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
-import yaml from 'js-yaml'
-import { Sparkles } from 'lucide-react'
-import { api } from '@/lib/api'
-import { generateUUID } from '@/lib/uuid'
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import yaml from "js-yaml";
+import { Sparkles } from "lucide-react";
+import { api } from "@/lib/api";
+import { generateUUID } from "@/lib/uuid";
 import { cn } from "@/lib/utils";
-import { generateDisplayId } from '@/lib/generate-display-id'
-import { useErrors } from '@/contexts/ErrorContext'
-import { validateWildcardContent } from '@/lib/wildcard-validation'
-import { useSettings } from '@/contexts/SettingsContext'
-import { RasterIcon } from '@/components/RasterIcon'
-import { Button } from '@/components/ui/button'
-import { DisplayIdInput } from '@/components/ui/display-id-input'
-import { SearchInput } from '@/components/ui/search-input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { generateDisplayId } from "@/lib/generate-display-id";
+import { useErrors } from "@/contexts/ErrorContext";
+import { validateWildcardContent } from "@/lib/wildcard-validation";
+import { useSettings } from "@/contexts/SettingsContext";
+import { RasterIcon } from "@/components/RasterIcon";
+import { Button } from "@/components/ui/button";
+import { DisplayIdInput } from "@/components/ui/display-id-input";
+import { SearchInput } from "@/components/ui/search-input";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { WildcardContentEditor } from '@/components/WildcardContentEditor'
+} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { WildcardContentEditor } from "@/components/WildcardContentEditor";
 
 interface WildcardFormValues {
-  displayId: string
-  name: string
-  format: string
-  content: string
+  displayId: string;
+  name: string;
+  format: string;
+  content: string;
 }
 
 interface WildcardFormProps {
-  mode: 'create' | 'edit'
-  initialValues?: WildcardFormValues
-  onSubmit: (values: WildcardFormValues) => void
-  onCancel: () => void
-  isSubmitting: boolean
+  mode: "create" | "edit";
+  initialValues?: WildcardFormValues;
+  onSubmit: (values: WildcardFormValues) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
 }
 
-function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }: WildcardFormProps) {
-  const { addError } = useErrors()
-  const [displayId, setDisplayId] = useState(initialValues?.displayId || '')
-  const [name, setName] = useState(initialValues?.name || '')
-  const [format, setFormat] = useState(initialValues?.format || 'json')
-  const [content, setContent] = useState(initialValues?.content || '')
+function WildcardForm({
+  mode,
+  initialValues,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: WildcardFormProps) {
+  const { addError } = useErrors();
+  const [displayId, setDisplayId] = useState(initialValues?.displayId || "");
+  const [name, setName] = useState(initialValues?.name || "");
+  const [format, setFormat] = useState(initialValues?.format || "json");
+  const [content, setContent] = useState(initialValues?.content || "");
 
   const validateContent = (): boolean => {
     // First run global validation
-    const globalValidation = validateWildcardContent(content)
+    const globalValidation = validateWildcardContent(content);
     if (!globalValidation.valid) {
-      addError(globalValidation.error!)
-      return false
+      addError(globalValidation.error!);
+      return false;
     }
 
     // Then run format-specific validation
     try {
       switch (format) {
-        case 'json':
-          JSON.parse(content)
-          break
-        case 'yaml':
-          yaml.load(content)
-          break
+        case "json":
+          JSON.parse(content);
+          break;
+        case "yaml":
+          yaml.load(content);
+          break;
         // 'lines' and 'text' don't need format-specific validation
       }
-      return true
+      return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addError(`Invalid ${format.toUpperCase()}: ${errorMessage}`)
-      return false
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      addError(`Invalid ${format.toUpperCase()}: ${errorMessage}`);
+      return false;
     }
-  }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!validateContent()) {
-      return
+      return;
     }
 
-    onSubmit({ displayId, name, format, content })
-  }
+    onSubmit({ displayId, name, format, content });
+  };
 
   return (
     <Card className="bg-cyan-dark">
       <CardHeader>
-        <CardTitle>{mode === 'create' ? 'Create Wildcard' : 'Edit Wildcard'}</CardTitle>
+        <CardTitle>
+          {mode === "create" ? "Create Wildcard" : "Edit Wildcard"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'create' && (
+          {mode === "create" && (
             <div>
-              <label className="text-sm font-medium mb-2 block">Display ID</label>
+              <label className="text-sm font-medium mb-2 block">
+                Display ID
+              </label>
               <DisplayIdInput
                 value={displayId}
                 onChange={setDisplayId}
@@ -150,7 +162,11 @@ function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }:
           </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create' : 'Update'}
+              {isSubmitting
+                ? "Saving..."
+                : mode === "create"
+                  ? "Create"
+                  : "Update"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
@@ -159,144 +175,154 @@ function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }:
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export default function Wildcards() {
-  const { addError } = useErrors()
-  const { preferredLLMTarget } = useSettings()
-  const [isCreating, setIsCreating] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [wildcardToDelete, setWildcardToDelete] = useState<number | null>(null)
-  const [isGenerateOpen, setIsGenerateOpen] = useState(false)
-  const [generateConcept, setGenerateConcept] = useState('')
-  const [generatedName, setGeneratedName] = useState('')
-  const [generatedDisplayId, setGeneratedDisplayId] = useState('')
-  const [generatedContent, setGeneratedContent] = useState('')
-  const [showGenerateForm, setShowGenerateForm] = useState(false)
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const { addError } = useErrors();
+  const { preferredLLMTarget } = useSettings();
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [wildcardToDelete, setWildcardToDelete] = useState<number | null>(null);
+  const [isGenerateOpen, setIsGenerateOpen] = useState(false);
+  const [generateConcept, setGenerateConcept] = useState("");
+  const [generatedName, setGeneratedName] = useState("");
+  const [generatedDisplayId, setGeneratedDisplayId] = useState("");
+  const [generatedContent, setGeneratedContent] = useState("");
+  const [showGenerateForm, setShowGenerateForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const { data: wildcards, isLoading, refetch } = api.wildcards.list.useQuery()
-  const { data: serverConfig } = api.config.getSettings.useQuery()
+  const { data: wildcards, isLoading, refetch } = api.wildcards.list.useQuery();
+  const { data: serverConfig } = api.config.getSettings.useQuery();
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search)
-    }, 300)
+      setDebouncedSearch(search);
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [search])
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Fetch search results when there's a search query
-  const { data: searchResults, isLoading: isSearching } = api.wildcards.search.useQuery(
-    {
-      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-    },
-    { enabled: debouncedSearch.length > 0 }
-  )
+  const { data: searchResults, isLoading: isSearching } =
+    api.wildcards.search.useQuery(
+      {
+        query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+      },
+      { enabled: debouncedSearch.length > 0 },
+    );
 
   // Use search results if searching, otherwise use all wildcards
-  const displayWildcards = debouncedSearch.length > 0 ? searchResults : wildcards
-  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading
+  const displayWildcards =
+    debouncedSearch.length > 0 ? searchResults : wildcards;
+  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
 
   const llmTarget = (() => {
-    const targets = serverConfig?.llm?.allowedTargets
-    if (!targets || targets.length === 0) return 'lm-studio'
+    const targets = serverConfig?.llm?.allowedTargets;
+    if (!targets || targets.length === 0) return "lm-studio";
 
     if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget as 'lm-studio' | 'vertex' | 'openai' | 'anthropic'
+      return preferredLLMTarget as
+        | "lm-studio"
+        | "vertex"
+        | "openai"
+        | "anthropic";
     }
 
-    return (targets.includes('vertex') ? 'vertex' : targets[0]) as 'lm-studio' | 'vertex' | 'openai' | 'anthropic'
-  })()
+    return (targets.includes("vertex") ? "vertex" : targets[0]) as
+      | "lm-studio"
+      | "vertex"
+      | "openai"
+      | "anthropic";
+  })();
 
   const createMutation = api.wildcards.create.useMutation({
     onSuccess: () => {
-      refetch()
-      setIsCreating(false)
+      refetch();
+      setIsCreating(false);
     },
     onError: (error) => {
-      addError(`Failed to create wildcard: ${error.message}`)
+      addError(`Failed to create wildcard: ${error.message}`);
     },
-  })
+  });
 
   const updateMutation = api.wildcards.update.useMutation({
     onSuccess: () => {
-      refetch()
-      setEditingId(null)
+      refetch();
+      setEditingId(null);
     },
     onError: (error) => {
-      addError(`Failed to update wildcard: ${error.message}`)
+      addError(`Failed to update wildcard: ${error.message}`);
     },
-  })
+  });
 
   const deleteMutation = api.wildcards.delete.useMutation({
     onSuccess: () => {
-      refetch()
+      refetch();
     },
     onError: (error) => {
-      addError(`Failed to delete wildcard: ${error.message}`)
+      addError(`Failed to delete wildcard: ${error.message}`);
     },
-  })
+  });
 
-  const generateWildcardMutation = api.llm.transform.useMutation()
-  const autoLabelMutation = api.llm.transform.useMutation()
+  const generateWildcardMutation = api.llm.transform.useMutation();
+  const autoLabelMutation = api.llm.transform.useMutation();
 
   const handleGenerateSubmit = async () => {
-    if (!generateConcept.trim()) return
+    if (!generateConcept.trim()) return;
 
     try {
       // Fire both requests in parallel
       const [wildcardResult, labelResult] = await Promise.all([
         generateWildcardMutation.mutateAsync({
           text: generateConcept,
-          operation: 'generate-wildcard',
+          operation: "generate-wildcard",
           target: llmTarget,
           style: undefined,
         }),
         autoLabelMutation.mutateAsync({
           text: generateConcept,
-          operation: 'auto-label',
+          operation: "auto-label",
           target: llmTarget,
           style: undefined,
-        })
-      ])
+        }),
+      ]);
 
       // Parse the label result
-      let labelTitle = 'Generated Wildcard'
-      let labelCode = generateDisplayId()
+      let labelTitle = "Generated Wildcard";
+      let labelCode = generateDisplayId();
 
-      if (typeof labelResult.result === 'string') {
+      if (typeof labelResult.result === "string") {
         try {
-          const parsed = JSON.parse(labelResult.result)
-          if (parsed.title) labelTitle = parsed.title
-          if (parsed.code) labelCode = parsed.code
+          const parsed = JSON.parse(labelResult.result);
+          if (parsed.title) labelTitle = parsed.title;
+          if (parsed.code) labelCode = parsed.code;
         } catch {
           // If parsing fails, use the result as-is for title
-          labelTitle = labelResult.result
+          labelTitle = labelResult.result;
         }
       }
 
       // Format as YAML with the code-friendly key name
       if (Array.isArray(wildcardResult.result)) {
-        const yamlContent = yaml.dump({ [labelCode]: wildcardResult.result })
-        setGeneratedContent(yamlContent)
+        const yamlContent = yaml.dump({ [labelCode]: wildcardResult.result });
+        setGeneratedContent(yamlContent);
       }
 
       // Set the name and display ID
-      setGeneratedName(labelTitle)
-      setGeneratedDisplayId(labelCode)
+      setGeneratedName(labelTitle);
+      setGeneratedDisplayId(labelCode);
 
       // Show the form
-      setShowGenerateForm(true)
+      setShowGenerateForm(true);
     } catch (error) {
-      console.error('Generate failed:', error)
-      addError('Failed to generate wildcard')
+      console.error("Generate failed:", error);
+      addError("Failed to generate wildcard");
     }
-  }
+  };
 
   const handleGenerateCreate = (values: WildcardFormValues) => {
     createMutation.mutate({
@@ -305,15 +331,15 @@ export default function Wildcards() {
       name: values.name,
       format: values.format,
       content: values.content,
-    })
+    });
     // Reset generate state
-    setIsGenerateOpen(false)
-    setGenerateConcept('')
-    setGeneratedName('')
-    setGeneratedDisplayId('')
-    setGeneratedContent('')
-    setShowGenerateForm(false)
-  }
+    setIsGenerateOpen(false);
+    setGenerateConcept("");
+    setGeneratedName("");
+    setGeneratedDisplayId("");
+    setGeneratedContent("");
+    setShowGenerateForm(false);
+  };
 
   const handleCreate = (values: WildcardFormValues) => {
     createMutation.mutate({
@@ -322,8 +348,8 @@ export default function Wildcards() {
       name: values.name,
       format: values.format,
       content: values.content,
-    })
-  }
+    });
+  };
 
   const handleUpdate = (id: number, values: WildcardFormValues) => {
     updateMutation.mutate({
@@ -331,20 +357,20 @@ export default function Wildcards() {
       name: values.name,
       format: values.format,
       content: values.content,
-    })
-  }
+    });
+  };
 
   const handleDelete = (id: number) => {
-    setWildcardToDelete(id)
-    setDeleteDialogOpen(true)
-  }
+    setWildcardToDelete(id);
+    setDeleteDialogOpen(true);
+  };
 
   const confirmDelete = () => {
     if (wildcardToDelete !== null) {
-      deleteMutation.mutate({ id: wildcardToDelete })
-      setWildcardToDelete(null)
+      deleteMutation.mutate({ id: wildcardToDelete });
+      setWildcardToDelete(null);
     }
-  }
+  };
 
   return (
     <main className="standard-page-container">
@@ -354,7 +380,9 @@ export default function Wildcards() {
           Wildcards
         </h1>
         <p className="text-cyan-medium">
-          <mark className="highlighted-text">Manage your wildcard templates</mark>
+          <mark className="highlighted-text">
+            Manage your wildcard templates
+          </mark>
         </p>
       </div>
 
@@ -390,7 +418,7 @@ export default function Wildcards() {
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          {debouncedSearch.length > 0 ? 'Searching...' : 'Loading wildcards...'}
+          {debouncedSearch.length > 0 ? "Searching..." : "Loading wildcards..."}
         </div>
       ) : displayWildcards && displayWildcards.length > 0 ? (
         <div className="space-y-4">
@@ -402,7 +430,7 @@ export default function Wildcards() {
               transition={{ duration: 0.3, delay: index * 0.05 }}
               className={cn(
                 "relative border-standard-dark-cyan",
-                index === 0 && "accent-border-gradient"
+                index === 0 && "accent-border-gradient",
               )}
             >
               {editingId === wildcard.id ? (
@@ -423,9 +451,13 @@ export default function Wildcards() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-xl">{wildcard.name}</CardTitle>
+                        <CardTitle className="text-xl">
+                          {wildcard.name}
+                        </CardTitle>
                         <div className="flex gap-2 mt-2 text-sm text-cyan-medium">
-                          <span className="font-mono">{wildcard.displayId}</span>
+                          <span className="font-mono">
+                            {wildcard.displayId}
+                          </span>
                           <span>•</span>
                           <span className="capitalize">{wildcard.format}</span>
                         </div>
@@ -463,7 +495,9 @@ export default function Wildcards() {
         <Card>
           <CardContent className="py-12 border-standard-dark-cyan">
             <div className="text-center text-cyan-medium">
-              <p className="mb-4">No wildcards found matching "{debouncedSearch}"</p>
+              <p className="mb-4">
+                No wildcards found matching "{debouncedSearch}"
+              </p>
               <Button onClick={() => setSearch("")} variant="outline">
                 Clear Search
               </Button>
@@ -488,7 +522,9 @@ export default function Wildcards() {
           <DialogHeader>
             <DialogTitle>Generate New Wildcard</DialogTitle>
             <DialogDescription>
-              {!showGenerateForm ? 'Enter a concept or category to generate wildcard values' : 'Review and customize your generated wildcard'}
+              {!showGenerateForm
+                ? "Enter a concept or category to generate wildcard values"
+                : "Review and customize your generated wildcard"}
             </DialogDescription>
           </DialogHeader>
 
@@ -498,10 +534,16 @@ export default function Wildcards() {
                 <input
                   type="text"
                   value={generateConcept}
-                  onChange={(e) => setGenerateConcept(e.target.value.slice(0, 140))}
+                  onChange={(e) =>
+                    setGenerateConcept(e.target.value.slice(0, 140))
+                  }
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !generateWildcardMutation.isPending && !autoLabelMutation.isPending) {
-                      handleGenerateSubmit()
+                    if (
+                      e.key === "Enter" &&
+                      !generateWildcardMutation.isPending &&
+                      !autoLabelMutation.isPending
+                    ) {
+                      handleGenerateSubmit();
                     }
                   }}
                   placeholder="Enter a category (e.g., 'emotions', 'fantasy locations')"
@@ -515,9 +557,16 @@ export default function Wildcards() {
                   </span>
                   <Button
                     onClick={handleGenerateSubmit}
-                    disabled={!generateConcept.trim() || generateWildcardMutation.isPending || autoLabelMutation.isPending}
+                    disabled={
+                      !generateConcept.trim() ||
+                      generateWildcardMutation.isPending ||
+                      autoLabelMutation.isPending
+                    }
                   >
-                    {generateWildcardMutation.isPending || autoLabelMutation.isPending ? 'Generating...' : 'Generate'}
+                    {generateWildcardMutation.isPending ||
+                    autoLabelMutation.isPending
+                      ? "Generating..."
+                      : "Generate"}
                   </Button>
                 </div>
               </div>
@@ -532,15 +581,23 @@ export default function Wildcards() {
               >
                 {/* Input moved to top */}
                 <div className="border-b pb-4">
-                  <label className="text-sm font-medium mb-2 block">Concept</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    Concept
+                  </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={generateConcept}
-                      onChange={(e) => setGenerateConcept(e.target.value.slice(0, 140))}
+                      onChange={(e) =>
+                        setGenerateConcept(e.target.value.slice(0, 140))
+                      }
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !generateWildcardMutation.isPending && !autoLabelMutation.isPending) {
-                          handleGenerateSubmit()
+                        if (
+                          e.key === "Enter" &&
+                          !generateWildcardMutation.isPending &&
+                          !autoLabelMutation.isPending
+                        ) {
+                          handleGenerateSubmit();
                         }
                       }}
                       className="flex-1 px-3 py-2 rounded-md border border-cyan-medium bg-background"
@@ -548,10 +605,17 @@ export default function Wildcards() {
                     />
                     <Button
                       onClick={handleGenerateSubmit}
-                      disabled={!generateConcept.trim() || generateWildcardMutation.isPending || autoLabelMutation.isPending}
+                      disabled={
+                        !generateConcept.trim() ||
+                        generateWildcardMutation.isPending ||
+                        autoLabelMutation.isPending
+                      }
                       variant="outline"
                     >
-                      {generateWildcardMutation.isPending || autoLabelMutation.isPending ? 'Generating...' : 'Regenerate'}
+                      {generateWildcardMutation.isPending ||
+                      autoLabelMutation.isPending
+                        ? "Generating..."
+                        : "Regenerate"}
                     </Button>
                   </div>
                 </div>
@@ -570,7 +634,9 @@ export default function Wildcards() {
 
                 {/* Display ID */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Display ID</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    Display ID
+                  </label>
                   <div className="flex gap-2">
                     <DisplayIdInput
                       value={generatedDisplayId}
@@ -590,7 +656,9 @@ export default function Wildcards() {
 
                 {/* Content */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Content (YAML)</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    Content (YAML)
+                  </label>
                   <WildcardContentEditor
                     value={generatedContent}
                     onChange={setGeneratedContent}
@@ -601,25 +669,34 @@ export default function Wildcards() {
                 {/* Actions */}
                 <div className="flex gap-2 border-t pt-4">
                   <Button
-                    onClick={() => handleGenerateCreate({
-                      displayId: generatedDisplayId,
-                      name: generatedName,
-                      format: 'yaml',
-                      content: generatedContent,
-                    })}
-                    disabled={!generatedDisplayId.trim() || !generatedName.trim() || !generatedContent.trim() || createMutation.isPending}
+                    onClick={() =>
+                      handleGenerateCreate({
+                        displayId: generatedDisplayId,
+                        name: generatedName,
+                        format: "yaml",
+                        content: generatedContent,
+                      })
+                    }
+                    disabled={
+                      !generatedDisplayId.trim() ||
+                      !generatedName.trim() ||
+                      !generatedContent.trim() ||
+                      createMutation.isPending
+                    }
                   >
-                    {createMutation.isPending ? 'Creating...' : 'Create Wildcard'}
+                    {createMutation.isPending
+                      ? "Creating..."
+                      : "Create Wildcard"}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setIsGenerateOpen(false)
-                      setGenerateConcept('')
-                      setGeneratedName('')
-                      setGeneratedDisplayId('')
-                      setGeneratedContent('')
-                      setShowGenerateForm(false)
+                      setIsGenerateOpen(false);
+                      setGenerateConcept("");
+                      setGeneratedName("");
+                      setGeneratedDisplayId("");
+                      setGeneratedContent("");
+                      setShowGenerateForm(false);
                     }}
                   >
                     Cancel
@@ -641,5 +718,5 @@ export default function Wildcards() {
         variant="destructive"
       />
     </main>
-  )
+  );
 }

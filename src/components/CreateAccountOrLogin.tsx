@@ -1,14 +1,16 @@
-import { useState } from 'react';
-import { HeroInput } from '@/components/ui/hero-input';
-import { Button } from '@/components/ui/button';
-import { useSession } from '@/contexts/SessionContext';
+import { useState } from "react";
+import { HeroInput } from "@/components/ui/hero-input";
+import { Button } from "@/components/ui/button";
+import { useSession } from "@/contexts/SessionContext";
 
 interface CreateAccountOrLoginProps {
   onAccountCreated?: (token: string) => void;
 }
 
-export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginProps) {
-  const [token, setToken] = useState('');
+export function CreateAccountOrLogin({
+  onAccountCreated,
+}: CreateAccountOrLoginProps) {
+  const [token, setToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { checkSession } = useSession();
 
@@ -16,23 +18,23 @@ export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginP
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("http://localhost:3001/api/auth/login", {
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ token }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to log in');
+        throw new Error("Failed to log in");
       }
 
       // Update session context
       await checkSession();
     } catch (error) {
-      console.error('Error logging in:', error);
+      console.error("Error logging in:", error);
     } finally {
       setIsLoading(false);
     }
@@ -41,16 +43,16 @@ export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginP
   const handleCreateAccount = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/register', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("http://localhost:3001/api/auth/register", {
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create account');
+        throw new Error("Failed to create account");
       }
 
       const data = await response.json();
@@ -63,7 +65,7 @@ export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginP
         onAccountCreated(data.token);
       }
     } catch (error) {
-      console.error('Error creating account:', error);
+      console.error("Error creating account:", error);
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +89,7 @@ export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginP
             size="hero"
             disabled={!token || isLoading}
           >
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
         </div>
       </form>
@@ -98,7 +100,9 @@ export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginP
           <div className="w-full border-t border-cyan-medium/50"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-background text-cyan-medium font-bold">or</span>
+          <span className="px-4 bg-background text-cyan-medium font-bold">
+            or
+          </span>
         </div>
       </div>
 
@@ -111,7 +115,7 @@ export function CreateAccountOrLogin({ onAccountCreated }: CreateAccountOrLoginP
           className="w-full"
           disabled={isLoading}
         >
-          {isLoading ? 'Creating Account...' : 'Create an Account'}
+          {isLoading ? "Creating Account..." : "Create an Account"}
         </Button>
       </div>
     </div>

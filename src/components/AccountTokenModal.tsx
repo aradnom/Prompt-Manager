@@ -1,14 +1,24 @@
-import { Link } from 'react-router-dom'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Link } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface AccountTokenModalProps {
-  isOpen: boolean
-  onClose: () => void
-  token: string
+  isOpen: boolean;
+  onClose: () => void;
+  token: string;
 }
 
-export function AccountTokenModal({ isOpen, onClose, token }: AccountTokenModalProps) {
+export function AccountTokenModal({
+  isOpen,
+  onClose,
+  token,
+}: AccountTokenModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -19,8 +29,8 @@ export function AccountTokenModal({ isOpen, onClose, token }: AccountTokenModalP
               Write this down immediately!
             </div>
             <div>
-              This is your unique Account ID. You'll need it to log in to your account.
-              If you lose it, it cannot be retrieved.
+              This is your unique Account ID. You'll need it to log in to your
+              account. If you lose it, it cannot be retrieved.
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -33,8 +43,11 @@ export function AccountTokenModal({ isOpen, onClose, token }: AccountTokenModalP
 
         <div className="space-y-4">
           <p className="text-sm text-cyan-medium">
-            You can view your Account ID later on the{' '}
-            <Link to="/account" className="text-magenta-medium hover:text-magenta-light underline">
+            You can view your Account ID later on the{" "}
+            <Link
+              to="/account"
+              className="text-magenta-medium hover:text-magenta-light underline"
+            >
               Account page
             </Link>
             .
@@ -48,5 +61,5 @@ export function AccountTokenModal({ isOpen, onClose, token }: AccountTokenModalP
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

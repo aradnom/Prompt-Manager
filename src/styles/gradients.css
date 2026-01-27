@@ -1,10 +1,18 @@
 @layer utilities {
   .radial-gradient-magenta {
-    background: radial-gradient(circle at top left, rgb(from var(--color-magenta-light) r g b / 60%) 0%, rgba(0, 0, 0, 0) 70%);
+    background: radial-gradient(
+      circle at top left,
+      rgb(from var(--color-magenta-light) r g b / 60%) 0%,
+      rgba(0, 0, 0, 0) 70%
+    );
   }
 
   .radial-gradient-cyan {
-    background: radial-gradient(circle at top left, rgb(from var(--color-cyan-medium) r g b / 40%) 0%, rgba(0, 0, 0, 0) 30%);
+    background: radial-gradient(
+      circle at top left,
+      rgb(from var(--color-cyan-medium) r g b / 40%) 0%,
+      rgba(0, 0, 0, 0) 30%
+    );
   }
 
   .accent-border-gradient {
@@ -12,7 +20,7 @@
   }
 
   .accent-border-gradient::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     right: 0;
@@ -20,8 +28,15 @@
     height: 100%;
     border: 2px solid transparent;
     border-radius: inherit;
-    background: linear-gradient(225deg, var(--color-magenta-dark) 0%, transparent 20%) border-box;
-    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    background: linear-gradient(
+        225deg,
+        var(--color-magenta-dark) 0%,
+        transparent 20%
+      )
+      border-box;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) padding-box,
+      linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;

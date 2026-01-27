@@ -1,51 +1,50 @@
-import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { api } from '@/lib/api'
-import { useSettings } from '@/contexts/SettingsContext'
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { api } from "@/lib/api";
+import { useSettings } from "@/contexts/SettingsContext";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 
 export default function DeveloperSettings() {
-  const navigate = useNavigate()
-  const { data: config, isLoading } = api.config.getSettings.useQuery()
-  const { preferredLLMTarget, setPreferredLLMTarget } = useSettings()
+  const navigate = useNavigate();
+  const { data: config, isLoading } = api.config.getSettings.useQuery();
+  const { preferredLLMTarget, setPreferredLLMTarget } = useSettings();
 
   useEffect(() => {
     if (!isLoading && !config?.devSettingsEnabled) {
-      navigate('/')
+      navigate("/");
     }
-  }, [config, isLoading, navigate])
+  }, [config, isLoading, navigate]);
 
   if (isLoading) {
     return (
       <main className="standard-page-container">
-        <div className="text-center py-12 text-cyan-medium">
-          Loading...
-        </div>
+        <div className="text-center py-12 text-cyan-medium">Loading...</div>
       </main>
-    )
+    );
   }
 
   if (!config?.devSettingsEnabled) {
-    return null
+    return null;
   }
 
-  const allowedTargets = config.llm?.allowedTargets || []
-  const currentTarget = preferredLLMTarget && allowedTargets.includes(preferredLLMTarget) 
-    ? preferredLLMTarget 
-    : allowedTargets[0] || 'lm-studio'
+  const allowedTargets = config.llm?.allowedTargets || [];
+  const currentTarget =
+    preferredLLMTarget && allowedTargets.includes(preferredLLMTarget)
+      ? preferredLLMTarget
+      : allowedTargets[0] || "lm-studio";
 
   return (
     <main className="standard-page-container">
@@ -66,7 +65,9 @@ export default function DeveloperSettings() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Preferred LLM Target</label>
+              <label className="text-sm font-medium">
+                Preferred LLM Target
+              </label>
               <div className="w-[300px]">
                 <Select
                   value={currentTarget}
@@ -78,17 +79,23 @@ export default function DeveloperSettings() {
                   <SelectContent>
                     {allowedTargets.map((target) => (
                       <SelectItem key={target} value={target}>
-                        {target === 'lm-studio' ? 'LM Studio' : 
-                         target === 'vertex' ? 'Google Vertex AI' : 
-                         target === 'openai' ? 'OpenAI' :
-                         target === 'anthropic' ? 'Anthropic' : target}
+                        {target === "lm-studio"
+                          ? "LM Studio"
+                          : target === "vertex"
+                            ? "Google Vertex AI"
+                            : target === "openai"
+                              ? "OpenAI"
+                              : target === "anthropic"
+                                ? "Anthropic"
+                                : target}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <p className="text-xs text-cyan-medium">
-                Select which service to use for text transformations and variations.
+                Select which service to use for text transformations and
+                variations.
               </p>
             </div>
           </CardContent>
@@ -103,11 +110,12 @@ export default function DeveloperSettings() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-cyan-medium">
-              Developer settings are currently enabled via the DEV_SETTINGS environment variable.
+              Developer settings are currently enabled via the DEV_SETTINGS
+              environment variable.
             </p>
           </CardContent>
         </Card>
       </div>
     </main>
-  )
+  );
 }

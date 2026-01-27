@@ -1,55 +1,63 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { generateUUID } from '@/lib/uuid'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
+import { generateUUID } from "@/lib/uuid";
 
 interface ErrorMessage {
-  id: string
-  message: string
-  timestamp: number
+  id: string;
+  message: string;
+  timestamp: number;
 }
 
 interface ErrorContextType {
-  errors: ErrorMessage[]
-  addError: (message: string) => void
-  removeError: (id: string) => void
-  clearErrors: () => void
+  errors: ErrorMessage[];
+  addError: (message: string) => void;
+  removeError: (id: string) => void;
+  clearErrors: () => void;
 }
 
-const ErrorContext = createContext<ErrorContextType | undefined>(undefined)
+const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 
 export function ErrorProvider({ children }: { children: ReactNode }) {
-  const [errors, setErrors] = useState<ErrorMessage[]>([])
+  const [errors, setErrors] = useState<ErrorMessage[]>([]);
 
   const addError = useCallback((message: string) => {
-    const id = generateUUID()
-    const timestamp = Date.now()
-    setErrors((prev) => [...prev, { id, message, timestamp }])
+    const id = generateUUID();
+    const timestamp = Date.now();
+    setErrors((prev) => [...prev, { id, message, timestamp }]);
 
     // Auto-remove after 8 seconds
     setTimeout(() => {
-      setErrors((prev) => prev.filter((e) => e.id !== id))
-    }, 8000)
-  }, [])
+      setErrors((prev) => prev.filter((e) => e.id !== id));
+    }, 8000);
+  }, []);
 
   const removeError = useCallback((id: string) => {
-    setErrors((prev) => prev.filter((e) => e.id !== id))
-  }, [])
+    setErrors((prev) => prev.filter((e) => e.id !== id));
+  }, []);
 
   const clearErrors = useCallback(() => {
-    setErrors([])
-  }, [])
+    setErrors([]);
+  }, []);
 
   return (
-    <ErrorContext.Provider value={{ errors, addError, removeError, clearErrors }}>
+    <ErrorContext.Provider
+      value={{ errors, addError, removeError, clearErrors }}
+    >
       {children}
     </ErrorContext.Provider>
-  )
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useErrors() {
-  const context = useContext(ErrorContext)
+  const context = useContext(ErrorContext);
   if (context === undefined) {
-    throw new Error('useErrors must be used within an ErrorProvider')
+    throw new Error("useErrors must be used within an ErrorProvider");
   }
-  return context
+  return context;
 }

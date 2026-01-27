@@ -1,10 +1,13 @@
-import * as React from "react"
-import { motion } from "motion/react"
-import { type VariantProps, cva } from "class-variance-authority"
+import * as React from "react";
+import { motion } from "motion/react";
+import { type VariantProps, cva } from "class-variance-authority";
 
-import { cn } from "@/lib/utils"
-import { TEXT_BLOCK_ANIMATION, TEXT_BLOCK_FADE } from "@/lib/text-block-animation-settings"
-import { animatedButtonVariants } from "./animated-button-variants"
+import { cn } from "@/lib/utils";
+import {
+  TEXT_BLOCK_ANIMATION,
+  TEXT_BLOCK_FADE,
+} from "@/lib/text-block-animation-settings";
+import { animatedButtonVariants } from "./animated-button-variants";
 
 const dotVariants = cva("rounded-full", {
   variants: {
@@ -20,13 +23,14 @@ const dotVariants = cva("rounded-full", {
   defaultVariants: {
     variant: "default",
   },
-})
+});
 
 export interface AnimatedButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof animatedButtonVariants> {
-  asChild?: boolean
-  active?: boolean
+  asChild?: boolean;
+  active?: boolean;
 }
 
 const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
@@ -35,8 +39,10 @@ const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
       <motion.button
         ref={ref}
         className={cn(
-          active ? animatedButtonVariants({ variant, size, className }) : cn(dotVariants({ variant }), "w-2 h-2 text-sm", className),
-          "overflow-hidden p-0 cursor-pointer"
+          active
+            ? animatedButtonVariants({ variant, size, className })
+            : cn(dotVariants({ variant }), "w-2 h-2 text-sm", className),
+          "overflow-hidden p-0 cursor-pointer",
         )}
         animate={{
           width: active ? "auto" : "8px",
@@ -64,9 +70,9 @@ const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
           {children}
         </motion.span>
       </motion.button>
-    )
-  }
-)
-AnimatedButton.displayName = "AnimatedButton"
+    );
+  },
+);
+AnimatedButton.displayName = "AnimatedButton";
 
-export { AnimatedButton }
+export { AnimatedButton };

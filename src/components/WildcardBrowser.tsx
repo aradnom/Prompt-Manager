@@ -1,55 +1,61 @@
-import { useState } from 'react'
-import { api } from '@/lib/api'
-import { extractWildcardValues } from '@/lib/wildcard-value-extractor'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { api } from "@/lib/api";
+import { extractWildcardValues } from "@/lib/wildcard-value-extractor";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+} from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 interface WildcardBrowserProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSelect: (displayId: string, path?: string) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (displayId: string, path?: string) => void;
 }
 
-export function WildcardBrowser({ open, onOpenChange, onSelect }: WildcardBrowserProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [expandedWildcards, setExpandedWildcards] = useState<Set<number>>(new Set())
-  const { data: wildcards, isLoading } = api.wildcards.list.useQuery()
+export function WildcardBrowser({
+  open,
+  onOpenChange,
+  onSelect,
+}: WildcardBrowserProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedWildcards, setExpandedWildcards] = useState<Set<number>>(
+    new Set(),
+  );
+  const { data: wildcards, isLoading } = api.wildcards.list.useQuery();
 
   const filteredWildcards = wildcards?.filter((wildcard) => {
-    const query = searchQuery.toLowerCase()
+    const query = searchQuery.toLowerCase();
     return (
       wildcard.displayId.toLowerCase().includes(query) ||
       wildcard.name.toLowerCase().includes(query) ||
       wildcard.content.toLowerCase().includes(query)
-    )
-  })
+    );
+  });
 
   const handleSelect = (displayId: string, path?: string) => {
-    onSelect(displayId, path)
-    onOpenChange(false)
-    setSearchQuery('')
-    setExpandedWildcards(new Set())
-  }
+    onSelect(displayId, path);
+    onOpenChange(false);
+    setSearchQuery("");
+    setExpandedWildcards(new Set());
+  };
 
   const toggleExpanded = (wildcardId: number) => {
-    setExpandedWildcards(prev => {
-      const next = new Set(prev)
+    setExpandedWildcards((prev) => {
+      const next = new Set(prev);
       if (next.has(wildcardId)) {
-        next.delete(wildcardId)
+        next.delete(wildcardId);
       } else {
-        next.add(wildcardId)
+        next.add(wildcardId);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,11 +84,17 @@ export function WildcardBrowser({ open, onOpenChange, onSelect }: WildcardBrowse
               </div>
             ) : filteredWildcards && filteredWildcards.length > 0 ? (
               filteredWildcards.map((wildcard) => {
-                const isExpanded = expandedWildcards.has(wildcard.id)
-                const values = extractWildcardValues(wildcard.content, wildcard.format)
+                const isExpanded = expandedWildcards.has(wildcard.id);
+                const values = extractWildcardValues(
+                  wildcard.content,
+                  wildcard.format,
+                );
 
                 return (
-                  <div key={wildcard.id} className="border border-cyan-medium rounded-md">
+                  <div
+                    key={wildcard.id}
+                    className="border border-cyan-medium rounded-md"
+                  >
                     <div className="flex items-start justify-between gap-2 p-3">
                       <button
                         onClick={() => toggleExpanded(wildcard.id)}
@@ -100,7 +112,8 @@ export function WildcardBrowser({ open, onOpenChange, onSelect }: WildcardBrowse
                           </div>
                           {!isExpanded && (
                             <div className="text-sm text-cyan-medium mt-1">
-                              {values.length} value{values.length !== 1 ? 's' : ''}
+                              {values.length} value
+                              {values.length !== 1 ? "s" : ""}
                             </div>
                           )}
                         </div>
@@ -116,15 +129,15 @@ export function WildcardBrowser({ open, onOpenChange, onSelect }: WildcardBrowse
                           values.map((value, idx) => (
                             <button
                               key={idx}
-                              onClick={() => handleSelect(wildcard.displayId, value.path)}
+                              onClick={() =>
+                                handleSelect(wildcard.displayId, value.path)
+                              }
                               className="w-full text-left p-2 rounded hover:bg-cyan-dark transition-colors text-sm"
                             >
                               <div className="font-mono text-xs text-cyan-medium mb-1">
                                 {value.displayPath}
                               </div>
-                              <div className="truncate">
-                                {value.value}
-                              </div>
+                              <div className="truncate">{value.value}</div>
                             </button>
                           ))
                         ) : (
@@ -135,11 +148,11 @@ export function WildcardBrowser({ open, onOpenChange, onSelect }: WildcardBrowse
                       </div>
                     )}
                   </div>
-                )
+                );
               })
             ) : (
               <div className="text-center py-8 text-cyan-medium">
-                {searchQuery ? 'No wildcards found' : 'No wildcards available'}
+                {searchQuery ? "No wildcards found" : "No wildcards available"}
               </div>
             )}
           </div>
@@ -152,5 +165,5 @@ export function WildcardBrowser({ open, onOpenChange, onSelect }: WildcardBrowse
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -25,8 +25,8 @@
 
   --radius: 0.5rem;
 
-  --font-sans: 'Quicksand', sans-serif;
-  --font-mono: 'Pitagon Sans Mono', monospace;
+  --font-sans: "Quicksand", sans-serif;
+  --font-mono: "Pitagon Sans Mono", monospace;
 }
 
 @layer base {
@@ -38,6 +38,8 @@
   }
 }
 
-@layer components {}
+@layer components {
+}
 
-@layer utilities {}
+@layer utilities {
+}

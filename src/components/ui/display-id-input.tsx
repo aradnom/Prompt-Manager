@@ -1,8 +1,11 @@
-import { forwardRef, InputHTMLAttributes } from 'react'
+import { forwardRef, InputHTMLAttributes } from "react";
 
-export interface DisplayIdInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
-  value: string
-  onChange: (value: string) => void
+export interface DisplayIdInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type" | "onChange"
+> {
+  value: string;
+  onChange: (value: string) => void;
 }
 
 /**
@@ -11,14 +14,14 @@ export interface DisplayIdInputProps extends Omit<InputHTMLAttributes<HTMLInputE
  * - Replaces spaces with dashes
  */
 export const DisplayIdInput = forwardRef<HTMLInputElement, DisplayIdInputProps>(
-  ({ value, onChange, className = '', ...props }, ref) => {
+  ({ value, onChange, className = "", ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const normalized = e.target.value
         .toLowerCase()
-        .replace(/\s+/g, '-') // Replace spaces with dashes
-        .replace(/[^\p{L}\p{N}-]/gu, '') // Remove anything that's not a letter, number, or dash
-      onChange(normalized)
-    }
+        .replace(/\s+/g, "-") // Replace spaces with dashes
+        .replace(/[^\p{L}\p{N}-]/gu, ""); // Remove anything that's not a letter, number, or dash
+      onChange(normalized);
+    };
 
     return (
       <input
@@ -29,8 +32,8 @@ export const DisplayIdInput = forwardRef<HTMLInputElement, DisplayIdInputProps>(
         className={`px-3 py-2 rounded-md border border-cyan-medium bg-background ${className}`}
         {...props}
       />
-    )
-  }
-)
+    );
+  },
+);
 
-DisplayIdInput.displayName = 'DisplayIdInput'
+DisplayIdInput.displayName = "DisplayIdInput";

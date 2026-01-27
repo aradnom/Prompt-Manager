@@ -1,26 +1,31 @@
-import CodeMirror from '@uiw/react-codemirror'
-import { json } from '@codemirror/lang-json'
-import { yaml } from '@codemirror/lang-yaml'
-import { vscodeDark } from '@uiw/codemirror-theme-vscode'
+import CodeMirror from "@uiw/react-codemirror";
+import { json } from "@codemirror/lang-json";
+import { yaml } from "@codemirror/lang-yaml";
+import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 
 interface WildcardContentEditorProps {
-  value: string
-  onChange: (value: string) => void
-  format: string
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  format: string;
+  disabled?: boolean;
 }
 
-export function WildcardContentEditor({ value, onChange, format, disabled }: WildcardContentEditorProps) {
+export function WildcardContentEditor({
+  value,
+  onChange,
+  format,
+  disabled,
+}: WildcardContentEditorProps) {
   const getExtensions = () => {
     switch (format) {
-      case 'json':
-        return [json()]
-      case 'yaml':
-        return [yaml()]
+      case "json":
+        return [json()];
+      case "yaml":
+        return [yaml()];
       default:
-        return []
+        return [];
     }
-  }
+  };
 
   return (
     <CodeMirror
@@ -41,5 +46,5 @@ export function WildcardContentEditor({ value, onChange, format, disabled }: Wil
       }}
       className="border border-cyan-medium rounded-md overflow-hidden"
     />
-  )
+  );
 }

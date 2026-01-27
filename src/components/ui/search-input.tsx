@@ -7,9 +7,16 @@ interface SearchInputProps {
   className?: string;
 }
 
-export function SearchInput({ value, onChange, placeholder = "Search...", className = "" }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search...",
+  className = "",
+}: SearchInputProps) {
   return (
-    <div className={`relative flex items-center border-2 border-cyan-medium rounded-lg bg-cyan-dark/50 focus-within:border-magenta-medium transition-colors ${className}`}>
+    <div
+      className={`relative flex items-center border-2 border-cyan-medium rounded-lg bg-cyan-dark/50 focus-within:border-magenta-medium transition-colors ${className}`}
+    >
       <Search className="ml-3 h-5 w-5 shrink-0 text-cyan-medium" />
       <input
         type="text"

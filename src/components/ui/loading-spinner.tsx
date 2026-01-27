@@ -1,4 +1,4 @@
-import { motion } from "motion/react"
+import { motion } from "motion/react";
 
 export function LoadingSpinner() {
   return (
@@ -13,5 +13,5 @@ export function LoadingSpinner() {
         }}
       />
     </div>
-  )
+  );
 }

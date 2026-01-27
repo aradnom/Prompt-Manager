@@ -32,12 +32,13 @@ export default function Blocks() {
   }, [search]);
 
   // Fetch search results when there's a search query
-  const { data: searchResults, isLoading: isSearching } = api.blocks.search.useQuery(
-    {
-      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-    },
-    { enabled: debouncedSearch.length > 0 }
-  );
+  const { data: searchResults, isLoading: isSearching } =
+    api.blocks.search.useQuery(
+      {
+        query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+      },
+      { enabled: debouncedSearch.length > 0 },
+    );
 
   // Use search results if searching, otherwise use all blocks
   const displayBlocks = debouncedSearch.length > 0 ? searchResults : blocks;
@@ -135,7 +136,7 @@ export default function Blocks() {
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          {debouncedSearch.length > 0 ? 'Searching...' : 'Loading blocks...'}
+          {debouncedSearch.length > 0 ? "Searching..." : "Loading blocks..."}
         </div>
       ) : displayBlocks && displayBlocks.length > 0 ? (
         <div className="space-y-4">
@@ -143,7 +144,7 @@ export default function Blocks() {
             <motion.div
               className={cn(
                 "border-standard-dark-cyan",
-                index === 0 && "accent-border-gradient"
+                index === 0 && "accent-border-gradient",
               )}
               key={block.id}
               initial={{ opacity: 0, y: 20 }}
@@ -189,7 +190,9 @@ export default function Blocks() {
         <Card>
           <CardContent className="py-12 border-standard-dark-cyan">
             <div className="text-center text-cyan-medium">
-              <p className="mb-4">No blocks found matching "{debouncedSearch}"</p>
+              <p className="mb-4">
+                No blocks found matching "{debouncedSearch}"
+              </p>
               <Button onClick={() => setSearch("")} variant="outline">
                 Clear Search
               </Button>
