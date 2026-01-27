@@ -40,7 +40,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 
-import { useSettings } from "@/contexts/SettingsContext";
+import { useServerConfig } from "@/contexts/ServerConfigContext";
 import type { OutputStyle } from "@/types/schema";
 
 type Block = RouterOutput["blocks"]["list"][number];
@@ -193,8 +193,7 @@ export function TextBlock({
     setInlineText(block.text);
   }, [block.text]);
 
-  const { data: serverConfig } = api.config.getSettings.useQuery();
-  const { preferredLLMTarget } = useSettings();
+  const { config: serverConfig, preferredLLMTarget } = useServerConfig();
 
   const llmTarget = useMemo(() => {
     const targets = serverConfig?.llm?.allowedTargets;
@@ -202,19 +201,11 @@ export function TextBlock({
 
     // Use preference if valid, otherwise fallback to first available
     if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget as
-        | "lm-studio"
-        | "vertex"
-        | "openai"
-        | "anthropic";
+      return preferredLLMTarget;
     }
 
     // Default fallback: Prefer vertex if available, otherwise first allowed
-    return (targets.includes("vertex") ? "vertex" : targets[0]) as
-      | "lm-studio"
-      | "vertex"
-      | "openai"
-      | "anthropic";
+    return targets.includes("vertex") ? "vertex" : targets[0];
   }, [serverConfig, preferredLLMTarget]);
 
   const handleMoreDescriptive = async () => {

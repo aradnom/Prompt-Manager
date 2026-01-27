@@ -42,7 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useServerConfig } from "@/contexts/ServerConfigContext";
 import {
   Card,
   CardContent,
@@ -72,7 +72,7 @@ export function StackEditor({ stack }: StackEditorProps) {
   const [generateConcept, setGenerateConcept] = useState("");
   const [generateResults, setGenerateResults] = useState<string[]>([]);
   const [isEditingConcept, setIsEditingConcept] = useState(false);
-  const { preferredLLMTarget } = useSettings();
+  const { config: serverConfig, preferredLLMTarget } = useServerConfig();
 
   const {
     data: fullStack,
@@ -84,7 +84,6 @@ export function StackEditor({ stack }: StackEditorProps) {
   });
 
   const { data: wildcards } = api.wildcards.list.useQuery();
-  const { data: serverConfig } = api.config.getSettings.useQuery();
 
   const updateContentMutation = api.stacks.updateContent.useMutation();
   const generateMutation = api.llm.transform.useMutation();
@@ -103,19 +102,11 @@ export function StackEditor({ stack }: StackEditorProps) {
 
     // Use preference if valid, otherwise fallback to first available
     if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget as
-        | "lm-studio"
-        | "vertex"
-        | "openai"
-        | "anthropic";
+      return preferredLLMTarget;
     }
 
     // Default fallback: Prefer vertex if available, otherwise first allowed
-    return (targets.includes("vertex") ? "vertex" : targets[0]) as
-      | "lm-studio"
-      | "vertex"
-      | "openai"
-      | "anthropic";
+    return targets.includes("vertex") ? "vertex" : targets[0];
   }, [serverConfig, preferredLLMTarget]);
 
   // We cast here because we know we requested includeBlocks: true

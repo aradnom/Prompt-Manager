@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useServerConfig } from "@/contexts/ServerConfigContext";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
@@ -180,7 +180,7 @@ function WildcardForm({
 
 export default function Wildcards() {
   const { addError } = useErrors();
-  const { preferredLLMTarget } = useSettings();
+  const { config: serverConfig, preferredLLMTarget } = useServerConfig();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -195,7 +195,6 @@ export default function Wildcards() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const { data: wildcards, isLoading, refetch } = api.wildcards.list.useQuery();
-  const { data: serverConfig } = api.config.getSettings.useQuery();
 
   // Debounce search input
   useEffect(() => {
@@ -225,18 +224,10 @@ export default function Wildcards() {
     if (!targets || targets.length === 0) return "lm-studio";
 
     if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget as
-        | "lm-studio"
-        | "vertex"
-        | "openai"
-        | "anthropic";
+      return preferredLLMTarget;
     }
 
-    return (targets.includes("vertex") ? "vertex" : targets[0]) as
-      | "lm-studio"
-      | "vertex"
-      | "openai"
-      | "anthropic";
+    return targets.includes("vertex") ? "vertex" : targets[0];
   })();
 
   const createMutation = api.wildcards.create.useMutation({

@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { api } from "@/lib/api";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useServerConfig } from "@/contexts/ServerConfigContext";
+import { getPlatformDisplayName } from "@/lib/llm-platform-names";
 import {
   Card,
   CardContent,
@@ -19,8 +19,8 @@ import {
 
 export default function DeveloperSettings() {
   const navigate = useNavigate();
-  const { data: config, isLoading } = api.config.getSettings.useQuery();
-  const { preferredLLMTarget, setPreferredLLMTarget } = useSettings();
+  const { config, isLoading, preferredLLMTarget, setPreferredLLMTarget } =
+    useServerConfig();
 
   useEffect(() => {
     if (!isLoading && !config?.devSettingsEnabled) {
@@ -79,15 +79,7 @@ export default function DeveloperSettings() {
                   <SelectContent>
                     {allowedTargets.map((target) => (
                       <SelectItem key={target} value={target}>
-                        {target === "lm-studio"
-                          ? "LM Studio"
-                          : target === "vertex"
-                            ? "Google Vertex AI"
-                            : target === "openai"
-                              ? "OpenAI"
-                              : target === "anthropic"
-                                ? "Anthropic"
-                                : target}
+                        {getPlatformDisplayName(target)}
                       </SelectItem>
                     ))}
                   </SelectContent>
