@@ -3,6 +3,7 @@ import type { PostgresStorageAdapter } from '@server/adapters/postgres-adapter'
 import type { ServerConfig } from '@server/config'
 import { generateToken, hashToken, encryptAccountData, decryptAccountData, generateSessionKey, encryptDerivedKey, deriveEncryptionKey, decrypt, encrypt } from '@server/lib/auth'
 import { withDerivedKey } from '@server/middleware/account-data'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
 import 'express-session' // Required for session type augmentation
 
 export function registerAuthRoutes(
@@ -257,7 +258,7 @@ export function registerAuthRoutes(
       }
 
       // Get current account data (already encrypted)
-      const currentAccountData = user.accountData || {}
+      const currentAccountData: Record<string, any> = user.accountData || {}
 
       // Decrypt apiKeys field if it exists
       const derivedKey = req.derivedKey!
@@ -298,9 +299,14 @@ export function registerAuthRoutes(
       const encryptedApiKeys = encrypt(JSON.stringify(apiKeys), derivedKey)
 
       // Update account data with encrypted apiKeys
-      const updatedAccountData = {
+      const updatedAccountData: Record<string, any> = {
         ...currentAccountData,
         apiKeys: encryptedApiKeys,
+      }
+
+      // If activeLLMPlatform is not set, set it to this provider
+      if (!currentAccountData.activeLLMPlatform) {
+        updatedAccountData.activeLLMPlatform = encrypt(provider, derivedKey)
       }
 
       // Update user in database
@@ -310,6 +316,170 @@ export function registerAuthRoutes(
     } catch (error) {
       console.error('Error saving API key:', error)
       res.status(500).json({ error: 'Failed to save API key' })
+    }
+  })
+
+  // Set active LLM platform
+  app.post('/api/auth/active-platform', withDerivedKey, async (req, res) => {
+    try {
+      const userId = req.session.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
+
+      const { platform } = req.body
+      if (!platform) {
+        return res.status(400).json({ error: 'Platform is required' })
+      }
+
+      // Valid platforms
+      const validPlatforms = ['vertex', 'openai', 'anthropic']
+      if (!validPlatforms.includes(platform)) {
+        return res.status(400).json({ error: 'Invalid platform' })
+      }
+
+      // Get user from database
+      const user = await storage.getUserById(userId)
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' })
+      }
+
+      // Get current account data (already encrypted)
+      const currentAccountData = user.accountData || {}
+
+      // Encrypt the active platform value
+      const derivedKey = req.derivedKey!
+      const encryptedPlatform = encrypt(platform, derivedKey)
+
+      // Update account data with active platform
+      const updatedAccountData = {
+        ...currentAccountData,
+        activeLLMPlatform: encryptedPlatform,
+      }
+
+      // Update user in database
+      await storage.updateUserAccountData(userId, updatedAccountData)
+
+      res.json({ success: true })
+    } catch (error) {
+      console.error('Error saving active platform:', error)
+      res.status(500).json({ error: 'Failed to save active platform' })
+    }
+  })
+
+  // Test API key (validates without incurring inference costs)
+  app.post('/api/auth/api-keys/test', withDerivedKey, async (req, res) => {
+    try {
+      const userId = req.session.userId
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
+
+      const { provider } = req.body
+      if (!provider) {
+        return res.status(400).json({ error: 'Provider is required' })
+      }
+
+      // Valid providers
+      const validProviders = ['vertex', 'openai', 'anthropic']
+      if (!validProviders.includes(provider)) {
+        return res.status(400).json({ error: 'Invalid provider' })
+      }
+
+      // Get user from database
+      const user = await storage.getUserById(userId)
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' })
+      }
+
+      // Get current account data
+      const currentAccountData = user.accountData || {}
+
+      // Decrypt apiKeys field
+      const derivedKey = req.derivedKey!
+      let apiKeys: Record<string, any> = {}
+
+      if (currentAccountData.apiKeys) {
+        try {
+          const decryptedApiKeys = decrypt(currentAccountData.apiKeys as string, derivedKey)
+          apiKeys = JSON.parse(decryptedApiKeys)
+        } catch (error) {
+          console.error('Error decrypting API keys:', error)
+          return res.status(500).json({ error: 'Failed to decrypt API keys' })
+        }
+      }
+
+      const providerData = apiKeys[provider]
+      if (!providerData || !providerData.key) {
+        return res.status(400).json({ error: 'API key not configured for this provider' })
+      }
+
+      // Test the API key based on provider
+      if (provider === 'vertex') {
+        try {
+          const client = new GoogleGenAI({
+            apiKey: providerData.key,
+            vertexai: true,
+            apiVersion: 'v1'
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any)
+
+          // Minimal inference call to test the key (very low cost - just a few tokens)
+          await client.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: [{ role: 'user', parts: [{ text: 'Hi' }] }],
+            config: {
+              generationConfig: {
+                maxOutputTokens: 5,
+                temperature: 0,
+              },
+              thinkingConfig: {
+                includeThoughts: false,
+                thinkingLevel: ThinkingLevel.MINIMAL
+              }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any
+          })
+
+          res.json({ success: true, message: 'API key is valid' })
+        } catch (error: any) {
+          console.error('Vertex API key test failed:', error)
+          res.status(400).json({
+            success: false,
+            error: 'API key test failed',
+            message: error.message || 'Invalid API key or insufficient permissions'
+          })
+        }
+      } else if (provider === 'openai') {
+        try {
+          // Test by listing models (doesn't incur inference costs)
+          const response = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${providerData.key}`,
+            },
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error?.message || 'Invalid API key')
+          }
+
+          res.json({ success: true, message: 'API key is valid' })
+        } catch (error: any) {
+          console.error('OpenAI API key test failed:', error)
+          res.status(400).json({
+            success: false,
+            error: 'API key test failed',
+            message: error.message || 'Invalid API key or insufficient permissions'
+          })
+        }
+      } else if (provider === 'anthropic') {
+        // TODO: Implement Anthropic key testing
+        res.status(501).json({ error: 'Anthropic key testing not yet implemented' })
+      }
+    } catch (error) {
+      console.error('Error testing API key:', error)
+      res.status(500).json({ error: 'Failed to test API key' })
     }
   })
 }
