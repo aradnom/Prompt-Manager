@@ -13,6 +13,7 @@ import { RasterIcon } from '@/components/RasterIcon'
 import { Button } from '@/components/ui/button'
 import { DisplayIdInput } from '@/components/ui/display-id-input'
 import { SearchInput } from '@/components/ui/search-input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Card,
   CardContent,
@@ -122,17 +123,21 @@ function WildcardForm({ mode, initialValues, onSubmit, onCancel, isSubmitting }:
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Format</label>
-            <select
+            <Select
               value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+              onValueChange={setFormat}
               disabled={isSubmitting}
             >
-              <option value="json">JSON</option>
-              <option value="yaml">YAML</option>
-              <option value="lines">Lines</option>
-              <option value="text">Plain Text</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="yaml">YAML</SelectItem>
+                <SelectItem value="lines">Lines</SelectItem>
+                <SelectItem value="text">Plain Text</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Content</label>

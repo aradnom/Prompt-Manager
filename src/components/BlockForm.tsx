@@ -4,6 +4,7 @@ import { useTypes } from '@/contexts/TypesContext'
 import { insertWildcard } from '@/lib/wildcard-parser'
 import { Button } from '@/components/ui/button'
 import { DisplayIdInput } from '@/components/ui/display-id-input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Card,
   CardContent,
@@ -122,19 +123,23 @@ export function BlockForm({
             <label className="text-sm font-medium mb-2 block">
               Type
             </label>
-            <select
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
-              value={typeId || ''}
-              onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}
+            <Select
+              value={typeId?.toString() || ''}
+              onValueChange={(value) => setTypeId(value ? Number(value) : undefined)}
               disabled={isSubmitting}
             >
-              <option value="">None</option>
-              {types.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {types.map((type) => (
+                  <SelectItem key={type.id} value={type.id.toString()}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">
