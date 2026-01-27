@@ -1,29 +1,35 @@
-import { cn } from "@/lib/utils"
-import { Button } from '@/components/ui/button'
-import { ButtonGroup } from '@/components/ui/button-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ModelConfig {
-  availableModels: Record<string, string>
-  selectedModel: string
-  onModelChange: (model: string) => void
-  customModel?: string
-  onCustomModelChange?: (model: string) => void
-  onCustomModelBlur?: () => void
+  availableModels: Record<string, string>;
+  selectedModel: string;
+  onModelChange: (model: string) => void;
+  customModel?: string;
+  onCustomModelChange?: (model: string) => void;
+  onCustomModelBlur?: () => void;
 }
 
 interface ApiKeyInputProps {
-  displayName: string
-  apiKey: string
-  onApiKeyChange: (key: string) => void
-  configured: boolean
-  onSave: () => void
-  onTest: () => void
-  isSaving: boolean
-  isTesting: boolean
-  testResult?: { success: boolean; message?: string } | null
-  modelConfig?: ModelConfig
-  enabled: boolean
+  displayName: string;
+  apiKey: string;
+  onApiKeyChange: (key: string) => void;
+  configured: boolean;
+  onSave: () => void;
+  onTest: () => void;
+  isSaving: boolean;
+  isTesting: boolean;
+  testResult?: { success: boolean; message?: string } | null;
+  modelConfig?: ModelConfig;
+  enabled: boolean;
 }
 
 export function ApiKeyInput({
@@ -37,13 +43,18 @@ export function ApiKeyInput({
   isTesting,
   testResult,
   modelConfig,
-  enabled = false
+  enabled = false,
 }: ApiKeyInputProps) {
   return (
-    <div className={cn('space-y-4 border border-cyan-medium/50 rounded-lg p-4 transition-colors transition-opacity', {
-      'opacity-50': !enabled,
-      'bg-cyan-dark': enabled
-    })}>
+    <div
+      className={cn(
+        "space-y-4 border border-cyan-medium/50 rounded-lg p-4 transition-colors",
+        {
+          "opacity-50": !enabled,
+          "bg-cyan-dark": enabled,
+        },
+      )}
+    >
       <div>
         <label className="text-sm font-medium mb-2 block">
           {displayName} API Key
@@ -57,41 +68,33 @@ export function ApiKeyInput({
             onChange={(e) => onApiKeyChange(e.target.value)}
             disabled={isSaving}
           />
-          <ButtonGroup className={`*:flex-1 ${configured ? 'min-w-40' : ''}`}>
-            <Button
-              onClick={onSave}
-              disabled={isSaving || !apiKey.trim()}
-            >
-              {isSaving ? 'Saving...' : configured ? 'Update' : 'Save'}
+          <ButtonGroup className={`*:flex-1 ${configured ? "min-w-40" : ""}`}>
+            <Button onClick={onSave} disabled={isSaving || !apiKey.trim()}>
+              {isSaving ? "Saving..." : configured ? "Update" : "Save"}
             </Button>
             {configured && (
-              <Button
-                onClick={onTest}
-                disabled={isTesting}
-                variant="outline"
-              >
-                {isTesting ? 'Testing...' : 'Test'}
+              <Button onClick={onTest} disabled={isTesting} variant="outline">
+                {isTesting ? "Testing..." : "Test"}
               </Button>
             )}
           </ButtonGroup>
         </div>
         {configured && (
-          <p className="text-sm text-cyan-medium mt-1">
-            ✓ API key configured
-          </p>
+          <p className="text-sm text-cyan-medium mt-1">✓ API key configured</p>
         )}
         {testResult && (
-          <p className={`text-sm mt-1 ${testResult.success ? 'text-green-500' : 'text-red-500'}`}>
-            {testResult.success ? '✓ ' : '✗ '}{testResult.message}
+          <p
+            className={`text-sm mt-1 ${testResult.success ? "text-green-500" : "text-red-500"}`}
+          >
+            {testResult.success ? "✓ " : "✗ "}
+            {testResult.message}
           </p>
         )}
       </div>
 
       {modelConfig && configured && (
         <div>
-          <label className="text-sm font-medium mb-2 block">
-            Model
-          </label>
+          <label className="text-sm font-medium mb-2 block">Model</label>
           <Select
             value={modelConfig.selectedModel}
             onValueChange={modelConfig.onModelChange}
@@ -101,28 +104,33 @@ export function ApiKeyInput({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(modelConfig.availableModels).map(([modelId, displayName]) => (
-                <SelectItem key={modelId} value={modelId}>
-                  {displayName}
-                </SelectItem>
-              ))}
+              {Object.entries(modelConfig.availableModels).map(
+                ([modelId, displayName]) => (
+                  <SelectItem key={modelId} value={modelId}>
+                    {displayName}
+                  </SelectItem>
+                ),
+              )}
               <SelectItem value="custom">Custom Model</SelectItem>
             </SelectContent>
           </Select>
 
-          {modelConfig.selectedModel === 'custom' && modelConfig.onCustomModelChange && (
-            <input
-              type="text"
-              placeholder="Enter custom model ID (e.g., gemini-pro)"
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
-              value={modelConfig.customModel || ''}
-              onChange={(e) => modelConfig.onCustomModelChange!(e.target.value)}
-              onBlur={modelConfig.onCustomModelBlur}
-              disabled={isSaving}
-            />
-          )}
+          {modelConfig.selectedModel === "custom" &&
+            modelConfig.onCustomModelChange && (
+              <input
+                type="text"
+                placeholder="Enter custom model ID (e.g., gemini-pro)"
+                className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+                value={modelConfig.customModel || ""}
+                onChange={(e) =>
+                  modelConfig.onCustomModelChange!(e.target.value)
+                }
+                onBlur={modelConfig.onCustomModelBlur}
+                disabled={isSaving}
+              />
+            )}
         </div>
       )}
     </div>
-  )
+  );
 }

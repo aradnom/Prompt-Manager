@@ -1,172 +1,203 @@
-import { useState, useEffect } from 'react'
-import { motion } from 'motion/react'
-import { RasterIcon } from '@/components/RasterIcon'
-import { CreateAccountOrLogin } from '@/components/CreateAccountOrLogin'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { useSession } from '@/contexts/SessionContext'
-import { PREDEFINED_MODELS } from '@/lib/llm-model-names'
-import { ApiKeyInput } from '@/components/ApiKeyInput'
-import { storage } from '@/lib/storage'
+import { useState, useEffect } from "react";
+import { motion } from "motion/react";
+import { RasterIcon } from "@/components/RasterIcon";
+import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useSession } from "@/contexts/SessionContext";
+import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
+import { ApiKeyInput } from "@/components/ApiKeyInput";
+import { storage } from "@/lib/storage";
 
 export default function Account() {
-  const { isAuthenticated, isLoading: sessionLoading, checkSession, setAuthenticated } = useSession()
-  const [accountData, setAccountData] = useState<Record<string, string> | null>(null)
-  const [isLoadingAccount, setIsLoadingAccount] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [apiKeyInfo, setApiKeyInfo] = useState<Record<string, { configured: boolean; model?: string }>>({})
-  const [isSavingApiKey, setIsSavingApiKey] = useState(false)
-  const [isTestingApiKey, setIsTestingApiKey] = useState(false)
-  const [testResult, setTestResult] = useState<{ provider: string; success: boolean; message?: string } | null>(null)
-  const [vertexApiKey, setVertexApiKey] = useState('')
-  const [vertexModel, setVertexModel] = useState(Object.keys(PREDEFINED_MODELS.vertex)[0])
-  const [customModel, setCustomModel] = useState('')
-  const [openaiApiKey, setOpenaiApiKey] = useState('')
-  const [openaiModel, setOpenaiModel] = useState(Object.keys(PREDEFINED_MODELS.openai)[0])
-  const [openaiCustomModel, setOpenaiCustomModel] = useState('')
-  const [anthropicApiKey, setAnthropicApiKey] = useState('')
-  const [anthropicModel, setAnthropicModel] = useState(Object.keys(PREDEFINED_MODELS.anthropic)[0])
-  const [anthropicCustomModel, setAnthropicCustomModel] = useState('')
-  const [grokApiKey, setGrokApiKey] = useState('')
-  const [grokModel, setGrokModel] = useState(Object.keys(PREDEFINED_MODELS.grok)[0])
-  const [grokCustomModel, setGrokCustomModel] = useState('')
-  const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>('')
+  const {
+    isAuthenticated,
+    isLoading: sessionLoading,
+    checkSession,
+    setAuthenticated,
+  } = useSession();
+  const [accountData, setAccountData] = useState<Record<string, string> | null>(
+    null,
+  );
+  const [isLoadingAccount, setIsLoadingAccount] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [apiKeyInfo, setApiKeyInfo] = useState<
+    Record<string, { configured: boolean; model?: string }>
+  >({});
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [isTestingApiKey, setIsTestingApiKey] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    provider: string;
+    success: boolean;
+    message?: string;
+  } | null>(null);
+  const [vertexApiKey, setVertexApiKey] = useState("");
+  const [vertexModel, setVertexModel] = useState(
+    Object.keys(PREDEFINED_MODELS.vertex)[0],
+  );
+  const [customModel, setCustomModel] = useState("");
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [openaiModel, setOpenaiModel] = useState(
+    Object.keys(PREDEFINED_MODELS.openai)[0],
+  );
+  const [openaiCustomModel, setOpenaiCustomModel] = useState("");
+  const [anthropicApiKey, setAnthropicApiKey] = useState("");
+  const [anthropicModel, setAnthropicModel] = useState(
+    Object.keys(PREDEFINED_MODELS.anthropic)[0],
+  );
+  const [anthropicCustomModel, setAnthropicCustomModel] = useState("");
+  const [grokApiKey, setGrokApiKey] = useState("");
+  const [grokModel, setGrokModel] = useState(
+    Object.keys(PREDEFINED_MODELS.grok)[0],
+  );
+  const [grokCustomModel, setGrokCustomModel] = useState("");
+  const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>("");
 
   useEffect(() => {
     if (isAuthenticated && !accountData) {
-      fetchAccountData()
+      fetchAccountData();
     }
-  }, [isAuthenticated, accountData])
+  }, [isAuthenticated, accountData]);
 
   const fetchAccountData = async () => {
-    setIsLoadingAccount(true)
+    setIsLoadingAccount(true);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/account', {
-        credentials: 'include',
-      })
+      const response = await fetch("http://localhost:3001/api/auth/account", {
+        credentials: "include",
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch account data')
+        throw new Error("Failed to fetch account data");
       }
 
-      const data = await response.json()
-      setAccountData(data.accountData)
-      setApiKeyInfo(data.apiKeys || {})
-      setActiveLLMPlatform(data.accountData?.activeLLMPlatform || '')
+      const data = await response.json();
+      setAccountData(data.accountData);
+      setApiKeyInfo(data.apiKeys || {});
+      setActiveLLMPlatform(data.accountData?.activeLLMPlatform || "");
 
       // Pre-populate the model dropdown if a model is configured
       if (data.apiKeys?.vertex?.model) {
-        const savedModel = data.apiKeys.vertex.model
+        const savedModel = data.apiKeys.vertex.model;
         // Check if it's one of our predefined models
         if (savedModel in PREDEFINED_MODELS.vertex) {
-          setVertexModel(savedModel)
+          setVertexModel(savedModel);
         } else {
           // It's a custom model
-          setVertexModel('custom')
-          setCustomModel(savedModel)
+          setVertexModel("custom");
+          setCustomModel(savedModel);
         }
       }
 
       if (data.apiKeys?.openai?.model) {
-        const savedModel = data.apiKeys.openai.model
+        const savedModel = data.apiKeys.openai.model;
         // Check if it's one of our predefined models
         if (savedModel in PREDEFINED_MODELS.openai) {
-          setOpenaiModel(savedModel)
+          setOpenaiModel(savedModel);
         } else {
           // It's a custom model
-          setOpenaiModel('custom')
-          setOpenaiCustomModel(savedModel)
+          setOpenaiModel("custom");
+          setOpenaiCustomModel(savedModel);
         }
       }
 
       if (data.apiKeys?.anthropic?.model) {
-        const savedModel = data.apiKeys.anthropic.model
+        const savedModel = data.apiKeys.anthropic.model;
         // Check if it's one of our predefined models
         if (savedModel in PREDEFINED_MODELS.anthropic) {
-          setAnthropicModel(savedModel)
+          setAnthropicModel(savedModel);
         } else {
           // It's a custom model
-          setAnthropicModel('custom')
-          setAnthropicCustomModel(savedModel)
+          setAnthropicModel("custom");
+          setAnthropicCustomModel(savedModel);
         }
       }
 
       if (data.apiKeys?.grok?.model) {
-        const savedModel = data.apiKeys.grok.model
+        const savedModel = data.apiKeys.grok.model;
         // Check if it's one of our predefined models
         if (savedModel in PREDEFINED_MODELS.grok) {
-          setGrokModel(savedModel)
+          setGrokModel(savedModel);
         } else {
           // It's a custom model
-          setGrokModel('custom')
-          setGrokCustomModel(savedModel)
+          setGrokModel("custom");
+          setGrokCustomModel(savedModel);
         }
       }
     } catch (err) {
-      console.error('Error fetching account data:', err)
-      setError('Failed to load account data')
+      console.error("Error fetching account data:", err);
+      setError("Failed to load account data");
     } finally {
-      setIsLoadingAccount(false)
+      setIsLoadingAccount(false);
     }
-  }
+  };
 
-  const handleSaveApiKey = async (provider: string, apiKey: string, model?: string) => {
-    setIsSavingApiKey(true)
+  const handleSaveApiKey = async (
+    provider: string,
+    apiKey: string,
+    model?: string,
+  ) => {
+    setIsSavingApiKey(true);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/api-keys', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("http://localhost:3001/api/auth/api-keys", {
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ provider, apiKey, model }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to save API key')
+        throw new Error("Failed to save API key");
       }
 
       // Refresh account data to get updated flags
-      await fetchAccountData()
+      await fetchAccountData();
       // Clear the input fields after successful save
-      if (provider === 'vertex') {
-        setVertexApiKey('')
-        setCustomModel('')
-      } else if (provider === 'openai') {
-        setOpenaiApiKey('')
-        setOpenaiCustomModel('')
-      } else if (provider === 'anthropic') {
-        setAnthropicApiKey('')
-        setAnthropicCustomModel('')
-      } else if (provider === 'grok') {
-        setGrokApiKey('')
-        setGrokCustomModel('')
+      if (provider === "vertex") {
+        setVertexApiKey("");
+        setCustomModel("");
+      } else if (provider === "openai") {
+        setOpenaiApiKey("");
+        setOpenaiCustomModel("");
+      } else if (provider === "anthropic") {
+        setAnthropicApiKey("");
+        setAnthropicCustomModel("");
+      } else if (provider === "grok") {
+        setGrokApiKey("");
+        setGrokCustomModel("");
       }
     } catch (err) {
-      console.error('Error saving API key:', err)
-      setError('Failed to save API key')
+      console.error("Error saving API key:", err);
+      setError("Failed to save API key");
     } finally {
-      setIsSavingApiKey(false)
+      setIsSavingApiKey(false);
     }
-  }
+  };
 
   const handleSaveModel = async (provider: string, model: string) => {
-    setIsSavingApiKey(true)
+    setIsSavingApiKey(true);
     try {
       // We need to send a placeholder key since the backend requires it
       // The backend will preserve the existing key
-      const response = await fetch('http://localhost:3001/api/auth/api-keys', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("http://localhost:3001/api/auth/api-keys", {
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ provider, apiKey: '__PRESERVE__', model }),
-      })
+        body: JSON.stringify({ provider, apiKey: "__PRESERVE__", model }),
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to save model')
+        throw new Error("Failed to save model");
       }
 
       // Update apiKeyInfo locally to reflect the saved model
@@ -176,94 +207,108 @@ export default function Account() {
           ...prev[provider],
           model,
         },
-      }))
+      }));
 
-      if (provider === 'vertex') {
-        setCustomModel('')
-      } else if (provider === 'openai') {
-        setOpenaiCustomModel('')
-      } else if (provider === 'anthropic') {
-        setAnthropicCustomModel('')
-      } else if (provider === 'grok') {
-        setGrokCustomModel('')
+      if (provider === "vertex") {
+        setCustomModel("");
+      } else if (provider === "openai") {
+        setOpenaiCustomModel("");
+      } else if (provider === "anthropic") {
+        setAnthropicCustomModel("");
+      } else if (provider === "grok") {
+        setGrokCustomModel("");
       }
     } catch (err) {
-      console.error('Error saving model:', err)
-      setError('Failed to save model')
+      console.error("Error saving model:", err);
+      setError("Failed to save model");
     } finally {
-      setIsSavingApiKey(false)
+      setIsSavingApiKey(false);
     }
-  }
+  };
 
   const handleTestApiKey = async (provider: string) => {
-    setIsTestingApiKey(true)
-    setTestResult(null)
+    setIsTestingApiKey(true);
+    setTestResult(null);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/api-keys/test', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        "http://localhost:3001/api/auth/api-keys/test",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ provider }),
         },
-        body: JSON.stringify({ provider }),
-      })
+      );
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        setTestResult({ provider, success: true, message: data.message })
+        setTestResult({ provider, success: true, message: data.message });
       } else {
-        setTestResult({ provider, success: false, message: data.message || data.error })
+        setTestResult({
+          provider,
+          success: false,
+          message: data.message || data.error,
+        });
       }
     } catch (err) {
-      console.error('Error testing API key:', err)
-      setTestResult({ provider, success: false, message: 'Failed to test API key' })
+      console.error("Error testing API key:", err);
+      setTestResult({
+        provider,
+        success: false,
+        message: "Failed to test API key",
+      });
     } finally {
-      setIsTestingApiKey(false)
+      setIsTestingApiKey(false);
     }
-  }
+  };
 
   const handleSetActivePlatform = async (platform: string) => {
     try {
-      const response = await fetch('http://localhost:3001/api/auth/active-platform', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        "http://localhost:3001/api/auth/active-platform",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ platform }),
         },
-        body: JSON.stringify({ platform }),
-      })
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to set active platform')
+        throw new Error("Failed to set active platform");
       }
 
-      setActiveLLMPlatform(platform)
+      setActiveLLMPlatform(platform);
     } catch (err) {
-      console.error('Error setting active platform:', err)
-      setError('Failed to set active platform')
+      console.error("Error setting active platform:", err);
+      setError("Failed to set active platform");
     }
-  }
+  };
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      })
+      const response = await fetch("http://localhost:3001/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
 
       if (response.ok) {
-        setAuthenticated(false)
-        setAccountData(null)
-        storage.clearActiveStackId()
-        await checkSession()
+        setAuthenticated(false);
+        setAccountData(null);
+        storage.clearActiveStackId();
+        await checkSession();
       }
     } catch (err) {
-      console.error('Error logging out:', err)
+      console.error("Error logging out:", err);
     }
-  }
+  };
 
-  const isLoading = sessionLoading || isLoadingAccount
+  const isLoading = sessionLoading || isLoadingAccount;
 
   return (
     <main className="standard-page-container">
@@ -290,7 +335,8 @@ export default function Account() {
               <CardHeader>
                 <CardTitle>Your Account ID</CardTitle>
                 <CardDescription>
-                  This is your unique Account ID. Jot it down in permanent ink somewhere because if you lose it, it cannot be found again.
+                  This is your unique Account ID. Jot it down in permanent ink
+                  somewhere because if you lose it, it cannot be found again.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -304,7 +350,8 @@ export default function Account() {
               <CardHeader>
                 <CardTitle>LLM Settings</CardTitle>
                 <CardDescription>
-                  Configure API keys for LLM-powered features. Your keys are encrypted and never stored in plaintext.
+                  Configure API keys for LLM-powered features. Your keys are
+                  encrypted and never stored in plaintext.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -313,6 +360,7 @@ export default function Account() {
                     const configuredPlatforms = Object.entries(apiKeyInfo)
                       .filter(([_, info]) => info.configured)
                       .map(([platform, _]) => platform)
+                      .sort();
 
                     if (configuredPlatforms.length > 1) {
                       return (
@@ -325,13 +373,25 @@ export default function Account() {
                             onValueChange={handleSetActivePlatform}
                           >
                             {configuredPlatforms.map((platform) => (
-                              <div key={platform} className="flex items-center space-x-2">
-                                <RadioGroupItem value={platform} id={platform} />
+                              <div
+                                key={platform}
+                                className="flex items-center space-x-2"
+                              >
+                                <RadioGroupItem
+                                  value={platform}
+                                  id={platform}
+                                />
                                 <label
                                   htmlFor={platform}
                                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                                 >
-                                  {platform === 'vertex' ? 'Google Vertex AI' : platform === 'openai' ? 'OpenAI' : platform === 'anthropic' ? 'Anthropic' : 'Grok'}
+                                  {platform === "vertex"
+                                    ? "Google Vertex AI"
+                                    : platform === "openai"
+                                      ? "OpenAI"
+                                      : platform === "anthropic"
+                                        ? "Anthropic"
+                                        : "Grok"}
                                 </label>
                               </div>
                             ))}
@@ -339,10 +399,10 @@ export default function Account() {
 
                           <hr className="mt-6" />
                         </div>
-                      )
+                      );
                     }
-                    
-                    return null
+
+                    return null;
                   })()}
 
                   <ApiKeyInput
@@ -351,34 +411,37 @@ export default function Account() {
                     onApiKeyChange={setVertexApiKey}
                     configured={apiKeyInfo.vertex?.configured || false}
                     onSave={() => {
-                      const modelToSave = vertexModel === 'custom' ? customModel : vertexModel
-                      handleSaveApiKey('vertex', vertexApiKey, modelToSave)
+                      const modelToSave =
+                        vertexModel === "custom" ? customModel : vertexModel;
+                      handleSaveApiKey("vertex", vertexApiKey, modelToSave);
                     }}
-                    onTest={() => handleTestApiKey('vertex')}
+                    onTest={() => handleTestApiKey("vertex")}
                     isSaving={isSavingApiKey}
                     isTesting={isTestingApiKey}
-                    testResult={testResult?.provider === 'vertex' ? testResult : null}
+                    testResult={
+                      testResult?.provider === "vertex" ? testResult : null
+                    }
                     modelConfig={{
                       availableModels: PREDEFINED_MODELS.vertex,
                       selectedModel: vertexModel,
                       onModelChange: (model) => {
-                        setVertexModel(model)
-                        if (model !== 'custom') {
-                          setCustomModel('')
+                        setVertexModel(model);
+                        if (model !== "custom") {
+                          setCustomModel("");
                           // Save immediately for predefined models
-                          handleSaveModel('vertex', model)
+                          handleSaveModel("vertex", model);
                         }
                       },
                       customModel,
                       onCustomModelChange: setCustomModel,
                       onCustomModelBlur: () => {
                         // Save when custom input loses focus
-                        if (vertexModel === 'custom' && customModel.trim()) {
-                          handleSaveModel('vertex', customModel)
+                        if (vertexModel === "custom" && customModel.trim()) {
+                          handleSaveModel("vertex", customModel);
                         }
                       },
                     }}
-                    enabled={activeLLMPlatform === 'vertex'}
+                    enabled={activeLLMPlatform === "vertex"}
                   />
 
                   <ApiKeyInput
@@ -387,34 +450,42 @@ export default function Account() {
                     onApiKeyChange={setOpenaiApiKey}
                     configured={apiKeyInfo.openai?.configured || false}
                     onSave={() => {
-                      const modelToSave = openaiModel === 'custom' ? openaiCustomModel : openaiModel
-                      handleSaveApiKey('openai', openaiApiKey, modelToSave)
+                      const modelToSave =
+                        openaiModel === "custom"
+                          ? openaiCustomModel
+                          : openaiModel;
+                      handleSaveApiKey("openai", openaiApiKey, modelToSave);
                     }}
-                    onTest={() => handleTestApiKey('openai')}
+                    onTest={() => handleTestApiKey("openai")}
                     isSaving={isSavingApiKey}
                     isTesting={isTestingApiKey}
-                    testResult={testResult?.provider === 'openai' ? testResult : null}
+                    testResult={
+                      testResult?.provider === "openai" ? testResult : null
+                    }
                     modelConfig={{
                       availableModels: PREDEFINED_MODELS.openai,
                       selectedModel: openaiModel,
                       onModelChange: (model) => {
-                        setOpenaiModel(model)
-                        if (model !== 'custom') {
-                          setOpenaiCustomModel('')
+                        setOpenaiModel(model);
+                        if (model !== "custom") {
+                          setOpenaiCustomModel("");
                           // Save immediately for predefined models
-                          handleSaveModel('openai', model)
+                          handleSaveModel("openai", model);
                         }
                       },
                       customModel: openaiCustomModel,
                       onCustomModelChange: setOpenaiCustomModel,
                       onCustomModelBlur: () => {
                         // Save when custom input loses focus
-                        if (openaiModel === 'custom' && openaiCustomModel.trim()) {
-                          handleSaveModel('openai', openaiCustomModel)
+                        if (
+                          openaiModel === "custom" &&
+                          openaiCustomModel.trim()
+                        ) {
+                          handleSaveModel("openai", openaiCustomModel);
                         }
                       },
                     }}
-                    enabled={activeLLMPlatform === 'openai'}
+                    enabled={activeLLMPlatform === "openai"}
                   />
 
                   <ApiKeyInput
@@ -423,34 +494,46 @@ export default function Account() {
                     onApiKeyChange={setAnthropicApiKey}
                     configured={apiKeyInfo.anthropic?.configured || false}
                     onSave={() => {
-                      const modelToSave = anthropicModel === 'custom' ? anthropicCustomModel : anthropicModel
-                      handleSaveApiKey('anthropic', anthropicApiKey, modelToSave)
+                      const modelToSave =
+                        anthropicModel === "custom"
+                          ? anthropicCustomModel
+                          : anthropicModel;
+                      handleSaveApiKey(
+                        "anthropic",
+                        anthropicApiKey,
+                        modelToSave,
+                      );
                     }}
-                    onTest={() => handleTestApiKey('anthropic')}
+                    onTest={() => handleTestApiKey("anthropic")}
                     isSaving={isSavingApiKey}
                     isTesting={isTestingApiKey}
-                    testResult={testResult?.provider === 'anthropic' ? testResult : null}
+                    testResult={
+                      testResult?.provider === "anthropic" ? testResult : null
+                    }
                     modelConfig={{
                       availableModels: PREDEFINED_MODELS.anthropic,
                       selectedModel: anthropicModel,
                       onModelChange: (model) => {
-                        setAnthropicModel(model)
-                        if (model !== 'custom') {
-                          setAnthropicCustomModel('')
+                        setAnthropicModel(model);
+                        if (model !== "custom") {
+                          setAnthropicCustomModel("");
                           // Save immediately for predefined models
-                          handleSaveModel('anthropic', model)
+                          handleSaveModel("anthropic", model);
                         }
                       },
                       customModel: anthropicCustomModel,
                       onCustomModelChange: setAnthropicCustomModel,
                       onCustomModelBlur: () => {
                         // Save when custom input loses focus
-                        if (anthropicModel === 'custom' && anthropicCustomModel.trim()) {
-                          handleSaveModel('anthropic', anthropicCustomModel)
+                        if (
+                          anthropicModel === "custom" &&
+                          anthropicCustomModel.trim()
+                        ) {
+                          handleSaveModel("anthropic", anthropicCustomModel);
                         }
                       },
                     }}
-                    enabled={activeLLMPlatform === 'anthropic'}
+                    enabled={activeLLMPlatform === "anthropic"}
                   />
 
                   <ApiKeyInput
@@ -459,34 +542,37 @@ export default function Account() {
                     onApiKeyChange={setGrokApiKey}
                     configured={apiKeyInfo.grok?.configured || false}
                     onSave={() => {
-                      const modelToSave = grokModel === 'custom' ? grokCustomModel : grokModel
-                      handleSaveApiKey('grok', grokApiKey, modelToSave)
+                      const modelToSave =
+                        grokModel === "custom" ? grokCustomModel : grokModel;
+                      handleSaveApiKey("grok", grokApiKey, modelToSave);
                     }}
-                    onTest={() => handleTestApiKey('grok')}
+                    onTest={() => handleTestApiKey("grok")}
                     isSaving={isSavingApiKey}
                     isTesting={isTestingApiKey}
-                    testResult={testResult?.provider === 'grok' ? testResult : null}
+                    testResult={
+                      testResult?.provider === "grok" ? testResult : null
+                    }
                     modelConfig={{
                       availableModels: PREDEFINED_MODELS.grok,
                       selectedModel: grokModel,
                       onModelChange: (model) => {
-                        setGrokModel(model)
-                        if (model !== 'custom') {
-                          setGrokCustomModel('')
+                        setGrokModel(model);
+                        if (model !== "custom") {
+                          setGrokCustomModel("");
                           // Save immediately for predefined models
-                          handleSaveModel('grok', model)
+                          handleSaveModel("grok", model);
                         }
                       },
                       customModel: grokCustomModel,
                       onCustomModelChange: setGrokCustomModel,
                       onCustomModelBlur: () => {
                         // Save when custom input loses focus
-                        if (grokModel === 'custom' && grokCustomModel.trim()) {
-                          handleSaveModel('grok', grokCustomModel)
+                        if (grokModel === "custom" && grokCustomModel.trim()) {
+                          handleSaveModel("grok", grokCustomModel);
                         }
                       },
                     }}
-                    enabled={activeLLMPlatform === 'grok'}
+                    enabled={activeLLMPlatform === "grok"}
                   />
                 </div>
               </CardContent>
@@ -502,10 +588,8 @@ export default function Account() {
           <CreateAccountOrLogin />
         )}
 
-        {error && (
-          <p className="text-red-500 mt-4">{error}</p>
-        )}
+        {error && <p className="text-red-500 mt-4">{error}</p>}
       </div>
     </main>
-  )
+  );
 }
