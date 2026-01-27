@@ -211,7 +211,7 @@ export default function Stacks() {
     <main className="container mx-auto p-8 pt-20">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-            <RasterIcon name="books" size={36} />
+            <RasterIcon name="chat" size={36} />
             Prompts
           </h1>
           <p className="text-cyan-medium">
