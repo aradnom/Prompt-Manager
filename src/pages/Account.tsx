@@ -151,8 +151,15 @@ export default function Account() {
         throw new Error('Failed to save model')
       }
 
-      // Refresh account data
-      await fetchAccountData()
+      // Update apiKeyInfo locally to reflect the saved model
+      setApiKeyInfo((prev) => ({
+        ...prev,
+        [provider]: {
+          ...prev[provider],
+          model,
+        },
+      }))
+
       if (provider === 'vertex') {
         setCustomModel('')
       } else if (provider === 'openai') {
@@ -338,13 +345,17 @@ export default function Account() {
                         setVertexModel(model)
                         if (model !== 'custom') {
                           setCustomModel('')
+                          // Save immediately for predefined models
+                          handleSaveModel('vertex', model)
                         }
                       },
                       customModel,
                       onCustomModelChange: setCustomModel,
-                      onSaveModel: () => {
-                        const modelToSave = vertexModel === 'custom' ? customModel : vertexModel
-                        handleSaveModel('vertex', modelToSave)
+                      onCustomModelBlur: () => {
+                        // Save when custom input loses focus
+                        if (vertexModel === 'custom' && customModel.trim()) {
+                          handleSaveModel('vertex', customModel)
+                        }
                       },
                     }}
                     enabled={activeLLMPlatform === 'vertex'}
@@ -370,13 +381,17 @@ export default function Account() {
                         setOpenaiModel(model)
                         if (model !== 'custom') {
                           setOpenaiCustomModel('')
+                          // Save immediately for predefined models
+                          handleSaveModel('openai', model)
                         }
                       },
                       customModel: openaiCustomModel,
                       onCustomModelChange: setOpenaiCustomModel,
-                      onSaveModel: () => {
-                        const modelToSave = openaiModel === 'custom' ? openaiCustomModel : openaiModel
-                        handleSaveModel('openai', modelToSave)
+                      onCustomModelBlur: () => {
+                        // Save when custom input loses focus
+                        if (openaiModel === 'custom' && openaiCustomModel.trim()) {
+                          handleSaveModel('openai', openaiCustomModel)
+                        }
                       },
                     }}
                     enabled={activeLLMPlatform === 'openai'}
@@ -402,13 +417,17 @@ export default function Account() {
                         setAnthropicModel(model)
                         if (model !== 'custom') {
                           setAnthropicCustomModel('')
+                          // Save immediately for predefined models
+                          handleSaveModel('anthropic', model)
                         }
                       },
                       customModel: anthropicCustomModel,
                       onCustomModelChange: setAnthropicCustomModel,
-                      onSaveModel: () => {
-                        const modelToSave = anthropicModel === 'custom' ? anthropicCustomModel : anthropicModel
-                        handleSaveModel('anthropic', modelToSave)
+                      onCustomModelBlur: () => {
+                        // Save when custom input loses focus
+                        if (anthropicModel === 'custom' && anthropicCustomModel.trim()) {
+                          handleSaveModel('anthropic', anthropicCustomModel)
+                        }
                       },
                     }}
                     enabled={activeLLMPlatform === 'anthropic'}
