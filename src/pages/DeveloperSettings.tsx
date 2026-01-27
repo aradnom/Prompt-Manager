@@ -30,7 +30,7 @@ export default function DeveloperSettings() {
 
   if (isLoading) {
     return (
-      <main className="container mx-auto p-8 pt-20">
+      <main className="standard-page-container">
         <div className="text-center py-12 text-cyan-medium">
           Loading...
         </div>
@@ -48,7 +48,7 @@ export default function DeveloperSettings() {
     : allowedTargets[0] || 'lm-studio'
 
   return (
-    <main className="container mx-auto p-8 pt-20">
+    <main className="standard-page-container">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Developer Settings</h1>
         <p className="text-cyan-medium">

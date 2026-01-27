@@ -5,11 +5,12 @@ import { RasterIcon } from '@/components/RasterIcon'
 
 export default function WhatIsThis() {
   return (
-    <main className="container mx-auto p-8 pt-20 pb-96">
+    <main className="standard-page-container">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="mb-8"
       >
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
           <RasterIcon name="question-mark" size={36} />

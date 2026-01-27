@@ -98,7 +98,7 @@ export default function Blocks() {
   };
 
   return (
-    <main className="container mx-auto p-8 pt-20">
+    <main className="standard-page-container">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
           <RasterIcon name="blocks" size={36} />

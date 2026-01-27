@@ -35,12 +35,12 @@ function HomeContent() {
   };
 
   return (
-    <main className="container mx-auto p-8 pt-20 pb-96">
+    <main className="standard-page-container">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex"
+        className="flex mb-8"
       >
         <RasterIcon name="logo1" size={100} className="mr-5" />
         <div>

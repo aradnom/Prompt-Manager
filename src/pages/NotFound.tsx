@@ -10,7 +10,7 @@ import {
 
 export default function NotFound() {
   return (
-    <main className="container mx-auto p-8 pt-20">
+    <main className="standard-page-container">
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-2/4 border-standard-dark-cyan">
           <CardHeader>

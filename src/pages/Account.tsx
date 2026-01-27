@@ -246,7 +246,7 @@ export default function Account() {
   const isLoading = sessionLoading || isLoadingAccount
 
   return (
-    <main className="container mx-auto p-8 pt-20">
+    <main className="standard-page-container">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
