@@ -25,6 +25,9 @@ export default function Account() {
   const [openaiApiKey, setOpenaiApiKey] = useState('')
   const [openaiModel, setOpenaiModel] = useState(Object.keys(PREDEFINED_MODELS.openai)[0])
   const [openaiCustomModel, setOpenaiCustomModel] = useState('')
+  const [anthropicApiKey, setAnthropicApiKey] = useState('')
+  const [anthropicModel, setAnthropicModel] = useState(Object.keys(PREDEFINED_MODELS.anthropic)[0])
+  const [anthropicCustomModel, setAnthropicCustomModel] = useState('')
   const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>('')
 
   useEffect(() => {
@@ -73,6 +76,18 @@ export default function Account() {
           setOpenaiCustomModel(savedModel)
         }
       }
+
+      if (data.apiKeys?.anthropic?.model) {
+        const savedModel = data.apiKeys.anthropic.model
+        // Check if it's one of our predefined models
+        if (savedModel in PREDEFINED_MODELS.anthropic) {
+          setAnthropicModel(savedModel)
+        } else {
+          // It's a custom model
+          setAnthropicModel('custom')
+          setAnthropicCustomModel(savedModel)
+        }
+      }
     } catch (err) {
       console.error('Error fetching account data:', err)
       setError('Failed to load account data')
@@ -106,6 +121,9 @@ export default function Account() {
       } else if (provider === 'openai') {
         setOpenaiApiKey('')
         setOpenaiCustomModel('')
+      } else if (provider === 'anthropic') {
+        setAnthropicApiKey('')
+        setAnthropicCustomModel('')
       }
     } catch (err) {
       console.error('Error saving API key:', err)
@@ -139,6 +157,8 @@ export default function Account() {
         setCustomModel('')
       } else if (provider === 'openai') {
         setOpenaiCustomModel('')
+      } else if (provider === 'anthropic') {
+        setAnthropicCustomModel('')
       }
     } catch (err) {
       console.error('Error saving model:', err)
@@ -360,6 +380,38 @@ export default function Account() {
                       },
                     }}
                     enabled={activeLLMPlatform === 'openai'}
+                  />
+
+                  <ApiKeyInput
+                    displayName="Anthropic"
+                    apiKey={anthropicApiKey}
+                    onApiKeyChange={setAnthropicApiKey}
+                    configured={apiKeyInfo.anthropic?.configured || false}
+                    onSave={() => {
+                      const modelToSave = anthropicModel === 'custom' ? anthropicCustomModel : anthropicModel
+                      handleSaveApiKey('anthropic', anthropicApiKey, modelToSave)
+                    }}
+                    onTest={() => handleTestApiKey('anthropic')}
+                    isSaving={isSavingApiKey}
+                    isTesting={isTestingApiKey}
+                    testResult={testResult?.provider === 'anthropic' ? testResult : null}
+                    modelConfig={{
+                      availableModels: PREDEFINED_MODELS.anthropic,
+                      selectedModel: anthropicModel,
+                      onModelChange: (model) => {
+                        setAnthropicModel(model)
+                        if (model !== 'custom') {
+                          setAnthropicCustomModel('')
+                        }
+                      },
+                      customModel: anthropicCustomModel,
+                      onCustomModelChange: setAnthropicCustomModel,
+                      onSaveModel: () => {
+                        const modelToSave = anthropicModel === 'custom' ? anthropicCustomModel : anthropicModel
+                        handleSaveModel('anthropic', modelToSave)
+                      },
+                    }}
+                    enabled={activeLLMPlatform === 'anthropic'}
                   />
                 </div>
               </CardContent>
