@@ -4,8 +4,11 @@ import { RasterIcon } from '@/components/RasterIcon'
 import { CreateAccountOrLogin } from '@/components/CreateAccountOrLogin'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useSession } from '@/contexts/SessionContext'
 import { PREDEFINED_MODELS } from '@/lib/llm-model-names'
+import { ApiKeyInput } from '@/components/ApiKeyInput'
+import { storage } from '@/lib/storage'
 
 export default function Account() {
   const { isAuthenticated, isLoading: sessionLoading, checkSession, setAuthenticated } = useSession()
@@ -14,9 +17,15 @@ export default function Account() {
   const [error, setError] = useState<string | null>(null)
   const [apiKeyInfo, setApiKeyInfo] = useState<Record<string, { configured: boolean; model?: string }>>({})
   const [isSavingApiKey, setIsSavingApiKey] = useState(false)
+  const [isTestingApiKey, setIsTestingApiKey] = useState(false)
+  const [testResult, setTestResult] = useState<{ provider: string; success: boolean; message?: string } | null>(null)
   const [vertexApiKey, setVertexApiKey] = useState('')
   const [vertexModel, setVertexModel] = useState(Object.keys(PREDEFINED_MODELS.vertex)[0])
   const [customModel, setCustomModel] = useState('')
+  const [openaiApiKey, setOpenaiApiKey] = useState('')
+  const [openaiModel, setOpenaiModel] = useState(Object.keys(PREDEFINED_MODELS.openai)[0])
+  const [openaiCustomModel, setOpenaiCustomModel] = useState('')
+  const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>('')
 
   useEffect(() => {
     if (isAuthenticated && !accountData) {
@@ -38,6 +47,7 @@ export default function Account() {
       const data = await response.json()
       setAccountData(data.accountData)
       setApiKeyInfo(data.apiKeys || {})
+      setActiveLLMPlatform(data.accountData?.activeLLMPlatform || '')
 
       // Pre-populate the model dropdown if a model is configured
       if (data.apiKeys?.vertex?.model) {
@@ -49,6 +59,18 @@ export default function Account() {
           // It's a custom model
           setVertexModel('custom')
           setCustomModel(savedModel)
+        }
+      }
+
+      if (data.apiKeys?.openai?.model) {
+        const savedModel = data.apiKeys.openai.model
+        // Check if it's one of our predefined models
+        if (savedModel in PREDEFINED_MODELS.openai) {
+          setOpenaiModel(savedModel)
+        } else {
+          // It's a custom model
+          setOpenaiModel('custom')
+          setOpenaiCustomModel(savedModel)
         }
       }
     } catch (err) {
@@ -78,8 +100,13 @@ export default function Account() {
       // Refresh account data to get updated flags
       await fetchAccountData()
       // Clear the input fields after successful save
-      setVertexApiKey('')
-      setCustomModel('')
+      if (provider === 'vertex') {
+        setVertexApiKey('')
+        setCustomModel('')
+      } else if (provider === 'openai') {
+        setOpenaiApiKey('')
+        setOpenaiCustomModel('')
+      }
     } catch (err) {
       console.error('Error saving API key:', err)
       setError('Failed to save API key')
@@ -108,12 +135,66 @@ export default function Account() {
 
       // Refresh account data
       await fetchAccountData()
-      setCustomModel('')
+      if (provider === 'vertex') {
+        setCustomModel('')
+      } else if (provider === 'openai') {
+        setOpenaiCustomModel('')
+      }
     } catch (err) {
       console.error('Error saving model:', err)
       setError('Failed to save model')
     } finally {
       setIsSavingApiKey(false)
+    }
+  }
+
+  const handleTestApiKey = async (provider: string) => {
+    setIsTestingApiKey(true)
+    setTestResult(null)
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/api-keys/test', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setTestResult({ provider, success: true, message: data.message })
+      } else {
+        setTestResult({ provider, success: false, message: data.message || data.error })
+      }
+    } catch (err) {
+      console.error('Error testing API key:', err)
+      setTestResult({ provider, success: false, message: 'Failed to test API key' })
+    } finally {
+      setIsTestingApiKey(false)
+    }
+  }
+
+  const handleSetActivePlatform = async (platform: string) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/active-platform', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ platform }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to set active platform')
+      }
+
+      setActiveLLMPlatform(platform)
+    } catch (err) {
+      console.error('Error setting active platform:', err)
+      setError('Failed to set active platform')
     }
   }
 
@@ -127,6 +208,7 @@ export default function Account() {
       if (response.ok) {
         setAuthenticated(false)
         setAccountData(null)
+        storage.clearActiveStackId()
         await checkSession()
       }
     } catch (err) {
@@ -157,7 +239,7 @@ export default function Account() {
           <p className="text-cyan-medium">Loading...</p>
         ) : isAuthenticated && accountData ? (
           <div className="space-y-6">
-            <Card>
+            <Card className="accent-border-gradient">
               <CardHeader>
                 <CardTitle>Your Account ID</CardTitle>
                 <CardDescription>
@@ -180,83 +262,105 @@ export default function Account() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Google Vertex AI API Key
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        placeholder="Enter your Vertex AI API key"
-                        className="flex-1 px-3 py-2 rounded-md border border-cyan-medium bg-background"
-                        value={vertexApiKey}
-                        onChange={(e) => setVertexApiKey(e.target.value)}
-                        disabled={isSavingApiKey}
-                      />
-                      <Button
-                        onClick={() => {
-                          const modelToSave = vertexModel === 'custom' ? customModel : vertexModel
-                          handleSaveApiKey('vertex', vertexApiKey, modelToSave)
-                        }}
-                        disabled={isSavingApiKey || !vertexApiKey.trim()}
-                      >
-                        {isSavingApiKey ? 'Saving...' : apiKeyInfo.vertex?.configured ? 'Update' : 'Save'}
-                      </Button>
-                    </div>
-                    {apiKeyInfo.vertex?.configured && (
-                      <p className="text-sm text-cyan-medium mt-1">
-                        ✓ API key configured
-                      </p>
-                    )}
-                  </div>
+                  {(() => {
+                    const configuredPlatforms = Object.entries(apiKeyInfo)
+                      .filter(([_, info]) => info.configured)
+                      .map(([platform, _]) => platform)
 
-                  {apiKeyInfo.vertex?.configured && (
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Model
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background mb-2"
-                        value={vertexModel}
-                        onChange={(e) => {
-                          setVertexModel(e.target.value)
-                          if (e.target.value !== 'custom') {
-                            setCustomModel('')
-                          }
-                        }}
-                        disabled={isSavingApiKey}
-                      >
-                        {Object.entries(PREDEFINED_MODELS.vertex).map(([modelId, displayName]) => (
-                          <option key={modelId} value={modelId}>
-                            {displayName}
-                          </option>
-                        ))}
-                        <option value="custom">Custom Model</option>
-                      </select>
+                    if (configuredPlatforms.length > 1) {
+                      return (
+                        <div>
+                          <label className="text-lg font-medium mb-3 block">
+                            Active Platform
+                          </label>
+                          <RadioGroup
+                            value={activeLLMPlatform}
+                            onValueChange={handleSetActivePlatform}
+                          >
+                            {configuredPlatforms.map((platform) => (
+                              <div key={platform} className="flex items-center space-x-2">
+                                <RadioGroupItem value={platform} id={platform} />
+                                <label
+                                  htmlFor={platform}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                >
+                                  {platform === 'vertex' ? 'Google Vertex AI' : platform === 'openai' ? 'OpenAI' : 'Anthropic'}
+                                </label>
+                              </div>
+                            ))}
+                          </RadioGroup>
 
-                      {vertexModel === 'custom' && (
-                        <input
-                          type="text"
-                          placeholder="Enter custom model ID (e.g., gemini-pro)"
-                          className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background mb-2"
-                          value={customModel}
-                          onChange={(e) => setCustomModel(e.target.value)}
-                          disabled={isSavingApiKey}
-                        />
-                      )}
+                          <hr className="mt-6" />
+                        </div>
+                      )
+                    }
+                    
+                    return null
+                  })()}
 
-                      <Button
-                        onClick={() => {
-                          const modelToSave = vertexModel === 'custom' ? customModel : vertexModel
-                          handleSaveModel('vertex', modelToSave)
-                        }}
-                        disabled={isSavingApiKey || (vertexModel === 'custom' && !customModel.trim())}
-                        className="flex ml-auto"
-                      >
-                        {isSavingApiKey ? 'Saving...' : 'Save Model'}
-                      </Button>
-                    </div>
-                  )}
+                  <ApiKeyInput
+                    displayName="Google Vertex"
+                    apiKey={vertexApiKey}
+                    onApiKeyChange={setVertexApiKey}
+                    configured={apiKeyInfo.vertex?.configured || false}
+                    onSave={() => {
+                      const modelToSave = vertexModel === 'custom' ? customModel : vertexModel
+                      handleSaveApiKey('vertex', vertexApiKey, modelToSave)
+                    }}
+                    onTest={() => handleTestApiKey('vertex')}
+                    isSaving={isSavingApiKey}
+                    isTesting={isTestingApiKey}
+                    testResult={testResult?.provider === 'vertex' ? testResult : null}
+                    modelConfig={{
+                      availableModels: PREDEFINED_MODELS.vertex,
+                      selectedModel: vertexModel,
+                      onModelChange: (model) => {
+                        setVertexModel(model)
+                        if (model !== 'custom') {
+                          setCustomModel('')
+                        }
+                      },
+                      customModel,
+                      onCustomModelChange: setCustomModel,
+                      onSaveModel: () => {
+                        const modelToSave = vertexModel === 'custom' ? customModel : vertexModel
+                        handleSaveModel('vertex', modelToSave)
+                      },
+                    }}
+                    enabled={activeLLMPlatform === 'vertex'}
+                  />
+
+                  <ApiKeyInput
+                    displayName="OpenAI"
+                    apiKey={openaiApiKey}
+                    onApiKeyChange={setOpenaiApiKey}
+                    configured={apiKeyInfo.openai?.configured || false}
+                    onSave={() => {
+                      const modelToSave = openaiModel === 'custom' ? openaiCustomModel : openaiModel
+                      handleSaveApiKey('openai', openaiApiKey, modelToSave)
+                    }}
+                    onTest={() => handleTestApiKey('openai')}
+                    isSaving={isSavingApiKey}
+                    isTesting={isTestingApiKey}
+                    testResult={testResult?.provider === 'openai' ? testResult : null}
+                    modelConfig={{
+                      availableModels: PREDEFINED_MODELS.openai,
+                      selectedModel: openaiModel,
+                      onModelChange: (model) => {
+                        setOpenaiModel(model)
+                        if (model !== 'custom') {
+                          setOpenaiCustomModel('')
+                        }
+                      },
+                      customModel: openaiCustomModel,
+                      onCustomModelChange: setOpenaiCustomModel,
+                      onSaveModel: () => {
+                        const modelToSave = openaiModel === 'custom' ? openaiCustomModel : openaiModel
+                        handleSaveModel('openai', modelToSave)
+                      },
+                    }}
+                    enabled={activeLLMPlatform === 'openai'}
+                  />
                 </div>
               </CardContent>
             </Card>
