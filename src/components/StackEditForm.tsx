@@ -28,11 +28,7 @@ interface StackEditFormProps {
   onClose: () => void;
 }
 
-export function StackEditForm({
-  stack,
-  stackDetails,
-  onClose,
-}: StackEditFormProps) {
+export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
   const [editName, setEditName] = useState(stack.name || "");
   const [editDisplayId, setEditDisplayId] = useState(stack.displayId);
   const [commaSeparated, setCommaSeparated] = useState(stack.commaSeparated);
@@ -218,7 +214,7 @@ export function StackEditForm({
                   <ChevronDown className="h-4 w-4 text-cyan-medium" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-[300px]"
+                  className="w-75"
                   align="start"
                   onClick={(e) => e.stopPropagation()}
                 >

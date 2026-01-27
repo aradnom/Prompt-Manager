@@ -1,7 +1,6 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Dices } from "lucide-react";
-import yaml from "js-yaml";
 import { Wildcard } from "@/types/schema";
 import { resolveWildcardPath } from "@/lib/wildcard-value-extractor";
 import { WildcardBrowserLists } from "@/components/WildcardBrowserLists";
@@ -192,7 +191,7 @@ export function WildcardString({
             />
 
             <motion.div
-              className={`absolute ${getTooltipPositionClasses()} z-50 w-[500px] max-h-[400px] overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4`}
+              className={`absolute ${getTooltipPositionClasses()} z-50 w-125 max-h-100 overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4`}
               onMouseEnter={handleMouseEnter}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0 }}

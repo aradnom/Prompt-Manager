@@ -28,9 +28,9 @@ export function HorizontalRule({
 
   return (
     <div
-      className={`h-0.5 w-full bg-gradient-to-r from-cyan-medium/50 to-magenta-medium/80 ${
+      className={`h-0.5 w-full bg-linear-to-r from-cyan-medium/50 to-magenta-medium/80 ${
         animated ? "animate-gradient" : ""
-      } ${parallax ? "bg-[length:200%_100%]" : ""} ${className}`}
+      } ${parallax ? "bg-size-[200%_100%]" : ""} ${className}`}
       style={parallax ? { backgroundPosition } : undefined}
     />
   );

@@ -482,7 +482,7 @@ export default function Wildcards() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <pre className="bg-cyan-dark p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap break-words">
+                    <pre className="bg-cyan-dark p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap wrap-break-word">
                       {wildcard.content}
                     </pre>
                   </CardContent>

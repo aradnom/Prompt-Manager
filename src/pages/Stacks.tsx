@@ -479,7 +479,7 @@ export default function Stacks() {
                             return (
                               <div
                                 key={revision.id}
-                                className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
+                                className="shrink-0 w-100 h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   try {

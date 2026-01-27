@@ -246,7 +246,7 @@ export function WildcardBrowserLists({
                         levelIndex,
                       )
                     }
-                    className={`flex-shrink-0 px-3 py-2 rounded border text-sm ${
+                    className={`shrink-0 px-3 py-2 rounded border text-sm ${
                       node.isLeaf
                         ? "bg-magenta-dark/10 border-magenta-medium/30 hover:bg-magenta-dark/20"
                         : isSelected

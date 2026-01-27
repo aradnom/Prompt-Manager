@@ -147,7 +147,6 @@ export function BlockForm({
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
                 {types.map((type) => (
                   <SelectItem key={type.id} value={type.id.toString()}>
                     {type.name}
@@ -161,7 +160,7 @@ export function BlockForm({
             <textarea
               ref={textareaRef}
               placeholder="Enter your prompt text..."
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background min-h-[120px]"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background min-h-30"
               value={text}
               onChange={(e) => setText(e.target.value)}
               disabled={isSubmitting}

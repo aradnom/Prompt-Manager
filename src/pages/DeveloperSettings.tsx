@@ -68,7 +68,7 @@ export default function DeveloperSettings() {
               <label className="text-sm font-medium">
                 Preferred LLM Target
               </label>
-              <div className="w-[300px]">
+              <div className="w-75">
                 <Select
                   value={currentTarget}
                   onValueChange={setPreferredLLMTarget}

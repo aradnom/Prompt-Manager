@@ -784,7 +784,7 @@ export function StackEditor({ stack }: StackEditorProps) {
 
                 {/* Concept in center */}
                 <div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[100px] flex items-center justify-center"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-25 flex items-center justify-center"
                   style={{ zIndex: 10 }}
                 >
                   <div className="p-4 border-2 border-magenta-medium rounded-md bg-background w-full h-full flex items-center justify-center relative">
@@ -835,7 +835,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                   return (
                     <motion.div
                       key={index}
-                      className="absolute top-1/2 left-1/2 w-[450px] h-[100px] cursor-pointer"
+                      className="absolute top-1/2 left-1/2 w-112.5 h-25 cursor-pointer"
                       style={{ zIndex: 10 }}
                       initial={{ x: -225, y: -50, scale: 0, opacity: 0 }}
                       animate={{

@@ -71,7 +71,7 @@ export function BlockSearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-0 gap-0">
+      <DialogContent className="sm:max-w-106.25 p-0 gap-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle>{getTitle()}</DialogTitle>
         </DialogHeader>
@@ -87,7 +87,7 @@ export function BlockSearchDialog({
             />
           </div>
         )}
-        <div className="max-h-[300px] overflow-y-auto p-2">
+        <div className="max-h-75 overflow-y-auto p-2">
           {isLoading ? (
             <div className="text-center py-6 text-sm text-cyan-medium">
               Searching...

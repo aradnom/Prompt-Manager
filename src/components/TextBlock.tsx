@@ -676,7 +676,7 @@ export function TextBlock({
                   return (
                     <div
                       key={revision.id}
-                      className="flex-shrink-0 w-[400px] h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
+                      className="shrink-0 w-100 h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
                       onClick={async () => {
                         try {
                           await setActiveRevisionMutation.mutateAsync({
@@ -768,7 +768,7 @@ export function TextBlock({
 
                 {/* Original text in center */}
                 <div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[100px] flex items-center justify-center"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-25 flex items-center justify-center"
                   style={{ zIndex: 10 }}
                 >
                   <div className="p-4 border-2 border-magenta-medium rounded-md bg-background w-full h-full flex items-center justify-center relative">
@@ -794,7 +794,7 @@ export function TextBlock({
                   return (
                     <motion.div
                       key={index}
-                      className="absolute top-1/2 left-1/2 w-[450px] h-[100px] cursor-pointer"
+                      className="absolute top-1/2 left-1/2 w-112.5 h-25 cursor-pointer"
                       style={{ zIndex: 10 }}
                       initial={{ x: -225, y: -50, scale: 0, opacity: 0 }}
                       animate={{
