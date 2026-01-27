@@ -1,11 +1,11 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from "crypto";
 
 export function generateToken() {
   // 0, 1, I, L, O excluded. U included. Specifically.
-  const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; 
+  const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
   const length = 12;
-  let token = '';
-  
+  let token = "";
+
   // Using randomBytes for cryptographic security
   const bytes = randomBytes(length);
 
@@ -15,7 +15,7 @@ export function generateToken() {
   }
 
   // Output format: XXXX-XXXX-XXXX
-  return token.match(/.{1,4}/g)?.join('-') || token;
+  return token.match(/.{1,4}/g)?.join("-") || token;
 }
 
-console.log(generateToken());
+console.info(generateToken());
