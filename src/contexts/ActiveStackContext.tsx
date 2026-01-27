@@ -19,13 +19,12 @@ export function ActiveStackProvider({ children }: { children: ReactNode }) {
   const [storedId, setStoredId] = useState<number | null>(null)
   const { userId, isAuthenticated, isLoading } = useSession()
 
-  // Clear active stack when user changes or logs out
+  // Clear active stack state when user logs out (storage is cleared in logout handler)
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
       _setActiveStack(null)
       setActiveStackBlocks([])
       setStoredId(null)
-      storage.clearActiveStackId()
     }
   }, [userId, isAuthenticated, isLoading])
 
