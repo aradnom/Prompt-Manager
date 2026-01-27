@@ -1,5 +1,6 @@
 import { LLMConfig } from '@server/config'
 import { VertexServiceGenAI } from './vertex-service-genai'
+import { OpenAIService } from './openai-service'
 
 export type LLMTarget = 'lm-studio' | 'openai' | 'anthropic' | 'vertex'
 export type OutputStyle = 't5' | 'clip' | null
@@ -18,9 +19,11 @@ export interface TransformResponse {
 
 export class LLMService {
   private vertexService: VertexServiceGenAI
+  private openaiService: OpenAIService
 
   constructor(private config: LLMConfig) {
     this.vertexService = new VertexServiceGenAI(config)
+    this.openaiService = new OpenAIService(config)
   }
 
   async transform(request: TransformRequest, userApiKey?: string, userModel?: string): Promise<TransformResponse> {
@@ -36,7 +39,7 @@ export class LLMService {
       case 'vertex':
         return this.vertexService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       case 'openai':
-        throw new Error('OpenAI target not yet implemented')
+        return this.openaiService.transform(request, this.buildSystemPrompt(request.operation, request.text, request.style), userApiKey, userModel)
       case 'anthropic':
         throw new Error('Anthropic target not yet implemented')
       default:
