@@ -9,6 +9,10 @@ export interface LLMConfig {
     apiEndpoint?: string
     apiKey?: string
   }
+  openai: {
+    apiKey?: string
+    model: string
+  }
 }
 
 export interface ServerConfig {
@@ -23,7 +27,7 @@ export interface ServerConfig {
 }
 
 function parseAllowedTargets(envValue: string | undefined): Set<string> {
-  if (!envValue) return new Set(['lm-studio', 'vertex'])
+  if (!envValue) return new Set(['lm-studio', 'vertex', 'openai'])
   return new Set(envValue.split(',').map(t => t.trim()))
 }
 
@@ -56,6 +60,10 @@ export function loadConfig(): ServerConfig {
         serviceAccountJson: process.env.VERTEX_SERVICE_ACCOUNT_JSON,
         apiEndpoint: process.env.VERTEX_API_ENDPOINT,
         apiKey: process.env.VERTEX_API_KEY,
+      },
+      openai: {
+        apiKey: process.env.OPENAI_API_KEY,
+        model: process.env.OPENAI_MODEL || 'gpt-4o',
       },
     },
   }
