@@ -443,7 +443,7 @@ export default function Wildcards() {
                           size="sm"
                           onClick={() => setEditingId(wildcard.id)}
                         >
-                          Edit
+                          Edit Wildcard
                         </Button>
                         <button
                           onClick={() => handleDelete(wildcard.id)}

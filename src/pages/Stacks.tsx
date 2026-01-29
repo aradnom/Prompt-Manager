@@ -389,6 +389,17 @@ export default function Stacks() {
                         </CardDescription>
                       </div>
                       <div className="flex gap-2 items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStackClick(stack.id, stack);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          Edit Prompt
+                        </Button>
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
