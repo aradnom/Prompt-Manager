@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import yaml from "js-yaml";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
 import { cn } from "@/lib/utils";
@@ -445,14 +445,14 @@ export default function Wildcards() {
                         >
                           Edit
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <button
                           onClick={() => handleDelete(wildcard.id)}
                           disabled={deleteMutation.isPending}
+                          className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                          aria-label="Delete wildcard"
                         >
-                          Delete
-                        </Button>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </CardHeader>

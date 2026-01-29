@@ -9,7 +9,7 @@ import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { SearchInput } from "@/components/ui/search-input";
-import { X, Clock } from "lucide-react";
+import { X, Clock, Trash2 } from "lucide-react";
 
 type Stack = RouterOutput["stacks"]["list"][number];
 import { Button } from "@/components/ui/button";
@@ -429,7 +429,7 @@ export default function Stacks() {
                           className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
                           aria-label="Delete stack"
                         >
-                          <X className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>

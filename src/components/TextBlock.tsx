@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Info, Clock, Save, RefreshCw } from "lucide-react";
+import { X, Info, Clock, Save, RefreshCw, Trash2 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -459,7 +459,7 @@ export function TextBlock({
                     className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
                     aria-label="Delete block"
                   >
-                    <X className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </ExpandingIcon>
               </>
