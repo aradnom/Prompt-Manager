@@ -221,8 +221,7 @@ export function WildcardString({
                 <WildcardBrowserLists
                   wildcard={wildcard}
                   currentPath={path}
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  onSelectValue={(newPath, _value) => {
+                  onSelectValue={(newPath) => {
                     if (onPathChange) {
                       onPathChange(displayId, path, newPath);
                     }

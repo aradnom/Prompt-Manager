@@ -208,14 +208,13 @@ function resolvePath(obj: unknown, path: string): string | null {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let current: any = obj;
+  let current: unknown = obj;
   for (const token of tokens) {
     if (current === undefined || current === null) {
       return null;
     }
 
-    current = current[token];
+    current = (current as Record<string | number, unknown>)[token];
   }
 
   if (current === undefined || current === null) {

@@ -53,7 +53,6 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useErrors() {
   const context = useContext(ErrorContext);
   if (context === undefined) {

@@ -236,7 +236,6 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
   };
 
   const transformWithLMStudio = async (
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _request: TransformRequest,
   ): Promise<TransformResponse> => {
     // TODO: Implement LM Studio client-side fetch

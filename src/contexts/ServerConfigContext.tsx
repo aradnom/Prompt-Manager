@@ -37,7 +37,6 @@ export function ServerConfigProvider({
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useServerConfig() {
   const context = useContext(ServerConfigContext);
   if (context === undefined) {

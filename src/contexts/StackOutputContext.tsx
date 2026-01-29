@@ -19,7 +19,6 @@ export function StackOutputProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useStackOutput() {
   const context = useContext(StackOutputContext);
   if (context === undefined) {

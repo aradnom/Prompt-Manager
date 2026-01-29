@@ -27,7 +27,7 @@ export function validateWildcardContent(content: string): ValidationResult {
   // Check for other problematic invisible characters
   // Allow: spaces, tabs, newlines, carriage returns
   // Block: other control characters (0x00-0x1F except 0x09, 0x0A, 0x0D)
-  // eslint-disable-next-line
+  // eslint-disable-next-line no-control-regex
   const problematicChars = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
   if (problematicChars.test(content)) {
     return {

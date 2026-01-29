@@ -30,7 +30,6 @@ export function StackContentProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useStackContent() {
   const context = useContext(StackContentContext);
   if (context === undefined) {

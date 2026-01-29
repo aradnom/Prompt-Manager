@@ -20,7 +20,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useTypes() {
   const context = useContext(TypesContext);
   if (context === undefined) {
