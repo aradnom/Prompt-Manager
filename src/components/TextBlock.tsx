@@ -303,7 +303,22 @@ export function TextBlock({
       transition={TEXT_BLOCK_ANIMATION}
     >
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div
+          className={cn("flex items-start justify-between", {
+            "cursor-pointer": alwaysActive && onEdit,
+          })}
+          onClick={(e) => {
+            if (
+              !alwaysActive ||
+              !onEdit ||
+              (e.target as HTMLElement).closest("button") ||
+              (e.target as HTMLElement).closest("input") ||
+              (e.target as HTMLElement).closest('[role="menu"]')
+            )
+              return;
+            onEdit();
+          }}
+        >
           <div className="flex-1">
             {isActive && (
               <div className="mb-2">
