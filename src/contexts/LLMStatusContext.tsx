@@ -25,7 +25,7 @@ interface LLMTargetInfo {
 const LLM_TARGET_INFO: Record<LLMTarget, LLMTargetInfo> = {
   "lm-studio": {
     id: "lm-studio",
-    name: "LM Studio",
+    name: "LM Studio (Local)",
     type: "client",
     requiresConfig: false, // User configures locally
   },
@@ -150,8 +150,6 @@ export function LLMStatusProvider({ children }: LLMStatusProviderProps) {
       target = firstServerTarget || "transformers-js";
     }
 
-    console.log(target);
-
     setActiveTargetState(target);
     setInitialized(true);
   }, [
@@ -174,7 +172,7 @@ export function LLMStatusProvider({ children }: LLMStatusProviderProps) {
     if (LLM_TARGET_INFO[target].type === "server") {
       // This will be handled by the Account page's setActivePlatform endpoint
       // For now, just update local state - the Account page will sync it to server
-      console.log(`Active target changed to: ${target}`);
+      console.debug(`Active target changed to: ${target}`);
     }
   };
 

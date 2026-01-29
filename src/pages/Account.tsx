@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { RasterIcon } from "@/components/RasterIcon";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
 import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
+import { useClientLLM } from "@/contexts/ClientLLMContext";
 import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { storage } from "@/lib/storage";
@@ -26,6 +28,8 @@ export default function Account() {
   } = useSession();
   const { activeTarget, setActiveTarget, availableTargets, getTargetInfo } =
     useLLMStatus();
+  const { lmStudioUrl, setLMStudioUrl } = useClientLLM();
+  const [lmStudioUrlDraft, setLmStudioUrlDraft] = useState(lmStudioUrl);
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
     null,
   );
@@ -64,6 +68,10 @@ export default function Account() {
   const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>("");
 
   useEffect(() => {
+    setLmStudioUrlDraft(lmStudioUrl);
+  }, [lmStudioUrl]);
+
+  useEffect(() => {
     if (isAuthenticated && !accountData) {
       fetchAccountData();
     }
@@ -72,7 +80,7 @@ export default function Account() {
   const fetchAccountData = async () => {
     setIsLoadingAccount(true);
     try {
-      const response = await fetch("http://localhost:3001/api/auth/account", {
+      const response = await fetch("/api/auth/account", {
         credentials: "include",
       });
 
@@ -148,7 +156,7 @@ export default function Account() {
   ) => {
     setIsSavingApiKey(true);
     try {
-      const response = await fetch("http://localhost:3001/api/auth/api-keys", {
+      const response = await fetch("/api/auth/api-keys", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -190,7 +198,7 @@ export default function Account() {
     try {
       // We need to send a placeholder key since the backend requires it
       // The backend will preserve the existing key
-      const response = await fetch("http://localhost:3001/api/auth/api-keys", {
+      const response = await fetch("/api/auth/api-keys", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -233,17 +241,14 @@ export default function Account() {
     setIsTestingApiKey(true);
     setTestResult(null);
     try {
-      const response = await fetch(
-        "http://localhost:3001/api/auth/api-keys/test",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ provider }),
+      const response = await fetch("/api/auth/api-keys/test", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ provider }),
+      });
 
       const data = await response.json();
 
@@ -270,17 +275,14 @@ export default function Account() {
 
   const handleSetActivePlatform = async (platform: string) => {
     try {
-      const response = await fetch(
-        "http://localhost:3001/api/auth/active-platform",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ platform }),
+      const response = await fetch("/api/auth/active-platform", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ platform }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to set active platform");
@@ -296,7 +298,7 @@ export default function Account() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
@@ -401,6 +403,49 @@ export default function Account() {
                     </RadioGroup>
 
                     <hr className="mt-6" />
+                  </div>
+
+                  <div
+                    className={`space-y-4 border border-cyan-medium/50 rounded-lg p-4 transition-colors ${activeLLMPlatform === "lm-studio" ? "bg-cyan-dark" : "opacity-50"}`}
+                  >
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        LM Studio API URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="http://localhost:11434/v1"
+                          className="flex-1 px-3 py-2 rounded-md border border-cyan-medium bg-background font-mono text-sm"
+                          value={lmStudioUrlDraft}
+                          onChange={(e) => setLmStudioUrlDraft(e.target.value)}
+                          onBlur={() => {
+                            const trimmed = lmStudioUrlDraft.trim();
+                            if (trimmed && trimmed !== lmStudioUrl) {
+                              setLMStudioUrl(trimmed);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                        />
+                      </div>
+                      <p className="text-sm text-cyan-medium mt-4">
+                        Connects directly from your browser to LM Studio.{" "}
+                        <strong>
+                          Make sure you have{" "}
+                          <Link
+                            to="/lm-studio-cors"
+                            className="underline hover:text-cyan-light"
+                          >
+                            CORS support enabled
+                          </Link>{" "}
+                          in LM Studio.
+                        </strong>
+                      </p>
+                    </div>
                   </div>
 
                   <ApiKeyInput

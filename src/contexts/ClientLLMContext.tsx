@@ -10,6 +10,7 @@ import { useLLMStatus } from "./LLMStatusContext";
 import { buildSystemPrompt } from "@shared/llm/prompts";
 import { processLLMResponse } from "@shared/llm/response-parser";
 import type { LLMOperation, OutputStyle } from "@shared/llm/types";
+import { storage } from "@/lib/storage";
 
 // Transformers.js types
 interface ChatMessage {
@@ -67,6 +68,14 @@ interface ClientLLMContextType {
   // Transform text using client-side LLM
   transform: (request: TransformRequest) => Promise<TransformResponse>;
 
+  // LM Studio URL config
+  lmStudioUrl: string;
+  setLMStudioUrl: (url: string) => Promise<void>;
+
+  // LM Studio CORS error state
+  lmStudioCorsError: boolean;
+  clearLmStudioCorsError: () => void;
+
   // Status
   isLoading: boolean;
   isReady: boolean;
@@ -84,9 +93,23 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lmStudioUrl, setLmStudioUrlState] = useState(
+    storage.DEFAULT_LM_STUDIO_URL,
+  );
+  const [lmStudioCorsError, setLmStudioCorsError] = useState(false);
 
   const pipelineRef = useRef<Pipeline | null>(null);
   const transformersRef = useRef<TransformersModule | null>(null);
+
+  // Load LM Studio URL from storage on mount
+  useEffect(() => {
+    storage.getLMStudioUrl().then(setLmStudioUrlState);
+  }, []);
+
+  const setLMStudioUrl = async (url: string) => {
+    setLmStudioUrlState(url);
+    await storage.setLMStudioUrl(url);
+  };
 
   // Initialize Transformers.js when it becomes the active target
   useEffect(() => {
@@ -111,7 +134,7 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
       setError(null);
 
       try {
-        console.log("Loading Transformers.js...");
+        console.debug("Loading Transformers.js...");
 
         // Dynamically import transformers.js
         const { pipeline, env } =
@@ -123,24 +146,28 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
         env.allowLocalModels = false;
         env.allowRemoteModels = true;
 
-        // console.log("Loading model: onnx-community/Qwen3-0.6B-ONNX (int8)...");
+        // Use WebGPU if available (requires secure context), fall back to WASM
+        const gpu = (navigator as Navigator & { gpu?: unknown }).gpu;
+        const device = gpu ? "webgpu" : "wasm";
+        const dtype = gpu ? "q4f16" : "q4";
+        console.debug(`Using device: ${device}`);
 
         // Load the text-generation pipeline with the specific model
         const textGenerator = await pipeline(
           "text-generation",
           "onnx-community/Llama-3.2-1B-Instruct-ONNX",
           // "onnx-community/Qwen3-0.6B-ONNX",
+          // "HuggingFaceTB/SmolLM2-360M-Instruct",
           {
-            dtype: "q4f16",
-            // dtype: "int8",
-            device: "webgpu",
+            dtype,
+            device,
           },
         );
 
         pipelineRef.current = textGenerator;
         setIsReady(true);
 
-        console.log("✓ Transformers.js model loaded and ready");
+        console.debug("✓ Transformers.js model loaded and ready");
       } catch (err) {
         console.error("Failed to initialize Transformers.js:", err);
         setError(
@@ -236,17 +263,76 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
   };
 
   const transformWithLMStudio = async (
-    _request: TransformRequest,
+    request: TransformRequest,
   ): Promise<TransformResponse> => {
-    // TODO: Implement LM Studio client-side fetch
-    // Will need to get the LM Studio URL from user settings
-    throw new Error("LM Studio client-side transform not yet implemented");
+    try {
+      const systemPrompt = buildSystemPrompt(
+        request.operation,
+        request.text,
+        request.style,
+      );
+
+      const response = await fetch(`${lmStudioUrl}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: request.text },
+          ],
+          temperature: 0.7,
+          max_tokens: 2048,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `LM Studio API error: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      let result = data.choices?.[0]?.message?.content;
+
+      if (!result) {
+        throw new Error("No response from LM Studio");
+      }
+
+      // Strip <think>...</think> tags (reasoning model artifacts)
+      result = result.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+      return {
+        result: processLLMResponse(result, request.operation),
+        target: "lm-studio",
+      };
+    } catch (err) {
+      console.error("LM Studio generation failed:", err);
+
+      // A TypeError with "Failed to fetch" is the browser's way of saying
+      // the request was blocked — almost always CORS when targeting a local server.
+      if (err instanceof TypeError && err.message === "Failed to fetch") {
+        setLmStudioCorsError(true);
+        throw new Error(
+          "Could not reach LM Studio. This is likely a CORS issue — see the help page for how to fix it.",
+        );
+      }
+
+      throw new Error(
+        `LM Studio request failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
+    }
   };
 
   return (
     <ClientLLMContext.Provider
       value={{
         transform,
+        lmStudioUrl,
+        setLMStudioUrl,
+        lmStudioCorsError,
+        clearLmStudioCorsError: () => setLmStudioCorsError(false),
         isLoading,
         isReady,
         error,
