@@ -424,7 +424,14 @@ export default function Wildcards() {
               ) : (
                 <Card>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
+                    <div
+                      className="flex items-start justify-between cursor-pointer"
+                      onClick={(e) => {
+                        if (!(e.target as HTMLElement).closest("button")) {
+                          setEditingId(wildcard.id);
+                        }
+                      }}
+                    >
                       <div>
                         <CardTitle className="text-xl">
                           {wildcard.name}
