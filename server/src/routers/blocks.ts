@@ -9,7 +9,7 @@ export const blocksRouter = router({
         name: z.string().optional(),
         displayId: z.string(),
         text: z.string(),
-        typeId: z.number().optional(),
+        typeId: z.number().nullish(),
         labels: z.array(z.string()).optional(),
         meta: z.record(z.string(), z.unknown()).optional(),
       }),
