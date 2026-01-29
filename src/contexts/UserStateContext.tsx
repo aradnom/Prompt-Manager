@@ -51,7 +51,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
 
     const fetchAccountData = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/auth/account", {
+        const response = await fetch("/api/auth/account", {
           credentials: "include",
         });
 

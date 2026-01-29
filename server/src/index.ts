@@ -26,13 +26,12 @@ async function main() {
   const app = express();
 
   // CORS configuration
-  if (config.nodeEnv === "development") {
-    app.use(
-      cors({
-        origin: "http://localhost:5173", // Frontend dev server
-        credentials: true, // Allow cookies to be sent
-      }),
-    );
+  if (process.env.CORS_ORIGINS) {
+    const origins = process.env.CORS_ORIGINS.split(",").map((s) => s.trim());
+    app.use(cors({ origin: origins, credentials: true }));
+  } else if (config.nodeEnv === "development") {
+    console.log("this one is running");
+    app.use(cors({ origin: true, credentials: true }));
   } else {
     app.use(cors());
   }
@@ -92,8 +91,8 @@ async function main() {
   registerSystemRoutes(app);
 
   app.listen(config.port, () => {
-    console.debug(`✓ Server listening on http://localhost:${config.port}`);
-    console.debug(`✓ tRPC endpoint: http://localhost:${config.port}/trpc`);
+    console.debug(`✓ Server listening on port ${config.port}`);
+    console.debug(`✓ tRPC endpoint available at /trpc`);
   });
 }
 

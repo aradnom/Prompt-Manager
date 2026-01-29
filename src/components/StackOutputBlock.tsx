@@ -103,9 +103,7 @@ export function StackOutputBlock() {
         !navigator.clipboard ||
         typeof navigator.clipboard.writeText !== "function"
       ) {
-        throw new Error(
-          "Clipboard API not available (requires HTTPS or localhost)",
-        );
+        throw new Error("Clipboard API not available (requires HTTPS)");
       }
       await navigator.clipboard.writeText(processedContent);
     } catch (error) {

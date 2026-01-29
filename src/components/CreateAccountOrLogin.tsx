@@ -18,7 +18,7 @@ export function CreateAccountOrLogin({
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -43,7 +43,7 @@ export function CreateAccountOrLogin({
   const handleCreateAccount = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/auth/register", {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         credentials: "include",
         headers: {

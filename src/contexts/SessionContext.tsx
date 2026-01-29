@@ -24,7 +24,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const checkSession = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/auth/session", {
+      const response = await fetch("/api/auth/session", {
         credentials: "include",
       });
       const data = await response.json();
