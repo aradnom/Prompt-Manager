@@ -373,8 +373,12 @@ export function registerAuthRoutes(
         return res.status(400).json({ error: "Platform is required" });
       }
 
-      // Valid platforms from config
-      if (!config.llm.allowedTargets.has(platform)) {
+      // Valid platforms from config, plus client-only targets
+      const clientOnlyTargets = ["transformers-js", "lm-studio"];
+      if (
+        !config.llm.allowedTargets.has(platform) &&
+        !clientOnlyTargets.includes(platform)
+      ) {
         return res.status(400).json({ error: "Invalid platform" });
       }
 
