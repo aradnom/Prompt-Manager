@@ -45,7 +45,7 @@ export default function Stacks() {
   const { displayId: urlDisplayId } = useParams<{ displayId: string }>();
   const { setActiveStack } = useActiveStack();
 
-  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery({});
+  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery();
 
   // Debounce search input
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function Stacks() {
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
     { enabled: activeStackId !== null },
   );
-  const { data: blocks } = api.blocks.list.useQuery({});
+  const { data: blocks } = api.blocks.list.useQuery();
   const revisionsQuery = api.stacks.getRevisions.useQuery(
     { stackId: showRevisionsForStack! },
     { enabled: showRevisionsForStack !== null },

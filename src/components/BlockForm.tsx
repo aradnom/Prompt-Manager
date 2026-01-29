@@ -51,7 +51,7 @@ export function BlockForm({
   const [text, setText] = useState(initialValues?.text || "");
   const [labels, setLabels] = useState(initialValues?.labels?.join(", ") || "");
   const [typeId, setTypeId] = useState<number | undefined>(
-    initialValues?.typeId,
+    initialValues?.typeId ?? undefined,
   );
   const [wildcardBrowserOpen, setWildcardBrowserOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

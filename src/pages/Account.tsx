@@ -14,7 +14,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
-import { getPlatformDisplayName } from "@/lib/llm-platform-names";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { storage } from "@/lib/storage";
 

@@ -101,7 +101,7 @@ export function LLMStatusProvider({ children }: LLMStatusProviderProps) {
   const allTargets: LLMTarget[] = useMemo(
     () => [
       "transformers-js", // Client-only, always available
-      ...(serverConfig?.llm?.allTargets || []), // Server-provided list
+      ...((serverConfig?.llm?.allTargets as LLMTarget[] | undefined) || []), // Server-provided list
     ],
     [serverConfig?.llm?.allTargets],
   );
@@ -137,7 +137,10 @@ export function LLMStatusProvider({ children }: LLMStatusProviderProps) {
 
     let target: LLMTarget;
 
-    if (activeLLMPlatform && availableTargets.includes(activeLLMPlatform)) {
+    if (
+      activeLLMPlatform &&
+      availableTargets.includes(activeLLMPlatform as LLMTarget)
+    ) {
       target = activeLLMPlatform as LLMTarget;
     } else {
       // Find first server target if any

@@ -155,18 +155,13 @@ export const blocksRouter = router({
       return { success: true };
     }),
 
-  list: protectedProcedure
-    .input(
-      z.object({
-        countOnly: z.boolean().optional().default(false),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      if (input.countOnly) {
-        return { count: await ctx.storage.countBlocks(ctx.userId) };
-      }
-      return ctx.storage.listBlocks(ctx.userId);
-    }),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.storage.listBlocks(ctx.userId);
+  }),
+
+  count: protectedProcedure.query(async ({ ctx }) => {
+    return { count: await ctx.storage.countBlocks(ctx.userId) };
+  }),
 
   search: protectedProcedure
     .input(

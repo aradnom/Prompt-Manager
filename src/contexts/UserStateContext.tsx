@@ -29,15 +29,15 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [accountDataLoaded, setAccountDataLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
-  const { data: stackData, refetch: refetchStacks } = api.stacks.list.useQuery(
-    { countOnly: true },
+  const { data: stackData, refetch: refetchStacks } = api.stacks.count.useQuery(
+    undefined,
     { enabled: isAuthenticated },
   );
 
-  const { data: blockData, refetch: refetchBlocks } = api.blocks.list.useQuery(
-    { countOnly: true },
+  const { data: blockData, refetch: refetchBlocks } = api.blocks.count.useQuery(
+    undefined,
     { enabled: isAuthenticated },
   );
 
@@ -75,19 +75,11 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (stackData && "count" in stackData) {
-      setStackCount(stackData.count);
-    } else {
-      setStackCount(0);
-    }
+    setStackCount(stackData?.count ?? 0);
   }, [stackData]);
 
   useEffect(() => {
-    if (blockData && "count" in blockData) {
-      setBlockCount(blockData.count);
-    } else {
-      setBlockCount(0);
-    }
+    setBlockCount(blockData?.count ?? 0);
   }, [blockData]);
 
   useEffect(() => {

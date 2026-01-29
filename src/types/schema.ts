@@ -74,7 +74,7 @@ export interface CreateBlockInput {
   displayId: string;
   name?: string;
   text: string;
-  typeId?: number;
+  typeId?: number | null;
   labels?: string[];
   userId?: number;
   meta?: Record<string, unknown>;
@@ -84,7 +84,7 @@ export interface UpdateBlockInput {
   name?: string;
   displayId?: string;
   text?: string;
-  typeId?: number;
+  typeId?: number | null;
   labels?: string[];
   meta?: Record<string, unknown>;
 }

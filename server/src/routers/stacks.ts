@@ -164,18 +164,13 @@ export const stacksRouter = router({
       return { success: true };
     }),
 
-  list: protectedProcedure
-    .input(
-      z.object({
-        countOnly: z.boolean().optional().default(false),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      if (input.countOnly) {
-        return { count: await ctx.storage.countStacks(ctx.userId) };
-      }
-      return ctx.storage.listStacks(ctx.userId);
-    }),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.storage.listStacks(ctx.userId);
+  }),
+
+  count: protectedProcedure.query(async ({ ctx }) => {
+    return { count: await ctx.storage.countStacks(ctx.userId) };
+  }),
 
   search: protectedProcedure
     .input(

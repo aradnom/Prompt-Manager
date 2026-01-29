@@ -6,7 +6,7 @@ import type { LLMOperation, OutputStyle } from "@shared/llm/types";
 
 interface TransformInput {
   text: string;
-  operation: LLMOperation | string;
+  operation: LLMOperation;
   target?: string;
   style?: OutputStyle;
 }

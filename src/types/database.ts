@@ -9,6 +9,8 @@ export interface UsersTable {
     string | null
   >;
   api_key: ColumnType<string | null, string | null, string | null>;
+  created_at: ColumnType<Date, Date | undefined, Date | undefined>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
 export interface TypesTable {

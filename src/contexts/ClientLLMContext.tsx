@@ -13,7 +13,7 @@ import type { LLMOperation, OutputStyle } from "@shared/llm/types";
 
 // Transformers.js types
 interface Pipeline {
-  (text: string | string[], options?: any): Promise<any>;
+  (input: any, options?: any): Promise<any>;
   dispose?: () => Promise<void>;
 }
 
@@ -213,7 +213,7 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
   };
 
   const transformWithLMStudio = async (
-    request: TransformRequest,
+    _request: TransformRequest,
   ): Promise<TransformResponse> => {
     // TODO: Implement LM Studio client-side fetch
     // Will need to get the LM Studio URL from user settings

@@ -2,8 +2,22 @@ import { z } from "zod";
 import { router, protectedProcedure } from "@server/trpc";
 import { decrypt } from "@server/lib/auth";
 import { LLM_TARGETS, type LLMTarget } from "@server/config";
+import type { LLMOperation } from "@shared/llm/types";
+
+const LLM_OPERATIONS: [LLMOperation, ...LLMOperation[]] = [
+  "more-descriptive",
+  "less-descriptive",
+  "variation-slight",
+  "variation-fair",
+  "variation-very",
+  "explore",
+  "generate",
+  "generate-wildcard",
+  "auto-label",
+];
 
 const llmTargetSchema = z.enum(LLM_TARGETS);
+const llmOperationSchema = z.enum(LLM_OPERATIONS);
 const outputStyleSchema = z.enum(["t5", "clip"]).nullable().optional();
 
 export const llmRouter = router({
@@ -11,7 +25,7 @@ export const llmRouter = router({
     .input(
       z.object({
         text: z.string(),
-        operation: z.string(),
+        operation: llmOperationSchema,
         target: llmTargetSchema,
         style: outputStyleSchema,
       }),
