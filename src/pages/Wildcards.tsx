@@ -43,6 +43,7 @@ interface WildcardFormProps {
   initialValues?: WildcardFormValues;
   onSubmit: (values: WildcardFormValues) => void;
   onCancel: () => void;
+  onDelete?: () => void;
   isSubmitting: boolean;
 }
 
@@ -51,6 +52,7 @@ function WildcardForm({
   initialValues,
   onSubmit,
   onCancel,
+  onDelete,
   isSubmitting,
 }: WildcardFormProps) {
   const { addError } = useErrors();
@@ -100,9 +102,20 @@ function WildcardForm({
   return (
     <Card className="bg-cyan-dark">
       <CardHeader>
-        <CardTitle>
-          {mode === "create" ? "Create Wildcard" : "Edit Wildcard"}
-        </CardTitle>
+        <div className="flex items-start justify-between">
+          <CardTitle>
+            {mode === "create" ? "Create Wildcard" : "Edit Wildcard"}
+          </CardTitle>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+              aria-label="Delete wildcard"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -419,6 +432,7 @@ export default function Wildcards() {
                   }}
                   onSubmit={(values) => handleUpdate(wildcard.id, values)}
                   onCancel={() => setEditingId(null)}
+                  onDelete={() => handleDelete(wildcard.id)}
                   isSubmitting={updateMutation.isPending}
                 />
               ) : (

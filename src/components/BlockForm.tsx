@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { useTypes } from "@/contexts/TypesContext";
 import { insertWildcard } from "@/lib/wildcard-parser";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
 import {
@@ -32,6 +33,7 @@ interface BlockFormProps {
   initialValues?: Partial<BlockFormValues>;
   onSubmit: (values: BlockFormValues) => void;
   onCancel: () => void;
+  onDelete?: () => void;
   isSubmitting?: boolean;
   mode?: "create" | "edit";
 }
@@ -40,6 +42,7 @@ export function BlockForm({
   initialValues,
   onSubmit,
   onCancel,
+  onDelete,
   isSubmitting = false,
   mode = "create",
 }: BlockFormProps) {
@@ -90,14 +93,27 @@ export function BlockForm({
   return (
     <Card className="bg-cyan-dark">
       <CardHeader>
-        <CardTitle>
-          {mode === "create" ? "Create New Block" : "Edit Block"}
-        </CardTitle>
-        <CardDescription>
-          {mode === "create"
-            ? "Enter details for your new text block"
-            : "Update block details"}
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>
+              {mode === "create" ? "Create New Block" : "Edit Block"}
+            </CardTitle>
+            <CardDescription>
+              {mode === "create"
+                ? "Enter details for your new text block"
+                : "Update block details"}
+            </CardDescription>
+          </div>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+              aria-label="Delete block"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

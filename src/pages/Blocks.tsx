@@ -163,6 +163,7 @@ export default function Blocks() {
                   }}
                   onSubmit={(values) => handleUpdate(block.id, values)}
                   onCancel={() => setEditingId(null)}
+                  onDelete={() => handleDelete(block.id)}
                   isSubmitting={updateMutation.isPending}
                 />
               ) : (
