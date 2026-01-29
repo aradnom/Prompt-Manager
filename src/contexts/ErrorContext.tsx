@@ -7,15 +7,21 @@ import {
 } from "react";
 import { generateUUID } from "@/lib/uuid";
 
+interface ErrorLink {
+  label: string;
+  href: string;
+}
+
 interface ErrorMessage {
   id: string;
   message: string;
+  link?: ErrorLink;
   timestamp: number;
 }
 
 interface ErrorContextType {
   errors: ErrorMessage[];
-  addError: (message: string) => void;
+  addError: (message: string, link?: ErrorLink) => void;
   removeError: (id: string) => void;
   clearErrors: () => void;
 }
@@ -25,10 +31,10 @@ const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 export function ErrorProvider({ children }: { children: ReactNode }) {
   const [errors, setErrors] = useState<ErrorMessage[]>([]);
 
-  const addError = useCallback((message: string) => {
+  const addError = useCallback((message: string, link?: ErrorLink) => {
     const id = generateUUID();
     const timestamp = Date.now();
-    setErrors((prev) => [...prev, { id, message, timestamp }]);
+    setErrors((prev) => [...prev, { id, message, link, timestamp }]);
 
     // Auto-remove after 8 seconds
     setTimeout(() => {

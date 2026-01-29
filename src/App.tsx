@@ -15,6 +15,7 @@ import Wildcards from "./pages/Wildcards";
 import WhatIsThis from "./pages/WhatIsThis";
 import Account from "./pages/Account";
 import DeveloperSettings from "./pages/DeveloperSettings";
+import LMStudioCors from "./pages/LMStudioCors";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -43,6 +44,10 @@ function App() {
                             element={<WhatIsThis />}
                           />
                           <Route path="/account" element={<Account />} />
+                          <Route
+                            path="/lm-studio-cors"
+                            element={<LMStudioCors />}
+                          />
                           <Route
                             path="/developer-settings"
                             element={<DeveloperSettings />}

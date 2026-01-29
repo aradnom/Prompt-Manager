@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
+import { Link } from "react-router-dom";
 import { useErrors } from "@/contexts/ErrorContext";
 import { Button } from "@/components/ui/button";
 
@@ -6,7 +7,7 @@ export function ErrorBanner() {
   const { errors, removeError } = useErrors();
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 min-w-96 max-w-2xl">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 min-w-96 max-w-2xl pointer-events-none">
       <AnimatePresence>
         {errors.map((error) => (
           <motion.div
@@ -15,9 +16,23 @@ export function ErrorBanner() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="bg-magenta-light text-foreground px-4 py-3 rounded-md shadow-lg border border-magenta-medium/50 flex items-start gap-3"
+            className="pointer-events-auto bg-magenta-light text-foreground px-4 py-3 rounded-md shadow-lg border border-magenta-medium/50 flex items-start gap-3"
           >
-            <div className="flex-1 text-sm">{error.message}</div>
+            <div className="flex-1 text-sm">
+              {error.message}
+              {error.link && (
+                <>
+                  {" "}
+                  <Link
+                    to={error.link.href}
+                    className="underline font-medium hover:text-foreground/80"
+                    onClick={() => removeError(error.id)}
+                  >
+                    {error.link.label}
+                  </Link>
+                </>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"

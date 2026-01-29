@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MainMenu } from "./MainMenu";
 import { ErrorBanner } from "./ErrorBanner";
+import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
 import { ParallaxCircle } from "./ParallaxCircle";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
@@ -63,6 +64,7 @@ function LayoutContent({ children }: LayoutProps) {
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>
+      <LMStudioCorsWarning />
       <ErrorBanner />
     </div>
   );
