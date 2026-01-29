@@ -37,9 +37,8 @@ export default function LMStudioCors() {
             <CardContent className="space-y-3 text-foreground">
               <p>
                 Prompt Manager talks to LM Studio directly from your browser.
-                When your browser makes a request to a different origin (a
-                different host or port), the target server has to explicitly
-                allow it. This is called{" "}
+                When your browser makes a request to LM Studio, it has to
+                explicitly allow the request. This is called{" "}
                 <strong>CORS (Cross-Origin Resource Sharing)</strong>.
               </p>
               <p>

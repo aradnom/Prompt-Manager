@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MainMenu } from "./MainMenu";
 import { ErrorBanner } from "./ErrorBanner";
@@ -6,8 +6,31 @@ import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
 import { ParallaxCircle } from "./ParallaxCircle";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
+import { useClientLLM } from "@/contexts/ClientLLMContext";
+import { useErrors } from "@/contexts/ErrorContext";
 import { AnimatedBorderButton } from "./AnimatedBorderButton";
 import { RasterIcon } from "./RasterIcon";
+
+const TRANSFORMERS_PROGRESS_ID = "transformers-js-load";
+
+function TransformersLoadProgress() {
+  const { loadProgress } = useClientLLM();
+  const { setProgress, removeProgress } = useErrors();
+
+  useEffect(() => {
+    if (loadProgress != null) {
+      setProgress(
+        TRANSFORMERS_PROGRESS_ID,
+        "Loading Transformers.js model\u2026",
+        loadProgress,
+      );
+    } else {
+      removeProgress(TRANSFORMERS_PROGRESS_ID);
+    }
+  }, [loadProgress, setProgress, removeProgress]);
+
+  return null;
+}
 
 interface LayoutProps {
   children: ReactNode;
@@ -64,6 +87,7 @@ function LayoutContent({ children }: LayoutProps) {
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>
+      <TransformersLoadProgress />
       <LMStudioCorsWarning />
       <ErrorBanner />
     </div>

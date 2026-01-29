@@ -19,17 +19,29 @@ interface ErrorMessage {
   timestamp: number;
 }
 
+interface ProgressMessage {
+  id: string;
+  message: string;
+  progress: number; // 0-100
+}
+
 interface ErrorContextType {
   errors: ErrorMessage[];
   addError: (message: string, link?: ErrorLink) => void;
   removeError: (id: string) => void;
   clearErrors: () => void;
+  progressMessages: ProgressMessage[];
+  setProgress: (id: string, message: string, progress: number) => void;
+  removeProgress: (id: string) => void;
 }
 
 const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 
 export function ErrorProvider({ children }: { children: ReactNode }) {
   const [errors, setErrors] = useState<ErrorMessage[]>([]);
+  const [progressMessages, setProgressMessages] = useState<ProgressMessage[]>(
+    [],
+  );
 
   const addError = useCallback((message: string, link?: ErrorLink) => {
     const id = generateUUID();
@@ -50,9 +62,36 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
     setErrors([]);
   }, []);
 
+  const setProgress = useCallback(
+    (id: string, message: string, progress: number) => {
+      setProgressMessages((prev) => {
+        const existing = prev.find((p) => p.id === id);
+        if (existing) {
+          return prev.map((p) =>
+            p.id === id ? { ...p, message, progress } : p,
+          );
+        }
+        return [...prev, { id, message, progress }];
+      });
+    },
+    [],
+  );
+
+  const removeProgress = useCallback((id: string) => {
+    setProgressMessages((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
   return (
     <ErrorContext.Provider
-      value={{ errors, addError, removeError, clearErrors }}
+      value={{
+        errors,
+        addError,
+        removeError,
+        clearErrors,
+        progressMessages,
+        setProgress,
+        removeProgress,
+      }}
     >
       {children}
     </ErrorContext.Provider>

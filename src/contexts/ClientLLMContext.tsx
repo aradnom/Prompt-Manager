@@ -28,9 +28,16 @@ interface GenerationOutput {
   generated_text: string | ChatMessage[];
 }
 
+interface ProgressEvent {
+  status: "initiate" | "download" | "progress" | "done" | "ready";
+  file?: string;
+  progress?: number;
+}
+
 interface PipelineOptions {
   dtype?: string;
   device?: string;
+  progress_callback?: (event: ProgressEvent) => void;
 }
 
 interface Pipeline {
@@ -80,6 +87,7 @@ interface ClientLLMContextType {
   isLoading: boolean;
   isReady: boolean;
   error: string | null;
+  loadProgress: number | null; // 0-100 during model load, null otherwise
 }
 
 const ClientLLMContext = createContext<ClientLLMContextType | null>(null);
@@ -97,9 +105,11 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
     storage.DEFAULT_LM_STUDIO_URL,
   );
   const [lmStudioCorsError, setLmStudioCorsError] = useState(false);
+  const [loadProgress, setLoadProgress] = useState<number | null>(null);
 
   const pipelineRef = useRef<Pipeline | null>(null);
   const transformersRef = useRef<TransformersModule | null>(null);
+  const fileProgressRef = useRef<Record<string, number>>({});
 
   // Load LM Studio URL from storage on mount
   useEffect(() => {
@@ -132,6 +142,8 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
     const initTransformers = async () => {
       setIsLoading(true);
       setError(null);
+      setLoadProgress(0);
+      fileProgressRef.current = {};
 
       try {
         console.debug("Loading Transformers.js...");
@@ -161,11 +173,20 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
           {
             dtype,
             device,
+            progress_callback: (event: ProgressEvent) => {
+              if (event.status === "progress" && event.file != null) {
+                fileProgressRef.current[event.file] = event.progress ?? 0;
+                const files = Object.values(fileProgressRef.current);
+                const overall = files.reduce((a, b) => a + b, 0) / files.length;
+                setLoadProgress(overall);
+              }
+            },
           },
         );
 
         pipelineRef.current = textGenerator;
         setIsReady(true);
+        setLoadProgress(null);
 
         console.debug("✓ Transformers.js model loaded and ready");
       } catch (err) {
@@ -176,6 +197,7 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
             : "Failed to initialize Transformers.js",
         );
         setIsReady(false);
+        setLoadProgress(null);
       } finally {
         setIsLoading(false);
       }
@@ -336,6 +358,7 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
         isLoading,
         isReady,
         error,
+        loadProgress,
       }}
     >
       {children}
