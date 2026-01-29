@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ServerConfigProvider } from "./contexts/ServerConfigContext";
+import { LLMStatusProvider } from "./contexts/LLMStatusContext";
+import { ClientLLMProvider } from "./contexts/ClientLLMContext";
 import { SessionProvider } from "./contexts/SessionContext";
 import { UserStateProvider } from "./contexts/UserStateContext";
 import { ActiveStackProvider } from "./contexts/ActiveStackContext";
@@ -21,28 +23,38 @@ function App() {
       <ServerConfigProvider>
         <SessionProvider>
           <UserStateProvider>
-            <ErrorProvider>
-              <TypesProvider>
-                <ActiveStackProvider>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/prompts" element={<Stacks />} />
-                      <Route path="/prompts/:displayId" element={<Stacks />} />
-                      <Route path="/blocks" element={<Blocks />} />
-                      <Route path="/wildcards" element={<Wildcards />} />
-                      <Route path="/what-is-this" element={<WhatIsThis />} />
-                      <Route path="/account" element={<Account />} />
-                      <Route
-                        path="/developer-settings"
-                        element={<DeveloperSettings />}
-                      />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
-                </ActiveStackProvider>
-              </TypesProvider>
-            </ErrorProvider>
+            <LLMStatusProvider>
+              <ClientLLMProvider>
+                <ErrorProvider>
+                  <TypesProvider>
+                    <ActiveStackProvider>
+                      <Layout>
+                        <Routes>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/prompts" element={<Stacks />} />
+                          <Route
+                            path="/prompts/:displayId"
+                            element={<Stacks />}
+                          />
+                          <Route path="/blocks" element={<Blocks />} />
+                          <Route path="/wildcards" element={<Wildcards />} />
+                          <Route
+                            path="/what-is-this"
+                            element={<WhatIsThis />}
+                          />
+                          <Route path="/account" element={<Account />} />
+                          <Route
+                            path="/developer-settings"
+                            element={<DeveloperSettings />}
+                          />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </Layout>
+                    </ActiveStackProvider>
+                  </TypesProvider>
+                </ErrorProvider>
+              </ClientLLMProvider>
+            </LLMStatusProvider>
           </UserStateProvider>
         </SessionProvider>
       </ServerConfigProvider>

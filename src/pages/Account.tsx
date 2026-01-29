@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
+import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
 import { getPlatformDisplayName } from "@/lib/llm-platform-names";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
@@ -24,6 +25,8 @@ export default function Account() {
     checkSession,
     setAuthenticated,
   } = useSession();
+  const { activeTarget, setActiveTarget, availableTargets, getTargetInfo } =
+    useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
     null,
   );
@@ -285,6 +288,7 @@ export default function Account() {
       }
 
       setActiveLLMPlatform(platform);
+      setActiveTarget(platform as any);
     } catch (err) {
       console.error("Error setting active platform:", err);
       setError("Failed to set active platform");
@@ -357,48 +361,48 @@ export default function Account() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {(() => {
-                    const configuredPlatforms = Object.entries(apiKeyInfo)
-                      .filter(([_, info]) => info.configured)
-                      .map(([platform, _]) => platform)
-                      .sort();
+                  <div>
+                    <label className="text-lg font-medium mb-3 block">
+                      Active Platform
+                    </label>
+                    <RadioGroup
+                      value={activeLLMPlatform || activeTarget || ""}
+                      onValueChange={handleSetActivePlatform}
+                    >
+                      {availableTargets.map((target) => {
+                        const info = getTargetInfo(target);
+                        const isServerTarget = info.type === "server";
+                        const isConfigured =
+                          !isServerTarget || apiKeyInfo[target]?.configured;
 
-                    if (configuredPlatforms.length > 1) {
-                      return (
-                        <div>
-                          <label className="text-lg font-medium mb-3 block">
-                            Active Platform
-                          </label>
-                          <RadioGroup
-                            value={activeLLMPlatform}
-                            onValueChange={handleSetActivePlatform}
+                        return (
+                          <div
+                            key={target}
+                            className="flex items-center space-x-2"
                           >
-                            {configuredPlatforms.map((platform) => (
-                              <div
-                                key={platform}
-                                className="flex items-center space-x-2"
-                              >
-                                <RadioGroupItem
-                                  value={platform}
-                                  id={platform}
-                                />
-                                <label
-                                  htmlFor={platform}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                >
-                                  {getPlatformDisplayName(platform)}
-                                </label>
-                              </div>
-                            ))}
-                          </RadioGroup>
+                            <RadioGroupItem
+                              value={target}
+                              id={`platform-${target}`}
+                              disabled={isServerTarget && !isConfigured}
+                            />
+                            <label
+                              htmlFor={`platform-${target}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {info.name}
+                              {isServerTarget && !isConfigured && (
+                                <span className="text-cyan-medium ml-2">
+                                  (no API key)
+                                </span>
+                              )}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
 
-                          <hr className="mt-6" />
-                        </div>
-                      );
-                    }
-
-                    return null;
-                  })()}
+                    <hr className="mt-6" />
+                  </div>
 
                   <ApiKeyInput
                     displayName="Google Vertex"

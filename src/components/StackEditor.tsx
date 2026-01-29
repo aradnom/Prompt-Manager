@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Sparkles, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -42,7 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useServerConfig } from "@/contexts/ServerConfigContext";
+import { useTransform } from "@/hooks/useTransform";
 import {
   Card,
   CardContent,
@@ -72,7 +72,7 @@ export function StackEditor({ stack }: StackEditorProps) {
   const [generateConcept, setGenerateConcept] = useState("");
   const [generateResults, setGenerateResults] = useState<string[]>([]);
   const [isEditingConcept, setIsEditingConcept] = useState(false);
-  const { config: serverConfig, preferredLLMTarget } = useServerConfig();
+  const generateMutation = useTransform();
 
   const {
     data: fullStack,
@@ -86,7 +86,6 @@ export function StackEditor({ stack }: StackEditorProps) {
   const { data: wildcards } = api.wildcards.list.useQuery();
 
   const updateContentMutation = api.stacks.updateContent.useMutation();
-  const generateMutation = api.llm.transform.useMutation();
 
   const saveContent = useCallback((stackId: number, content: string) => {
     updateContentMutation.mutate({
@@ -95,19 +94,6 @@ export function StackEditor({ stack }: StackEditorProps) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const llmTarget = useMemo(() => {
-    const targets = serverConfig?.llm?.allowedTargets;
-    if (!targets || targets.length === 0) return "lm-studio";
-
-    // Use preference if valid, otherwise fallback to first available
-    if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget;
-    }
-
-    // Default fallback: Prefer vertex if available, otherwise first allowed
-    return targets.includes("vertex") ? "vertex" : targets[0];
-  }, [serverConfig, preferredLLMTarget]);
 
   // We cast here because we know we requested includeBlocks: true
   const stackWithBlocks = fullStack as StackWithBlocks;
@@ -433,7 +419,6 @@ export function StackEditor({ stack }: StackEditorProps) {
       const result = await generateMutation.mutateAsync({
         text: generateConcept,
         operation: "generate",
-        target: llmTarget,
         style: stack.style,
       });
 

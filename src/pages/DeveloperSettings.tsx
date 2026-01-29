@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useServerConfig } from "@/contexts/ServerConfigContext";
+import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { getPlatformDisplayName } from "@/lib/llm-platform-names";
 import {
   Card,
@@ -19,8 +20,8 @@ import {
 
 export default function DeveloperSettings() {
   const navigate = useNavigate();
-  const { config, isLoading, preferredLLMTarget, setPreferredLLMTarget } =
-    useServerConfig();
+  const { config, isLoading } = useServerConfig();
+  const { activeTarget, setActiveTarget, availableTargets } = useLLMStatus();
 
   useEffect(() => {
     if (!isLoading && !config?.devSettingsEnabled) {
@@ -39,12 +40,6 @@ export default function DeveloperSettings() {
   if (!config?.devSettingsEnabled) {
     return null;
   }
-
-  const allowedTargets = config.llm?.allowedTargets || [];
-  const currentTarget =
-    preferredLLMTarget && allowedTargets.includes(preferredLLMTarget)
-      ? preferredLLMTarget
-      : allowedTargets[0] || "lm-studio";
 
   return (
     <main className="standard-page-container">
@@ -65,19 +60,17 @@ export default function DeveloperSettings() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">
-                Preferred LLM Target
-              </label>
+              <label className="text-sm font-medium">Active LLM Target</label>
               <div className="w-75">
                 <Select
-                  value={currentTarget}
-                  onValueChange={setPreferredLLMTarget}
+                  value={activeTarget || ""}
+                  onValueChange={setActiveTarget}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a target" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allowedTargets.map((target) => (
+                    {availableTargets.map((target) => (
                       <SelectItem key={target} value={target}>
                         {getPlatformDisplayName(target)}
                       </SelectItem>

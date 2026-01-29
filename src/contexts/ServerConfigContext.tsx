@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext } from "react";
 import { api } from "@/lib/api";
 
 interface ServerConfig {
@@ -12,8 +12,6 @@ interface ServerConfig {
 interface ServerConfigContextType {
   config: ServerConfig | null;
   isLoading: boolean;
-  preferredLLMTarget: string | null;
-  setPreferredLLMTarget: (target: string) => void;
 }
 
 const ServerConfigContext = createContext<ServerConfigContextType | undefined>(
@@ -26,24 +24,12 @@ export function ServerConfigProvider({
   children: React.ReactNode;
 }) {
   const { data: config, isLoading } = api.config.getSettings.useQuery();
-  const [preferredLLMTarget, setPreferredLLMTargetState] = useState<
-    string | null
-  >(() => {
-    return localStorage.getItem("preferred-llm-target");
-  });
-
-  const setPreferredLLMTarget = (target: string) => {
-    setPreferredLLMTargetState(target);
-    localStorage.setItem("preferred-llm-target", target);
-  };
 
   return (
     <ServerConfigContext.Provider
       value={{
         config: config || null,
         isLoading,
-        preferredLLMTarget,
-        setPreferredLLMTarget,
       }}
     >
       {children}

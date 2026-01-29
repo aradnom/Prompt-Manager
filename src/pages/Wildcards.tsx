@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
-import { useServerConfig } from "@/contexts/ServerConfigContext";
+import { useTransform } from "@/hooks/useTransform";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
@@ -180,7 +180,6 @@ function WildcardForm({
 
 export default function Wildcards() {
   const { addError } = useErrors();
-  const { config: serverConfig, preferredLLMTarget } = useServerConfig();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -219,17 +218,6 @@ export default function Wildcards() {
     debouncedSearch.length > 0 ? searchResults : wildcards;
   const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
 
-  const llmTarget = (() => {
-    const targets = serverConfig?.llm?.allowedTargets;
-    if (!targets || targets.length === 0) return "lm-studio";
-
-    if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget;
-    }
-
-    return targets.includes("vertex") ? "vertex" : targets[0];
-  })();
-
   const createMutation = api.wildcards.create.useMutation({
     onSuccess: () => {
       refetch();
@@ -259,8 +247,8 @@ export default function Wildcards() {
     },
   });
 
-  const generateWildcardMutation = api.llm.transform.useMutation();
-  const autoLabelMutation = api.llm.transform.useMutation();
+  const generateWildcardMutation = useTransform();
+  const autoLabelMutation = useTransform();
 
   const handleGenerateSubmit = async () => {
     if (!generateConcept.trim()) return;
@@ -271,14 +259,10 @@ export default function Wildcards() {
         generateWildcardMutation.mutateAsync({
           text: generateConcept,
           operation: "generate-wildcard",
-          target: llmTarget,
-          style: undefined,
         }),
         autoLabelMutation.mutateAsync({
           text: generateConcept,
           operation: "auto-label",
-          target: llmTarget,
-          style: undefined,
         }),
       ]);
 

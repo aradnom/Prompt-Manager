@@ -40,7 +40,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 
-import { useServerConfig } from "@/contexts/ServerConfigContext";
+import { useTransform } from "@/hooks/useTransform";
 import type { OutputStyle } from "@/types/schema";
 
 type Block = RouterOutput["blocks"]["list"][number];
@@ -89,8 +89,8 @@ export function TextBlock({
   const blockRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const utils = api.useUtils();
-  const transformMutation = api.llm.transform.useMutation();
-  const exploreMutation = api.llm.transform.useMutation();
+  const transformMutation = useTransform();
+  const exploreMutation = useTransform();
   const { data: wildcards } = api.wildcards.list.useQuery();
   const setActiveRevisionMutation = api.blocks.setActiveRevision.useMutation({
     onSuccess: () => {
@@ -193,27 +193,11 @@ export function TextBlock({
     setInlineText(block.text);
   }, [block.text]);
 
-  const { config: serverConfig, preferredLLMTarget } = useServerConfig();
-
-  const llmTarget = useMemo(() => {
-    const targets = serverConfig?.llm?.allowedTargets;
-    if (!targets || targets.length === 0) return "lm-studio";
-
-    // Use preference if valid, otherwise fallback to first available
-    if (preferredLLMTarget && targets.includes(preferredLLMTarget)) {
-      return preferredLLMTarget;
-    }
-
-    // Default fallback: Prefer vertex if available, otherwise first allowed
-    return targets.includes("vertex") ? "vertex" : targets[0];
-  }, [serverConfig, preferredLLMTarget]);
-
   const handleMoreDescriptive = async () => {
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
         operation: "more-descriptive",
-        target: llmTarget,
         style,
       });
 
@@ -230,7 +214,6 @@ export function TextBlock({
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
         operation: "less-descriptive",
-        target: llmTarget,
         style,
       });
 
@@ -249,7 +232,6 @@ export function TextBlock({
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
         operation,
-        target: llmTarget,
         style,
       });
 
@@ -268,7 +250,6 @@ export function TextBlock({
       const result = await exploreMutation.mutateAsync({
         text: getResolvedText(block.text),
         operation: "explore",
-        target: llmTarget,
         style,
       });
 
