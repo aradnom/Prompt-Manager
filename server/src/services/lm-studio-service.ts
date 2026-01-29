@@ -1,5 +1,6 @@
 import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
+import { processLLMResponse } from "@shared/llm/response-parser";
 
 export class LMStudioService {
   constructor(private config: LLMConfig) {
@@ -54,25 +55,8 @@ export class LMStudioService {
       // Strip out <think></think> tags and their contents (reasoning model artifacts)
       result = result.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
-      // For explore and generate operations, parse the numbered list into an array
-      if (
-        request.operation === "explore" ||
-        request.operation === "generate" ||
-        request.operation === "generate-wildcard"
-      ) {
-        const lines = result.trim().split("\n");
-        const variations = lines
-          .map((line: string) => line.replace(/^\d+\.\s*/, "").trim())
-          .filter((line: string) => line.length > 0);
-
-        return {
-          result: variations,
-          target: "lm-studio",
-        };
-      }
-
       return {
-        result: result.trim(),
+        result: processLLMResponse(result, request.operation),
         target: "lm-studio",
       };
     } catch (error) {

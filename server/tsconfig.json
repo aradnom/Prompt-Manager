@@ -18,7 +18,8 @@
     "baseUrl": "..",
     "paths": {
       "@/types/*": ["src/types/*"],
-      "@server/*": ["server/src/*"]
+      "@server/*": ["server/src/*"],
+      "@shared/*": ["shared/*"]
     }
   },
   "include": ["src/**/*", "../src/types/**/*"],

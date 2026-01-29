@@ -1,5 +1,6 @@
 import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
+import { processLLMResponse } from "@shared/llm/response-parser";
 import OpenAI from "openai";
 
 export class OpenAIService {
@@ -94,25 +95,8 @@ export class OpenAIService {
         throw new Error("No response from OpenAI");
       }
 
-      // For explore and generate operations, parse the numbered list into an array
-      if (
-        request.operation === "explore" ||
-        request.operation === "generate" ||
-        request.operation === "generate-wildcard"
-      ) {
-        const lines = text.trim().split("\n");
-        const variations = lines
-          .map((line: string) => line.replace(/^\d+\.\s*/, "").trim())
-          .filter((line: string) => line.length > 0);
-
-        return {
-          result: variations,
-          target: "openai",
-        };
-      }
-
       return {
-        result: text.trim(),
+        result: processLLMResponse(text, request.operation),
         target: "openai",
       };
     } catch (error: unknown) {
