@@ -59,10 +59,13 @@ export const llmRouter = router({
               user.accountData.apiKeys as string,
               ctx.derivedKey,
             );
-            const apiKeys = JSON.parse(decryptedApiKeys) as Record<string, any>;
+            const apiKeys = JSON.parse(decryptedApiKeys) as Record<
+              string,
+              { key?: string; model?: string }
+            >;
             const providerData = apiKeys[targetToUse];
 
-            if (providerData && typeof providerData === "object") {
+            if (providerData) {
               userApiKey = providerData.key;
               userModel = providerData.model;
             }

@@ -17,6 +17,19 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import "express-session"; // Required for session type augmentation
 
+interface ProviderApiKeyConfig {
+  key: string;
+  model?: string;
+}
+
+type ApiKeysMap = Record<string, ProviderApiKeyConfig>;
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : "Invalid API key or insufficient permissions";
+}
+
 export function registerAuthRoutes(
   app: Express,
   storage: PostgresStorageAdapter,
@@ -236,16 +249,12 @@ export function registerAuthRoutes(
             user.accountData.apiKeys as string,
             derivedKey,
           );
-          const apiKeys = JSON.parse(decryptedApiKeys) as Record<string, any>;
+          const apiKeys = JSON.parse(decryptedApiKeys) as ApiKeysMap;
 
           // Set configuration status and model for each provider
           for (const provider of Object.keys(apiKeyInfo)) {
             const providerData = apiKeys[provider];
-            if (
-              providerData &&
-              typeof providerData === "object" &&
-              providerData.key
-            ) {
+            if (providerData?.key) {
               apiKeyInfo[provider] = {
                 configured: true,
                 model: providerData.model,
@@ -290,19 +299,19 @@ export function registerAuthRoutes(
       }
 
       // Get current account data (already encrypted)
-      const currentAccountData: Record<string, any> = user.accountData || {};
+      const currentAccountData: Record<string, string> = user.accountData || {};
 
       // Decrypt apiKeys field if it exists
       const derivedKey = req.derivedKey!;
-      let apiKeys: Record<string, any> = {};
+      let apiKeys: ApiKeysMap = {};
 
       if (currentAccountData.apiKeys) {
         try {
           const decryptedApiKeys = decrypt(
-            currentAccountData.apiKeys as string,
+            currentAccountData.apiKeys,
             derivedKey,
           );
-          apiKeys = JSON.parse(decryptedApiKeys);
+          apiKeys = JSON.parse(decryptedApiKeys) as ApiKeysMap;
         } catch (error) {
           console.error("Error decrypting existing API keys:", error);
           // If decryption fails, start fresh
@@ -314,11 +323,7 @@ export function registerAuthRoutes(
       const existingProvider = apiKeys[provider];
 
       // If apiKey is '__PRESERVE__', keep the existing key (for model-only updates)
-      if (
-        apiKey === "__PRESERVE__" &&
-        existingProvider &&
-        existingProvider.key
-      ) {
+      if (apiKey === "__PRESERVE__" && existingProvider?.key) {
         // Just update the model, preserve the key
         apiKeys[provider] = {
           key: existingProvider.key,
@@ -340,7 +345,7 @@ export function registerAuthRoutes(
       const encryptedApiKeys = encrypt(JSON.stringify(apiKeys), derivedKey);
 
       // Update account data with encrypted apiKeys
-      const updatedAccountData: Record<string, any> = {
+      const updatedAccountData: Record<string, string> = {
         ...currentAccountData,
         apiKeys: encryptedApiKeys,
       };
@@ -440,15 +445,15 @@ export function registerAuthRoutes(
 
       // Decrypt apiKeys field
       const derivedKey = req.derivedKey!;
-      let apiKeys: Record<string, any> = {};
+      let apiKeys: ApiKeysMap = {};
 
       if (currentAccountData.apiKeys) {
         try {
           const decryptedApiKeys = decrypt(
-            currentAccountData.apiKeys as string,
+            currentAccountData.apiKeys,
             derivedKey,
           );
-          apiKeys = JSON.parse(decryptedApiKeys);
+          apiKeys = JSON.parse(decryptedApiKeys) as ApiKeysMap;
         } catch (error) {
           console.error("Error decrypting API keys:", error);
           return res.status(500).json({ error: "Failed to decrypt API keys" });
@@ -456,7 +461,7 @@ export function registerAuthRoutes(
       }
 
       const providerData = apiKeys[provider];
-      if (!providerData || !providerData.key) {
+      if (!providerData?.key) {
         return res
           .status(400)
           .json({ error: "API key not configured for this provider" });
@@ -490,13 +495,12 @@ export function registerAuthRoutes(
           });
 
           res.json({ success: true, message: "API key is valid" });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Vertex API key test failed:", error);
           res.status(400).json({
             success: false,
             error: "API key test failed",
-            message:
-              error.message || "Invalid API key or insufficient permissions",
+            message: getErrorMessage(error),
           });
         }
       } else if (provider === "openai") {
@@ -509,18 +513,19 @@ export function registerAuthRoutes(
           });
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+            const errorData = (await response.json().catch(() => ({}))) as {
+              error?: { message?: string };
+            };
             throw new Error(errorData.error?.message || "Invalid API key");
           }
 
           res.json({ success: true, message: "API key is valid" });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("OpenAI API key test failed:", error);
           res.status(400).json({
             success: false,
             error: "API key test failed",
-            message:
-              error.message || "Invalid API key or insufficient permissions",
+            message: getErrorMessage(error),
           });
         }
       } else if (provider === "anthropic") {
@@ -537,13 +542,12 @@ export function registerAuthRoutes(
           });
 
           res.json({ success: true, message: "API key is valid" });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Anthropic API key test failed:", error);
           res.status(400).json({
             success: false,
             error: "API key test failed",
-            message:
-              error.message || "Invalid API key or insufficient permissions",
+            message: getErrorMessage(error),
           });
         }
       } else if (provider === "grok") {
@@ -556,18 +560,19 @@ export function registerAuthRoutes(
           });
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+            const errorData = (await response.json().catch(() => ({}))) as {
+              error?: { message?: string };
+            };
             throw new Error(errorData.error?.message || "Invalid API key");
           }
 
           res.json({ success: true, message: "API key is valid" });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Grok API key test failed:", error);
           res.status(400).json({
             success: false,
             error: "API key test failed",
-            message:
-              error.message || "Invalid API key or insufficient permissions",
+            message: getErrorMessage(error),
           });
         }
       }

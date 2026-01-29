@@ -2,6 +2,7 @@ import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
 import { processLLMResponse } from "@shared/llm/response-parser";
 import OpenAI from "openai";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 
 export class OpenAIService {
   private client: OpenAI | null = null;
@@ -67,25 +68,21 @@ export class OpenAIService {
       console.debug(`OpenAI: Generating content with model: ${modelId}`);
 
       // Build request parameters
-      const requestParams: any = {
+      const requestParams: ChatCompletionCreateParamsNonStreaming = {
         model: modelId,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: request.text },
         ],
         max_completion_tokens: this.config.maxTokens,
-        reasoning_effort: "minimal",
+        // reasoning_effort is not supported by GPT-4 models
+        ...(!modelId.startsWith("gpt-4") && {
+          reasoning_effort: "minimal",
+        }),
+        // GPT-5 models don't support custom temperature
+        ...(!modelId.startsWith("gpt-5") && { temperature: 0.7 }),
         ...modelSpecificArgs,
       };
-
-      if (modelId.startsWith("gpt-4")) {
-        delete requestParams.reasoning_effort;
-      }
-
-      // Only set temperature for models that support it (GPT-5 models don't support custom temperature)
-      if (!modelId.startsWith("gpt-5")) {
-        requestParams.temperature = 0.7;
-      }
 
       const response = await clientToUse.chat.completions.create(requestParams);
 

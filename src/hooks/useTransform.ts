@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
+import type { LLMTarget as ServerLLMTarget } from "@server/config";
 import type { LLMOperation, OutputStyle } from "@shared/llm/types";
 
 interface TransformInput {
@@ -50,7 +51,7 @@ export function useTransform() {
         // Server-side transform (OpenAI, Anthropic, Vertex, Grok)
         return serverMutation.mutateAsync({
           ...input,
-          target: target as any,
+          target: target as ServerLLMTarget,
         });
       }
     },

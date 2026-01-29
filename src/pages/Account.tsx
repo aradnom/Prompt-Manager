@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
-import { useLLMStatus } from "@/contexts/LLMStatusContext";
+import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
 import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { storage } from "@/lib/storage";
@@ -287,7 +287,7 @@ export default function Account() {
       }
 
       setActiveLLMPlatform(platform);
-      setActiveTarget(platform as any);
+      setActiveTarget(platform as LLMTarget);
     } catch (err) {
       console.error("Error setting active platform:", err);
       setError("Failed to set active platform");

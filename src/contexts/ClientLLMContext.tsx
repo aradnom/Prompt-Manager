@@ -12,13 +12,40 @@ import { processLLMResponse } from "@shared/llm/response-parser";
 import type { LLMOperation, OutputStyle } from "@shared/llm/types";
 
 // Transformers.js types
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+interface GenerationOptions {
+  max_new_tokens?: number;
+  temperature?: number;
+  do_sample?: boolean;
+}
+
+interface GenerationOutput {
+  generated_text: string | ChatMessage[];
+}
+
+interface PipelineOptions {
+  dtype?: string;
+  device?: string;
+}
+
 interface Pipeline {
-  (input: any, options?: any): Promise<any>;
+  (
+    input: string | string[] | ChatMessage[],
+    options?: GenerationOptions,
+  ): Promise<GenerationOutput[]>;
   dispose?: () => Promise<void>;
 }
 
 interface TransformersModule {
-  pipeline: (task: string, model: string, options?: any) => Promise<Pipeline>;
+  pipeline: (
+    task: string,
+    model: string,
+    options?: PipelineOptions,
+  ) => Promise<Pipeline>;
   env: {
     allowLocalModels: boolean;
     allowRemoteModels: boolean;
@@ -178,21 +205,17 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
 
       // Extract the assistant's response from the chat output
       let generatedText = "";
-      if (Array.isArray(result) && result[0]?.generated_text) {
-        const output = result[0].generated_text;
-        // The output is an array of messages; grab the last assistant message
-        if (Array.isArray(output)) {
-          const assistantMsg = output.findLast(
-            (msg: any) => msg.role === "assistant",
-          );
-          generatedText = assistantMsg?.content || "";
-        } else {
-          generatedText = output;
-        }
-      } else if (result?.generated_text) {
-        generatedText = result.generated_text;
-      } else {
+      const output = result[0]?.generated_text;
+      if (!output) {
         throw new Error("Unexpected response format from Transformers.js");
+      }
+
+      if (Array.isArray(output)) {
+        // The output is an array of messages; grab the last assistant message
+        const assistantMsg = output.findLast((msg) => msg.role === "assistant");
+        generatedText = assistantMsg?.content || "";
+      } else {
+        generatedText = output;
       }
 
       // Strip <think>...</think> tags (reasoning model artifacts)
@@ -213,6 +236,7 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
   };
 
   const transformWithLMStudio = async (
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _request: TransformRequest,
   ): Promise<TransformResponse> => {
     // TODO: Implement LM Studio client-side fetch
