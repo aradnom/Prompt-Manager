@@ -139,18 +139,6 @@ function HomeContent() {
               <div className="space-y-4">
                 <div>
                   <Link
-                    to="/blocks"
-                    className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
-                  >
-                    Create Blocks
-                  </Link>
-                  <p className="text-sm text-cyan-medium mt-1">
-                    Start by creating reusable prompt blocks with your favorite
-                    subjects, styles, and modifiers.
-                  </p>
-                </div>
-                <div>
-                  <Link
                     to="/prompts"
                     className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
                   >
@@ -159,6 +147,18 @@ function HomeContent() {
                   <p className="text-sm text-cyan-medium mt-1">
                     Combine your blocks into prompts and set one as active to
                     start working with it here.
+                  </p>
+                </div>
+                <div>
+                  <Link
+                    to="/blocks"
+                    className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
+                  >
+                    Create Blocks
+                  </Link>
+                  <p className="text-sm text-cyan-medium mt-1">
+                    Start by creating reusable prompt blocks with your favorite
+                    subjects, styles, and modifiers.
                   </p>
                 </div>
               </div>

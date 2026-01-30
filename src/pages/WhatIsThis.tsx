@@ -150,10 +150,6 @@ export default function WhatIsThis() {
                   <li>Generate variations on existing prompts</li>
                 </ul>
               </div>
-              <p className="text-sm text-cyan-medium">
-                Note: LLM operations require an API key to be configured in your
-                Developer Settings.
-              </p>
             </CardContent>
           </Card>
         </motion.div>
