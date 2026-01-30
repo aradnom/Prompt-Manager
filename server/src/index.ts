@@ -17,6 +17,7 @@ import {
   notifyStackUpdate as _notifyStackUpdate,
 } from "@server/express-routes/integrations";
 import { registerSystemRoutes } from "@server/express-routes/system";
+import { createRateLimitMiddleware } from "@server/middleware/rate-limit";
 
 // Re-export notifyStackUpdate for use by other modules (e.g., stacks router)
 export const notifyStackUpdate = _notifyStackUpdate;
@@ -44,7 +45,17 @@ async function main() {
   });
   redisClient.on("error", (err) => console.error("Redis Client Error", err));
   await redisClient.connect();
-  console.debug("✓ Redis connection established");
+  console.debug("✓ Redis session connection established");
+
+  // Initialize Redis client for rate limiting (separate DB)
+  const rateLimitRedis = createClient({
+    url: config.rateLimitDatabaseUrl,
+  });
+  rateLimitRedis.on("error", (err) =>
+    console.error("Redis Rate Limit Client Error", err),
+  );
+  await rateLimitRedis.connect();
+  console.debug("✓ Redis rate limit connection established");
 
   // Initialize session store
   const redisStore = new RedisStore({
@@ -62,6 +73,7 @@ async function main() {
       cookie: {
         secure: config.nodeEnv !== "development",
         httpOnly: true,
+        sameSite: "strict",
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
       },
     }),
@@ -86,8 +98,12 @@ async function main() {
   );
 
   // Register route handlers
+  const rateLimiter = createRateLimitMiddleware(rateLimitRedis, {
+    windowMs: config.rateLimitWindowMs,
+    maxRequests: config.rateLimitMaxRequests,
+  });
   registerIntegrationRoutes(app, storage);
-  registerAuthRoutes(app, storage, config);
+  registerAuthRoutes(app, storage, config, rateLimiter);
   registerSystemRoutes(app);
 
   app.listen(config.port, () => {

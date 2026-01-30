@@ -42,6 +42,9 @@ export interface ServerConfig {
   sessionSecret: string;
   encryptionSalt: string;
   tokenSecret: string;
+  rateLimitDatabaseUrl: string;
+  rateLimitWindowMs: number;
+  rateLimitMaxRequests: number;
   llm: LLMConfig;
 }
 
@@ -67,6 +70,16 @@ export function loadConfig(): ServerConfig {
     tokenSecret:
       process.env.TOKEN_SECRET ||
       "change-this-to-a-random-secret-for-token-hashing",
+    rateLimitDatabaseUrl:
+      process.env.RATE_LIMIT_DATABASE_URL || "redis://localhost:6379/1",
+    rateLimitWindowMs: parseInt(
+      process.env.RATE_LIMIT_WINDOW_MS || "60000",
+      10,
+    ),
+    rateLimitMaxRequests: parseInt(
+      process.env.RATE_LIMIT_MAX_REQUESTS || "10",
+      10,
+    ),
     llm: {
       allowedTargets: parseAllowedTargets(process.env.LLM_ALLOWED_TARGETS),
       lmStudioUrl: process.env.LM_STUDIO_URL || "http://localhost:11434/v1",

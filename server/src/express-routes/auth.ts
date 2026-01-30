@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import type { PostgresStorageAdapter } from "@server/adapters/postgres-adapter";
 import type { ServerConfig } from "@server/config";
 import {
@@ -34,13 +34,18 @@ export function registerAuthRoutes(
   app: Express,
   storage: PostgresStorageAdapter,
   config: ServerConfig,
+  rateLimitMiddleware?: RequestHandler,
 ) {
+  // Build middleware chain for rate-limited routes
+  const rateLimited: RequestHandler[] = rateLimitMiddleware
+    ? [rateLimitMiddleware]
+    : [];
   // ============================================================================
   // Authentication Endpoints
   // ============================================================================
 
   // Register new account - generates token, creates user, establishes session
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", ...rateLimited, async (req, res) => {
     try {
       // Generate new token
       const token = generateToken();
@@ -98,9 +103,9 @@ export function registerAuthRoutes(
   });
 
   // Login - authenticates token, establishes session, returns decrypted account data
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", ...rateLimited, async (req, res) => {
     try {
-      const { token } = req.body;
+      const { token } = req.body ?? {};
 
       if (!token || typeof token !== "string") {
         return res.status(400).json({ error: "Token is required" });
