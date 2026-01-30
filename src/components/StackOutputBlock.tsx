@@ -1,7 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Dices, Minimize2, Maximize2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Copy, Dices, Minimize2, Maximize2, PackagePlus } from "lucide-react";
 import yaml from "js-yaml";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 import { useStackContent } from "@/contexts/StackContentContext";
@@ -10,14 +18,18 @@ import { useStackOutput } from "@/contexts/StackOutputContext";
 import { useErrors } from "@/contexts/ErrorContext";
 import { api } from "@/lib/api";
 import { parseWildcards } from "@/lib/wildcard-parser";
+import { generateDisplayId } from "@/lib/generate-display-id";
+import { generateUUID } from "@/lib/uuid";
 
 export function StackOutputBlock() {
   const { isMinimized, setIsMinimized } = useStackOutput();
   const { renderedContent, renderedContentWithMarkers } = useStackContent();
-  const { activeStack, activeStackBlocks } = useActiveStack();
+  const { activeStack, activeStackBlocks, setActiveStack } = useActiveStack();
   const { data: wildcards } = api.wildcards.list.useQuery();
   const { addError } = useErrors();
+  const navigate = useNavigate();
   const utils = api.useUtils();
+  const [isConverting, setIsConverting] = useState(false);
 
   const commaSeparated = activeStack?.commaSeparated ?? false;
 
@@ -65,6 +77,34 @@ export function StackOutputBlock() {
     },
   });
 
+  const createBlockMutation = api.blocks.create.useMutation();
+  const createStackMutation = api.stacks.create.useMutation();
+
+  const handleConvertToBlock = async () => {
+    if (!processedContent) return;
+    setIsConverting(true);
+    try {
+      const newBlock = await createBlockMutation.mutateAsync({
+        uuid: generateUUID(),
+        displayId: generateDisplayId(),
+        text: processedContent,
+      });
+      const newStack = await createStackMutation.mutateAsync({
+        uuid: generateUUID(),
+        displayId: generateDisplayId(),
+        blockIds: [newBlock.id],
+      });
+      setActiveStack(newStack);
+      navigate("/");
+    } catch (error) {
+      addError(
+        error instanceof Error ? error.message : "Failed to convert to block",
+      );
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   const handleCommaSeparatedChange = (checked: boolean) => {
     if (!activeStack) return;
     updateStackMutation.mutate({
@@ -91,6 +131,10 @@ export function StackOutputBlock() {
 
     return processedBlocks.join("\n\n");
   };
+
+  const hasWildcards =
+    activeStackBlocks?.some((block) => parseWildcards(block.text).length > 0) ??
+    false;
 
   const processedContent = getProcessedContent(renderedContent);
   const processedContentWithMarkers = getProcessedContent(
@@ -263,32 +307,68 @@ export function StackOutputBlock() {
             <CardTitle className="text-xl font-bold">Prompt Output</CardTitle>
           )}
           <div className="flex gap-2 items-center">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox
-                checked={commaSeparated}
-                onCheckedChange={handleCommaSeparatedChange}
-                className="cursor-pointer"
-              />
-              Comma Separated
-            </label>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={commaSeparated}
+                      onCheckedChange={handleCommaSeparatedChange}
+                      className="cursor-pointer"
+                    />
+                    {!isMinimized && "Comma Separated"}
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ensure that all blocks end in a comma
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               variant="outline"
-              size="sm"
+              size={isMinimized ? "xs" : "sm"}
               onClick={handleRandomizeWildcards}
-              disabled={!activeStackBlocks || activeStackBlocks.length === 0}
+              disabled={!hasWildcards}
               title="Randomize all wildcards"
             >
-              <Dices className="mr-2 h-4 w-4" />
-              Randomize Wildcards
+              <Dices className={isMinimized ? "h-4 w-4" : "mr-2 h-4 w-4"} />
+              {!isMinimized && "Randomize Wildcards"}
             </Button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size={isMinimized ? "xs" : "sm"}
+                    onClick={handleConvertToBlock}
+                    disabled={
+                      !renderedContent ||
+                      isConverting ||
+                      !activeStackBlocks ||
+                      activeStackBlocks.length < 2
+                    }
+                  >
+                    <PackagePlus
+                      className={isMinimized ? "h-4 w-4" : "mr-2 h-4 w-4"}
+                    />
+                    {!isMinimized &&
+                      (isConverting ? "Converting\u2026" : "Convert to Block")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Creates new prompt with contents of this one as the first
+                  block
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               variant="outline"
-              size="sm"
+              size={isMinimized ? "xs" : "sm"}
               onClick={handleCopy}
               disabled={!renderedContent}
             >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy
+              <Copy className={isMinimized ? "h-4 w-4" : "mr-2 h-4 w-4"} />
+              {!isMinimized && "Copy"}
             </Button>
             <Button
               variant={isMinimized ? "outline" : "outline-magenta"}
