@@ -21,6 +21,7 @@ export interface User {
   tokenHash: string | null;
   accountData: Record<string, string> | null;
   apiKey: string | null;
+  adminUser: boolean;
 }
 
 export interface CreateUserInput {

@@ -10,6 +10,7 @@ interface SessionContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   userId: number | null;
+  isAdmin: boolean;
   checkSession: () => Promise<void>;
   setAuthenticated: (authenticated: boolean, userId?: number) => void;
 }
@@ -20,6 +21,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const checkSession = async () => {
     setIsLoading(true);
@@ -32,9 +34,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (data.authenticated) {
         setIsAuthenticated(true);
         setUserId(data.userId);
+        setIsAdmin(data.adminUser ?? false);
       } else {
         setIsAuthenticated(false);
         setUserId(null);
+        setIsAdmin(false);
       }
     } catch (err) {
       console.error("Error checking session:", err);
@@ -48,6 +52,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const setAuthenticated = (authenticated: boolean, userIdValue?: number) => {
     setIsAuthenticated(authenticated);
     setUserId(userIdValue ?? null);
+    if (!authenticated) setIsAdmin(false);
   };
 
   useEffect(() => {
@@ -60,6 +65,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isLoading,
         userId,
+        isAdmin,
         checkSession,
         setAuthenticated,
       }}

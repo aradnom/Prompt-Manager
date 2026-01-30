@@ -2,7 +2,6 @@ import React, { createContext, useContext } from "react";
 import { api } from "@/lib/api";
 
 interface ServerConfig {
-  devSettingsEnabled: boolean;
   llm: {
     allowedTargets: string[];
     allTargets: string[];

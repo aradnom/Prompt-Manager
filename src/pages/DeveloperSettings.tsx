@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { useServerConfig } from "@/contexts/ServerConfigContext";
+import { useSession } from "@/contexts/SessionContext";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { getPlatformDisplayName } from "@/lib/llm-platform-names";
 import {
@@ -20,14 +20,14 @@ import {
 
 export default function DeveloperSettings() {
   const navigate = useNavigate();
-  const { config, isLoading } = useServerConfig();
+  const { isAdmin, isLoading } = useSession();
   const { activeTarget, setActiveTarget, availableTargets } = useLLMStatus();
 
   useEffect(() => {
-    if (!isLoading && !config?.devSettingsEnabled) {
+    if (!isLoading && !isAdmin) {
       navigate("/");
     }
-  }, [config, isLoading, navigate]);
+  }, [isAdmin, isLoading, navigate]);
 
   if (isLoading) {
     return (
@@ -37,7 +37,7 @@ export default function DeveloperSettings() {
     );
   }
 
-  if (!config?.devSettingsEnabled) {
+  if (!isAdmin) {
     return null;
   }
 
@@ -46,7 +46,9 @@ export default function DeveloperSettings() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Developer Settings</h1>
         <p className="text-cyan-medium">
-          Advanced settings and tools for development
+          <mark className="highlighted-text">
+            Advanced settings and tools for development
+          </mark>
         </p>
       </div>
 
@@ -95,8 +97,7 @@ export default function DeveloperSettings() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-cyan-medium">
-              Developer settings are currently enabled via the DEV_SETTINGS
-              environment variable.
+              This page is only visible to admin users.
             </p>
           </CardContent>
         </Card>

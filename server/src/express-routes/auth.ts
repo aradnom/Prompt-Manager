@@ -200,7 +200,12 @@ export function registerAuthRoutes(
         return res.json({ authenticated: false });
       }
 
-      res.json({ authenticated: true, userId });
+      const user = await storage.getUserById(userId);
+      res.json({
+        authenticated: true,
+        userId,
+        adminUser: user?.adminUser ?? false,
+      });
     } catch (error) {
       console.error("Error checking session:", error);
       res.status(500).json({ error: "Failed to check session" });

@@ -4,7 +4,6 @@ import { LLM_TARGETS } from "@server/config";
 export const configRouter = router({
   getSettings: publicProcedure.query(async ({ ctx }) => {
     return {
-      devSettingsEnabled: process.env.DEV_SETTINGS === "true",
       llm: {
         allowedTargets: Array.from(ctx.config.llm.allowedTargets),
         allTargets: Array.from(LLM_TARGETS),

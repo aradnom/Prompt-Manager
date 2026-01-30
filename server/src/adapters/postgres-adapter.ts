@@ -72,6 +72,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       tokenHash: result.token_hash,
       accountData: result.account_data as Record<string, string> | null,
       apiKey: result.api_key,
+      adminUser: result.admin_user ?? false,
     };
   }
 
@@ -91,6 +92,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       tokenHash: result.token_hash,
       accountData: result.account_data as Record<string, string> | null,
       apiKey: result.api_key,
+      adminUser: result.admin_user ?? false,
     };
   }
 
@@ -113,6 +115,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       tokenHash: result.token_hash,
       accountData: result.account_data as Record<string, string> | null,
       apiKey: result.api_key,
+      adminUser: result.admin_user ?? false,
     };
   }
 

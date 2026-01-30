@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -11,11 +10,12 @@ import { useMenu } from "@/contexts/MenuContext";
 import { AnimatedBorderButton } from "@/components/AnimatedBorderButton";
 import { MainMenuBorder } from "@/components/MainMenuBorder";
 import { RasterIcon } from "@/components/RasterIcon";
+import { useSession } from "@/contexts/SessionContext";
 
 export function MainMenu() {
   const { isOpen: open, setIsOpen: setOpen } = useMenu();
   const location = useLocation();
-  const { data: config, isLoading } = api.config.getSettings.useQuery();
+  const { isAdmin } = useSession();
 
   type MenuItem = {
     path: string;
@@ -37,18 +37,16 @@ export function MainMenu() {
     },
   ];
 
-  // Only add dev settings if explicitly enabled (not during loading)
-  const menuItems =
-    !isLoading && config?.devSettingsEnabled
-      ? [
-          ...baseMenuItems,
-          {
-            path: "/developer-settings",
-            label: "Developer Settings",
-            icon: "gear",
-          },
-        ]
-      : baseMenuItems;
+  const menuItems = isAdmin
+    ? [
+        ...baseMenuItems,
+        {
+          path: "/developer-settings",
+          label: "Developer Settings",
+          icon: "gear",
+        },
+      ]
+    : baseMenuItems;
 
   const isActive = (path: string) => {
     if (path === "/") {
