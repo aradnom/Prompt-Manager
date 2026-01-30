@@ -591,7 +591,12 @@ export default function Stacks() {
           <CardContent className="py-12">
             <div className="text-center text-cyan-medium">
               <p className="mb-4">No prompts yet</p>
-              <Button onClick={() => setIsCreating(true)}>
+              <Button
+                onClick={() => {
+                  setIsCreating(true);
+                  setDisplayId(generateDisplayId());
+                }}
+              >
                 Create Your First Prompt
               </Button>
             </div>
