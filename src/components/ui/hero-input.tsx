@@ -22,8 +22,8 @@ export function HeroInput({
       // Remove all non-alphanumeric characters and uppercase
       newValue = newValue.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
-      // Limit to 12 characters
-      newValue = newValue.slice(0, 12);
+      // Limit to 16 characters
+      newValue = newValue.slice(0, 16);
 
       // Add dashes after every 4 characters
       if (newValue.length > 4) {
@@ -31,6 +31,9 @@ export function HeroInput({
       }
       if (newValue.length > 9) {
         newValue = newValue.slice(0, 9) + "-" + newValue.slice(9);
+      }
+      if (newValue.length > 14) {
+        newValue = newValue.slice(0, 14) + "-" + newValue.slice(14);
       }
     }
 

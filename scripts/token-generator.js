@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 export function generateToken() {
   // 0, 1, I, L, O excluded. U included. Specifically.
   const chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-  const length = 12;
+  const length = 16;
   let token = "";
 
   // Using randomBytes for cryptographic security
@@ -14,7 +14,7 @@ export function generateToken() {
     token += chars[randomIndex];
   }
 
-  // Output format: XXXX-XXXX-XXXX
+  // Output format: XXXX-XXXX-XXXX-XXXX
   return token.match(/.{1,4}/g)?.join("-") || token;
 }
 

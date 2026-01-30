@@ -79,7 +79,7 @@ export function CreateAccountOrLogin({
           <HeroInput
             value={token}
             onChange={setToken}
-            placeholder="Enter your Account ID (XXXX-XXXX-XXXX)"
+            placeholder="Enter your Account ID (XXXX-XXXX-XXXX-XXXX)"
             className="flex-1"
             tokenFormatting
           />
