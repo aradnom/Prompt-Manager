@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { Copy, Check } from "lucide-react";
 import { RasterIcon } from "@/components/RasterIcon";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import {
@@ -17,6 +18,26 @@ import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { LMStudioInput } from "@/components/LMStudioInput";
 import { storage } from "@/lib/storage";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+      aria-label="Copy to clipboard"
+    >
+      {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+    </button>
+  );
+}
 
 export default function Account() {
   const {
@@ -339,8 +360,9 @@ export default function Account() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="font-mono text-2xl font-bold tracking-wider p-4 bg-cyan-dark/20 rounded-lg border-2 border-cyan-dark">
-                  {accountData.token}
+                <div className="flex items-center gap-3 font-mono text-2xl font-bold tracking-wider p-4 bg-cyan-dark/20 rounded-lg border-2 border-cyan-dark">
+                  <span className="flex-1">{accountData.token}</span>
+                  <CopyButton text={accountData.token} />
                 </div>
               </CardContent>
             </Card>
