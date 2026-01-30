@@ -8,7 +8,7 @@ Review of `server/src/express-routes/auth.ts`, `server/src/lib/auth.ts`, and rel
 
 **Resolution:** Token length increased from 12 to 16 characters, yielding `log2(31^16)` ≈ **79.3 bits of entropy**. This puts offline brute-force well out of reach even with fast hashing.
 
-## Concern 2 — Modulo bias in token generation
+## Concern 2 — Modulo bias in token generation ✅ RESOLVED
 
 `auth.ts:23` — `bytes[i] % 31` introduces modulo bias since 256 isn't divisible by 31. Characters at indices 0–7 have probability 9/256 while indices 8–30 have probability 8/256. This effectively reduces the entropy slightly below the theoretical 79.3 bits.
 
@@ -20,7 +20,7 @@ In `auth.ts:146-147`, after login, the session ID (`connect.sid`) stays the same
 
 The fix is calling `req.session.regenerate()` before setting session data in both the `/register` and `/login` handlers. This issues a new session ID and invalidates the old one.
 
-## Concern 4 — No `sameSite` on `connect.sid` cookie
+## Concern 4 — No `sameSite` on `connect.sid` cookie ✅ RESOLVED
 
 The `sessionKey` cookie is set with `sameSite: "strict"` (`auth.ts:86`), but the express-session `connect.sid` cookie (`index.ts:62-66`) has no `sameSite` attribute. Browsers default to `Lax`, which is reasonable but inconsistent with the stricter policy on `sessionKey`. Since both cookies are needed for authenticated requests (session + derived key), the effective protection is the stricter of the two — but it's cleaner to be explicit. Adding `sameSite: "strict"` (or at least `"lax"`) to the session config would close the gap.
 
@@ -31,7 +31,7 @@ The `sessionKey` cookie is set with `sameSite: "strict"` (`auth.ts:86`), but the
 - Throwing at startup if these aren't set and `NODE_ENV !== "development"`
 - Or at minimum logging a loud warning
 
-## Concern 6 — No rate limiting on auth endpoints
+## Concern 6 — No rate limiting on auth endpoints ✅ RESOLVED
 
 `/api/auth/login` and `/api/auth/register` have no rate limiting. Online brute-force against the full 79-bit token space is impractical, but rate limiting is still defense-in-depth against credential stuffing if tokens are partially leaked, and prevents abuse of the register endpoint (mass account creation).
 
