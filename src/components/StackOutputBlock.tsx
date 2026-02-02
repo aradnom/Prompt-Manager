@@ -10,7 +10,6 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Dices, Minimize2, Maximize2, PackagePlus } from "lucide-react";
-import yaml from "js-yaml";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 import { useStackContent } from "@/contexts/StackContentContext";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
@@ -18,6 +17,7 @@ import { useStackOutput } from "@/contexts/StackOutputContext";
 import { useErrors } from "@/contexts/ErrorContext";
 import { api } from "@/lib/api";
 import { parseWildcards } from "@/lib/wildcard-parser";
+import { getRandomWildcardPath } from "@/lib/wildcard-random";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 
@@ -138,107 +138,6 @@ export function StackOutputBlock() {
     }
   };
 
-  const getRandomPathForWildcard = (displayId: string): string | null => {
-    if (!wildcards) return null;
-
-    const wildcard = wildcards.find((w) => w.displayId === displayId);
-    if (!wildcard) return null;
-
-    const buildPath = (pathArray: string[]): string => {
-      let result = "";
-      pathArray.forEach((segment, idx) => {
-        if (segment.startsWith("[")) {
-          result += segment;
-        } else if (idx === 0) {
-          result += segment;
-        } else {
-          result += `.${segment}`;
-        }
-      });
-      return result;
-    };
-
-    const collectAllLeaves = (
-      obj: unknown,
-      parentPath: string[] = [],
-    ): Array<{ path: string; value: string }> => {
-      const leaves: Array<{ path: string; value: string }> = [];
-
-      const traverse = (data: unknown, pathSoFar: string[]) => {
-        if (Array.isArray(data)) {
-          data.forEach((item, idx) => {
-            const currentPath = [...pathSoFar, `[${idx}]`];
-            if (
-              typeof item === "string" ||
-              typeof item === "number" ||
-              typeof item === "boolean"
-            ) {
-              leaves.push({
-                path: buildPath(currentPath),
-                value: String(item),
-              });
-            } else {
-              traverse(item, currentPath);
-            }
-          });
-        } else if (typeof data === "object" && data !== null) {
-          const record = data as Record<string, unknown>;
-          Object.keys(record).forEach((key) => {
-            const value = record[key];
-            const currentPath = [...pathSoFar, key];
-            if (
-              typeof value === "string" ||
-              typeof value === "number" ||
-              typeof value === "boolean"
-            ) {
-              leaves.push({
-                path: buildPath(currentPath),
-                value: String(value),
-              });
-            } else {
-              traverse(value, currentPath);
-            }
-          });
-        }
-      };
-
-      traverse(obj, parentPath);
-      return leaves;
-    };
-
-    try {
-      if (wildcard.format === "json") {
-        const data = JSON.parse(wildcard.content);
-        const allLeaves = collectAllLeaves(data);
-        if (allLeaves.length > 0) {
-          return allLeaves[Math.floor(Math.random() * allLeaves.length)].path;
-        }
-      } else if (wildcard.format === "yaml") {
-        const data = yaml.load(wildcard.content);
-        const allLeaves = collectAllLeaves(data);
-        if (allLeaves.length > 0) {
-          return allLeaves[Math.floor(Math.random() * allLeaves.length)].path;
-        }
-      } else if (wildcard.format === "lines") {
-        const lines = wildcard.content.split("\n").filter((l) => l.trim());
-        if (lines.length > 0) {
-          const randomIndex = Math.floor(Math.random() * lines.length);
-          return `[${randomIndex}]`;
-        }
-      } else if (wildcard.format === "text") {
-        return "";
-      }
-    } catch (error) {
-      console.error(
-        "Failed to get random path for wildcard:",
-        displayId,
-        error,
-      );
-    }
-
-    return null;
-  };
-
   const handleRandomizeWildcards = async () => {
     if (!activeStackBlocks || !wildcards) return;
 
@@ -253,7 +152,10 @@ export function StackOutputBlock() {
 
       // Replace each wildcard with a random path
       for (const match of wildcardMatches) {
-        const randomPath = getRandomPathForWildcard(match.displayId);
+        const wildcard = wildcards.find((w) => w.displayId === match.displayId);
+        if (!wildcard) continue;
+
+        const randomPath = getRandomWildcardPath(wildcard);
         if (randomPath !== null) {
           const oldMarker = match.fullMatch;
           const newMarker = `{{wildcard:${match.displayId}:${randomPath}}}`;

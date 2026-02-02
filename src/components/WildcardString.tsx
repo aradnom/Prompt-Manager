@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Dices } from "lucide-react";
 import { Wildcard } from "@/types/schema";
 import { resolveWildcardPath } from "@/lib/wildcard-value-extractor";
+import { getRandomWildcardPath } from "@/lib/wildcard-random";
 import { WildcardBrowserLists } from "@/components/WildcardBrowserLists";
 
 interface WildcardStringProps {
@@ -164,7 +165,11 @@ export function WildcardString({
   const value = getCurrentValue(wildcard, path);
 
   const handleRandomSelection = () => {
-    // Random selection logic removed due to unused variable issues and logic migration
+    if (!onPathChange) return;
+    const randomPath = getRandomWildcardPath(wildcard);
+    if (randomPath !== null) {
+      onPathChange(displayId, path, randomPath);
+    }
     setShowTooltip(false);
   };
 

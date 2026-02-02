@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Wildcard } from "@/types/schema";
+import { buildWildcardPath } from "@/lib/wildcard-random";
 import yaml from "js-yaml";
 
 interface WildcardBrowserListsProps {
@@ -66,20 +67,6 @@ export function WildcardBrowserLists({
   );
 
   const buildTree = useMemo(() => {
-    const buildPathLocal = (pathArray: string[]): string => {
-      let result = "";
-      pathArray.forEach((segment, idx) => {
-        if (segment.startsWith("[")) {
-          result += segment;
-        } else if (idx === 0) {
-          result += segment;
-        } else {
-          result += `.${segment}`;
-        }
-      });
-      return result;
-    };
-
     const buildTreeRecursive = (
       obj: unknown,
       parentPath: string[] = [],
@@ -96,7 +83,7 @@ export function WildcardBrowserLists({
               key: String(item),
               value: String(item),
               isLeaf: true,
-              path: buildPathLocal(currentPath),
+              path: buildWildcardPath(currentPath),
             };
           } else {
             return {
@@ -104,7 +91,7 @@ export function WildcardBrowserLists({
               value: item,
               isLeaf: false,
               children: buildTreeRecursive(item, currentPath),
-              path: buildPathLocal(currentPath),
+              path: buildWildcardPath(currentPath),
             };
           }
         });
@@ -123,7 +110,7 @@ export function WildcardBrowserLists({
               key,
               value: String(value),
               isLeaf: true,
-              path: buildPathLocal(currentPath),
+              path: buildWildcardPath(currentPath),
             };
           } else {
             return {
