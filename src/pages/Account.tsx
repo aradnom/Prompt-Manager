@@ -364,6 +364,11 @@ export default function Account() {
                   <span className="flex-1">{accountData.token}</span>
                   <CopyButton text={accountData.token} />
                 </div>
+                <div className="flex justify-end mt-6">
+                  <Button onClick={handleLogout} variant="outline">
+                    Log Out
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -594,12 +599,6 @@ export default function Account() {
                 </div>
               </CardContent>
             </Card>
-
-            <div className="flex justify-end">
-              <Button onClick={handleLogout} variant="outline">
-                Log Out
-              </Button>
-            </div>
           </div>
         ) : (
           <CreateAccountOrLogin />
