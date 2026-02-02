@@ -25,6 +25,7 @@ import {
   resolveWildcardsWithMarkers,
 } from "@/lib/wildcard-resolver";
 import { api } from "@/lib/api";
+import { applyCommaSeparation } from "@/lib/comma-separation";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
@@ -99,19 +100,10 @@ export function StackEditor({ stack }: StackEditorProps) {
   const stackWithBlocks = fullStack as StackWithBlocks;
 
   // Apply comma separation to content if enabled
-  const applyCommaSeparation = useCallback(
+  const processCommas = useCallback(
     (content: string): string => {
       if (!stackWithBlocks?.commaSeparated) return content;
-      return content
-        .split("\n\n")
-        .map((block) => {
-          const trimmed = block.trimEnd();
-          if (trimmed.length === 0) return block;
-          if (trimmed.endsWith(",")) return block;
-          if (trimmed.endsWith(".")) return trimmed.slice(0, -1) + ",";
-          return trimmed + ",";
-        })
-        .join("\n\n");
+      return applyCommaSeparation(content);
     },
     [stackWithBlocks?.commaSeparated],
   );
@@ -138,10 +130,8 @@ export function StackEditor({ stack }: StackEditorProps) {
         : rawText;
 
       // Apply comma separation before setting context and saving
-      const finalContent = applyCommaSeparation(resolvedContent);
-      const finalContentWithMarkers = applyCommaSeparation(
-        resolvedContentWithMarkers,
-      );
+      const finalContent = processCommas(resolvedContent);
+      const finalContentWithMarkers = processCommas(resolvedContentWithMarkers);
 
       setRenderedContent(finalContent);
       setRenderedContentWithMarkers(finalContentWithMarkers);
@@ -162,7 +152,7 @@ export function StackEditor({ stack }: StackEditorProps) {
     setRenderedContentWithMarkers,
     stack.id,
     saveContent,
-    applyCommaSeparation,
+    processCommas,
   ]);
 
   const addBlockMutation = api.stacks.addBlock.useMutation({

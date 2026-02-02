@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { api, RouterOutput } from "@/lib/api";
+import { applyCommaSeparation } from "@/lib/comma-separation";
 import {
   resolveWildcardsInText,
   resolveWildcardsWithMarkers,
@@ -75,23 +76,9 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     };
   }, []);
 
-  // Process content to add trailing commas if enabled
   const getProcessedContent = (content: string): string => {
     if (!commaSeparated) return content;
-
-    // Split by double newline to get individual blocks
-    const blocks = content.split("\n\n");
-
-    // Add trailing comma to each block if it doesn't already have one
-    const processedBlocks = blocks.map((block) => {
-      const trimmed = block.trimEnd();
-      if (trimmed.length === 0) return block;
-      if (trimmed.endsWith(",")) return block;
-      if (trimmed.endsWith(".")) return trimmed.slice(0, -1) + ",";
-      return trimmed + ",";
-    });
-
-    return processedBlocks.join("\n\n");
+    return applyCommaSeparation(content);
   };
 
   // Compile stack content
