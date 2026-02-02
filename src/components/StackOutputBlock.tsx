@@ -132,9 +132,14 @@ export function StackOutputBlock() {
     return processedBlocks.join("\n\n");
   };
 
+  const disabledBlockIds = activeStack?.disabledBlockIds || [];
+
   const hasWildcards =
-    activeStackBlocks?.some((block) => parseWildcards(block.text).length > 0) ??
-    false;
+    activeStackBlocks?.some(
+      (block) =>
+        !disabledBlockIds.includes(block.id) &&
+        parseWildcards(block.text).length > 0,
+    ) ?? false;
 
   const processedContent = getProcessedContent(renderedContent);
   const processedContentWithMarkers = getProcessedContent(
@@ -261,8 +266,9 @@ export function StackOutputBlock() {
   const handleRandomizeWildcards = async () => {
     if (!activeStackBlocks || !wildcards) return;
 
-    // For each block, find all wildcards and replace them with random paths
+    // For each enabled block, find all wildcards and replace them with random paths
     for (const block of activeStackBlocks) {
+      if (disabledBlockIds.includes(block.id)) continue;
       const wildcardMatches = parseWildcards(block.text);
 
       if (wildcardMatches.length === 0) continue;

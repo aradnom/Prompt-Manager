@@ -103,8 +103,10 @@ export function StackEditor({ stack }: StackEditorProps) {
     if (stackWithBlocks?.blocks) {
       setActiveStackBlocks(stackWithBlocks.blocks);
 
-      // Compute rendered content
+      // Compute rendered content (excluding disabled blocks)
+      const disabledIds = stackWithBlocks.disabledBlockIds || [];
       const rawText = stackWithBlocks.blocks
+        .filter((b) => !disabledIds.includes(b.id))
         .map((b) => b.text.trim())
         .filter((t) => t.length > 0)
         .join("\n\n"); // Using double newline as requested
@@ -132,6 +134,7 @@ export function StackEditor({ stack }: StackEditorProps) {
     }
   }, [
     stackWithBlocks?.blocks,
+    stackWithBlocks?.disabledBlockIds,
     setActiveStackBlocks,
     wildcards,
     setRenderedContent,
@@ -166,6 +169,13 @@ export function StackEditor({ stack }: StackEditorProps) {
       refetch();
     },
   });
+
+  const toggleBlockDisabledMutation =
+    api.stacks.toggleBlockDisabled.useMutation({
+      onSuccess: () => {
+        refetch();
+      },
+    });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -271,6 +281,13 @@ export function StackEditor({ stack }: StackEditorProps) {
 
   const handleRemoveBlock = (blockId: number) => {
     removeBlockMutation.mutate({
+      stackId: stack.id,
+      blockId,
+    });
+  };
+
+  const handleToggleBlockDisabled = (blockId: number) => {
+    toggleBlockDisabledMutation.mutate({
       stackId: stack.id,
       blockId,
     });
@@ -583,6 +600,14 @@ export function StackEditor({ stack }: StackEditorProps) {
                             >
                               <TextBlock
                                 block={block}
+                                isDisabled={
+                                  stackWithBlocks?.disabledBlockIds?.includes(
+                                    block.id,
+                                  ) ?? false
+                                }
+                                onToggleDisable={() =>
+                                  handleToggleBlockDisabled(block.id)
+                                }
                                 onEdit={() => setEditingBlockId(block.id)}
                                 onDelete={() => handleRemoveBlock(block.id)}
                                 onDuplicate={() => handleDuplicateBlock(index)}

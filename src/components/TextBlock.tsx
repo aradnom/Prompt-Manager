@@ -1,6 +1,15 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Info, Clock, Save, RefreshCw, Trash2 } from "lucide-react";
+import {
+  X,
+  Info,
+  Clock,
+  Save,
+  RefreshCw,
+  Trash2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -53,6 +62,8 @@ interface TextBlockProps {
   onTransform?: (blockId: number, transformedText: string) => void;
   onSelectBlock?: (blockId: number) => void;
   isDeleting?: boolean;
+  isDisabled?: boolean;
+  onToggleDisable?: () => void;
   isSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -68,6 +79,8 @@ export function TextBlock({
   onDuplicate,
   onTransform,
   onSelectBlock,
+  isDisabled,
+  onToggleDisable,
   isDeleting,
   isSelectMode,
   isSelected,
@@ -288,6 +301,7 @@ export function TextBlock({
       className={cn(
         "relative rounded-lg bg-background text-foreground shadow-sm cursor-pointer",
         !alwaysActive && "border",
+        isDisabled && "opacity-40 grayscale contrast-75",
       )}
       onClick={handleBlockClick}
       animate={{
@@ -466,6 +480,39 @@ export function TextBlock({
                   >
                     {block.type.name}
                   </button>
+                )}
+                {onToggleDisable && (
+                  <ExpandingIcon active={isActive} origin="right">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleDisable();
+                            }}
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                            aria-label={
+                              isDisabled
+                                ? "Enable block in this prompt"
+                                : "Disable block in this prompt"
+                            }
+                          >
+                            {isDisabled ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isDisabled
+                            ? "Enable block in this prompt"
+                            : "Disable block in this prompt"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </ExpandingIcon>
                 )}
                 <ExpandingIcon active={isActive} origin="right">
                   <button
