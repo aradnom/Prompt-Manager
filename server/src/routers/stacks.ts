@@ -264,6 +264,28 @@ export const stacksRouter = router({
       return { success: true };
     }),
 
+  toggleBlockDisabled: protectedProcedure
+    .input(
+      z.object({
+        stackId: z.number(),
+        blockId: z.number(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      await ctx.storage.toggleBlockDisabledInStack(
+        input.stackId,
+        input.blockId,
+      );
+      return { success: true };
+    }),
+
   updateContent: protectedProcedure
     .input(
       z.object({

@@ -48,12 +48,14 @@ export interface BlockStack {
   userId: number | null;
   activeRevisionId: number | null;
   blockIds: number[];
+  disabledBlockIds: number[];
 }
 
 export interface StackRevision {
   id: number;
   stackId: number;
   blockIds: number[];
+  disabledBlockIds: number[];
   renderedContent?: string | null;
   createdAt: Date;
   updatedAt: Date;

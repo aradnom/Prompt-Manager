@@ -73,6 +73,11 @@ export interface StackRevisionsTable {
   id: ColumnType<number, never, never>;
   stack_id: number;
   block_ids: number[];
+  disabled_block_ids: ColumnType<
+    number[],
+    number[] | undefined,
+    number[] | undefined
+  >;
   rendered_content: ColumnType<string | null, string | null, string | null>;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;

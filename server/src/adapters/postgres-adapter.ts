@@ -392,11 +392,12 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         ...new Set(affectedStackRevisions.map((r) => r.stack_id)),
       ];
 
-      // Remove block from any stack revisions
+      // Remove block from any stack revisions (both block_ids and disabled_block_ids)
       await trx
         .updateTable("stack_revisions")
         .set({
           block_ids: sql`array_remove(block_ids, ${id})`,
+          disabled_block_ids: sql`array_remove(disabled_block_ids, ${id})`,
           updated_at: now,
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -730,6 +731,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
       const stack = this.mapStack(updatedStackResult);
       stack.blockIds = input.blockIds ?? [];
+      stack.disabledBlockIds = [];
       return stack;
     });
   }
@@ -756,7 +758,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    // Get current block_ids using coalesce pattern
+    // Get current block_ids and disabled_block_ids using coalesce pattern
     const revQuery = await this.db
       .selectFrom("stacks")
       .select((eb) => [
@@ -775,12 +777,28 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
       ])
       .where("stacks.id", "=", id)
       .executeTakeFirst();
 
     const stack = this.mapStack(stackResult);
     stack.blockIds = revQuery?.block_ids || [];
+    stack.disabledBlockIds = revQuery?.disabled_block_ids || [];
     return stack;
   }
 
@@ -808,6 +826,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
                 .limit(1),
             )
             .as("block_ids"),
+          eb.fn
+            .coalesce(
+              eb
+                .selectFrom("stack_revisions as active_rev")
+                .select("active_rev.disabled_block_ids")
+                .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+                .limit(1),
+              eb
+                .selectFrom("stack_revisions")
+                .select("disabled_block_ids")
+                .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+                .orderBy("created_at", "desc")
+                .limit(1),
+            )
+            .as("disabled_block_ids"),
           eb.fn
             .coalesce(
               eb
@@ -848,12 +881,13 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      // 4. Create initial revision with same block_ids and rendered_content
+      // 4. Create initial revision with same block_ids, disabled_block_ids, and rendered_content
       const newRevisionResult = await trx
         .insertInto("stack_revisions")
         .values({
           stack_id: newStackResult.id,
           block_ids: originalStack.block_ids || [],
+          disabled_block_ids: originalStack.disabled_block_ids || [],
           rendered_content: originalStack.rendered_content || null,
           created_at: now,
           updated_at: now,
@@ -875,6 +909,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
       const stack = this.mapStack(updatedStackResult);
       stack.blockIds = originalStack.block_ids || [];
+      stack.disabledBlockIds = originalStack.disabled_block_ids || [];
       return stack;
     });
   }
@@ -905,6 +940,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
       const stack = this.mapStack(stackResult);
       stack.blockIds = revision.block_ids;
+      stack.disabledBlockIds = revision.disabled_block_ids;
       return stack;
     });
   }
@@ -944,6 +980,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
       ])
       .where("stacks.id", "=", id)
       .executeTakeFirst();
@@ -952,6 +1003,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
     const stack = this.mapStack(result);
     stack.blockIds = result.block_ids || [];
+    stack.disabledBlockIds = result.disabled_block_ids || [];
 
     if (options?.includeBlocks) {
       return this.expandStack(stack, options.includeRevisions ?? false);
@@ -984,6 +1036,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
       ])
       .where("stacks.uuid", "=", uuid)
       .executeTakeFirst();
@@ -992,6 +1059,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
     const stack = this.mapStack(result);
     stack.blockIds = result.block_ids || [];
+    stack.disabledBlockIds = result.disabled_block_ids || [];
 
     if (options?.includeBlocks) {
       return this.expandStack(stack, options.includeRevisions ?? false);
@@ -1029,6 +1097,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
       ]);
 
     if (userId !== undefined) {
@@ -1041,6 +1124,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return results.map((r) => {
       const stack = this.mapStack(r);
       stack.blockIds = r.block_ids || [];
+      stack.disabledBlockIds = r.disabled_block_ids || [];
       return stack;
     });
   }
@@ -1087,6 +1171,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
       ]);
 
     // Text search filter
@@ -1113,6 +1212,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return results.map((r) => {
       const stack = this.mapStack(r);
       stack.blockIds = r.block_ids || [];
+      stack.disabledBlockIds = r.disabled_block_ids || [];
       return stack;
     });
   }
@@ -1141,6 +1241,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
       ])
       .where("display_id", "=", displayId)
       .where("user_id", "=", userId)
@@ -1153,6 +1268,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     // 2. Get active revision text for each block in order
     // We fetch all blocks involved, then map them back to the order
     const blockIds = result.block_ids;
+    const disabledBlockIds = result.disabled_block_ids || [];
 
     const blocksData = await this.db
       .selectFrom("blocks")
@@ -1215,8 +1331,9 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       });
     }
 
-    // 3. Compile the prompt in the correct order
+    // 3. Compile the prompt in the correct order, excluding disabled blocks
     const compiledParts = blockIds
+      .filter((id) => !disabledBlockIds.includes(id))
       .map((id) => textsMap.get(id))
       .filter((text) => text !== undefined && text !== null);
 
@@ -1283,6 +1400,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
                 .limit(1),
             )
             .as("block_ids"),
+          eb.fn
+            .coalesce(
+              eb
+                .selectFrom("stack_revisions as active_rev")
+                .select("active_rev.disabled_block_ids")
+                .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+                .limit(1),
+              eb
+                .selectFrom("stack_revisions")
+                .select("disabled_block_ids")
+                .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+                .orderBy("created_at", "desc")
+                .limit(1),
+            )
+            .as("disabled_block_ids"),
         ])
         .where("stacks.id", "=", stackId)
         .executeTakeFirst();
@@ -1312,6 +1444,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .values({
           stack_id: stackId,
           block_ids: newBlockIds,
+          disabled_block_ids: currentRev?.disabled_block_ids || [],
           rendered_content: renderedContent || null,
           created_at: now,
           updated_at: now,
@@ -1340,7 +1473,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db.transaction().execute(async (trx) => {
       const now = new Date();
 
-      // Get current block_ids and user_id (from active revision if set, otherwise latest)
+      // Get current block_ids, disabled_block_ids, and user_id (from active revision if set, otherwise latest)
       const currentRev = await trx
         .selectFrom("stacks")
         .select((eb) => [
@@ -1360,6 +1493,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
                 .limit(1),
             )
             .as("block_ids"),
+          eb.fn
+            .coalesce(
+              eb
+                .selectFrom("stack_revisions as active_rev")
+                .select("active_rev.disabled_block_ids")
+                .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+                .limit(1),
+              eb
+                .selectFrom("stack_revisions")
+                .select("disabled_block_ids")
+                .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+                .orderBy("created_at", "desc")
+                .limit(1),
+            )
+            .as("disabled_block_ids"),
         ])
         .where("stacks.id", "=", stackId)
         .executeTakeFirst();
@@ -1367,6 +1515,9 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       if (!currentRev?.block_ids) return;
 
       const newBlockIds = currentRev.block_ids.filter((id) => id !== blockId);
+      const newDisabledBlockIds = (currentRev.disabled_block_ids || []).filter(
+        (id) => id !== blockId,
+      );
 
       // Create new revision
       const newRevision = await trx
@@ -1374,6 +1525,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .values({
           stack_id: stackId,
           block_ids: newBlockIds,
+          disabled_block_ids: newDisabledBlockIds,
           rendered_content: renderedContent || null,
           created_at: now,
           updated_at: now,
@@ -1492,6 +1644,69 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .execute();
 
       // Update the stack's updated_at timestamp
+      await trx
+        .updateTable("stacks")
+        .set({ updated_at: now })
+        .where("id", "=", stackId)
+        .execute();
+    });
+  }
+
+  async toggleBlockDisabledInStack(
+    stackId: number,
+    blockId: number,
+  ): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      const now = new Date();
+
+      // Get the active revision ID (or fall back to latest)
+      const stackInfo = await trx
+        .selectFrom("stacks")
+        .select(["active_revision_id"])
+        .where("id", "=", stackId)
+        .executeTakeFirst();
+
+      let revisionIdToUpdate: number | null = null;
+
+      if (stackInfo?.active_revision_id) {
+        revisionIdToUpdate = stackInfo.active_revision_id;
+      } else {
+        const latestRev = await trx
+          .selectFrom("stack_revisions")
+          .select("id")
+          .where("stack_id", "=", stackId)
+          .orderBy("created_at", "desc")
+          .limit(1)
+          .executeTakeFirst();
+
+        revisionIdToUpdate = latestRev?.id ?? null;
+      }
+
+      if (!revisionIdToUpdate) return;
+
+      // Get current disabled_block_ids
+      const currentRev = await trx
+        .selectFrom("stack_revisions")
+        .select("disabled_block_ids")
+        .where("id", "=", revisionIdToUpdate)
+        .executeTakeFirst();
+
+      const currentDisabled = currentRev?.disabled_block_ids || [];
+      const newDisabled = currentDisabled.includes(blockId)
+        ? currentDisabled.filter((id) => id !== blockId)
+        : [...currentDisabled, blockId];
+
+      // Update in place
+      await trx
+        .updateTable("stack_revisions")
+        .set({
+          disabled_block_ids: newDisabled,
+          updated_at: now,
+        })
+        .where("id", "=", revisionIdToUpdate)
+        .execute();
+
+      // Update stack's updated_at
       await trx
         .updateTable("stacks")
         .set({ updated_at: now })
@@ -1775,6 +1990,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       userId: row.user_id,
       activeRevisionId: row.active_revision_id,
       blockIds: [], // To be filled by subquery
+      disabledBlockIds: [], // To be filled by subquery
     };
   }
 
@@ -1785,6 +2001,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       id: row.id,
       stackId: row.stack_id,
       blockIds: row.block_ids,
+      disabledBlockIds: row.disabled_block_ids,
       renderedContent: row.rendered_content,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),

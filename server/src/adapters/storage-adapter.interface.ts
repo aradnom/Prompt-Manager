@@ -102,6 +102,7 @@ export interface IStorageAdapter {
     stackId: number,
     renderedContent: string,
   ): Promise<void>;
+  toggleBlockDisabledInStack(stackId: number, blockId: number): Promise<void>;
 
   createType(name: string, description?: string): Promise<Type>;
   getType(id: number): Promise<Type | null>;
