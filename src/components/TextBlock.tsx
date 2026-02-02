@@ -316,7 +316,17 @@ export function TextBlock({
       }}
       transition={TEXT_BLOCK_ANIMATION}
     >
-      <CardHeader>
+      <CardHeader
+        onDoubleClick={(e) => {
+          if (
+            (e.target as HTMLElement).closest("button") ||
+            (e.target as HTMLElement).closest("input") ||
+            (e.target as HTMLElement).closest('[role="menu"]')
+          )
+            return;
+          onEdit();
+        }}
+      >
         <div
           className={cn("flex items-start justify-between", {
             "cursor-pointer": alwaysActive && onEdit,

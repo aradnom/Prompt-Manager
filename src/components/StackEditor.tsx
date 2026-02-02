@@ -607,9 +607,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                               />
                             </motion.div>
                           ) : (
-                            <div
-                              onDoubleClick={() => setEditingBlockId(block.id)}
-                            >
+                            <div>
                               <TextBlock
                                 block={block}
                                 isDisabled={
