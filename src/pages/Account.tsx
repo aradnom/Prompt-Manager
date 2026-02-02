@@ -91,8 +91,8 @@ export default function Account() {
     }
   }, [isAuthenticated, accountData]);
 
-  const fetchAccountData = async () => {
-    setIsLoadingAccount(true);
+  const fetchAccountData = async (silent = false) => {
+    if (!silent) setIsLoadingAccount(true);
     try {
       const response = await fetch("/api/auth/account", {
         credentials: "include",
@@ -159,7 +159,7 @@ export default function Account() {
       console.error("Error fetching account data:", err);
       setError("Failed to load account data");
     } finally {
-      setIsLoadingAccount(false);
+      if (!silent) setIsLoadingAccount(false);
     }
   };
 
@@ -183,8 +183,8 @@ export default function Account() {
         throw new Error("Failed to save API key");
       }
 
-      // Refresh account data to get updated flags
-      await fetchAccountData();
+      // Refresh account data to get updated flags (silent to avoid scroll jump)
+      await fetchAccountData(true);
       // Clear the input fields after successful save
       if (provider === "vertex") {
         setVertexApiKey("");
