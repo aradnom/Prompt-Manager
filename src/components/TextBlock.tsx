@@ -568,13 +568,8 @@ export function TextBlock({
                 text={block.text}
                 className="text-sm whitespace-pre-wrap cursor-text"
                 enableTooltips={true}
-                onWildcardPathChange={(displayId, oldPath, newPath) => {
-                  // Replace the wildcard marker in the text
-                  const oldMarker = `{{wildcard:${displayId}:${oldPath}}}`;
-                  const newMarker = `{{wildcard:${displayId}:${newPath}}}`;
+                onMarkerChange={(oldMarker, newMarker) => {
                   const updatedText = block.text.replace(oldMarker, newMarker);
-
-                  // Trigger transform to create a new revision
                   if (onTransform) {
                     onTransform(block.id, updatedText);
                   }

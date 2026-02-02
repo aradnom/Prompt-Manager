@@ -1,18 +1,21 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Dices } from "lucide-react";
+import { Dices, Lock, LockOpen } from "lucide-react";
 import { Wildcard } from "@/types/schema";
 import { resolveWildcardPath } from "@/lib/wildcard-value-extractor";
 import { getRandomWildcardPath } from "@/lib/wildcard-random";
+import { buildWildcardMarker } from "@/lib/wildcard-parser";
 import { WildcardBrowserLists } from "@/components/WildcardBrowserLists";
 
 interface WildcardStringProps {
   wildcard: Wildcard | null;
   displayId: string;
   path: string;
+  frozen?: boolean;
+  fullMatch?: string;
   valueOnly?: boolean;
   enableTooltip?: boolean;
-  onPathChange?: (displayId: string, oldPath: string, newPath: string) => void;
+  onMarkerChange?: (oldMarker: string, newMarker: string) => void;
 }
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
@@ -21,9 +24,11 @@ export function WildcardString({
   wildcard,
   displayId,
   path,
+  frozen = false,
+  fullMatch,
   valueOnly = false,
   enableTooltip = false,
-  onPathChange,
+  onMarkerChange,
 }: WildcardStringProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] =
@@ -165,18 +170,28 @@ export function WildcardString({
   const value = getCurrentValue(wildcard, path);
 
   const handleRandomSelection = () => {
-    if (!onPathChange) return;
+    if (!onMarkerChange || !fullMatch) return;
     const randomPath = getRandomWildcardPath(wildcard);
     if (randomPath !== null) {
-      onPathChange(displayId, path, randomPath);
+      onMarkerChange(
+        fullMatch,
+        buildWildcardMarker(displayId, randomPath, frozen),
+      );
     }
     setShowTooltip(false);
   };
 
+  const handleToggleFrozen = () => {
+    if (!onMarkerChange || !fullMatch) return;
+    onMarkerChange(fullMatch, buildWildcardMarker(displayId, path, !frozen));
+  };
+
+  const bgClass = frozen ? "bg-cyan-medium/30" : "bg-magenta-medium/70";
+
   return (
     <span
       ref={spanRef}
-      className={`relative inline-block px-2 py-0.5 rounded-sm bg-magenta-medium/30 text-foreground ${textSizeClass} font-mono ${enableTooltip ? "cursor-pointer" : ""}`}
+      className={`relative inline-block px-2 py-0.5 rounded-sm ${bgClass} text-foreground ${textSizeClass} font-mono ${enableTooltip ? "cursor-pointer" : ""}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -212,13 +227,32 @@ export function WildcardString({
                       {displayId}
                     </div>
                   </div>
-                  <button
-                    onClick={handleRandomSelection}
-                    className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors"
-                    title="Random selection"
-                  >
-                    <Dices className="h-4 w-4" />
-                  </button>
+                  <div className="flex gap-1">
+                    {onMarkerChange && fullMatch && (
+                      <button
+                        onClick={handleToggleFrozen}
+                        className={`p-2 rounded border transition-colors ${
+                          frozen
+                            ? "border-cyan-medium bg-cyan-dark/50 hover:bg-cyan-dark/80"
+                            : "border-cyan-medium hover:bg-cyan-dark/80"
+                        }`}
+                        title={frozen ? "Unlock wildcard" : "Lock wildcard"}
+                      >
+                        {frozen ? (
+                          <Lock className="h-4 w-4" />
+                        ) : (
+                          <LockOpen className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleRandomSelection}
+                      className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors"
+                      title="Random selection"
+                    >
+                      <Dices className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-4" />
@@ -227,8 +261,11 @@ export function WildcardString({
                   wildcard={wildcard}
                   currentPath={path}
                   onSelectValue={(newPath) => {
-                    if (onPathChange) {
-                      onPathChange(displayId, path, newPath);
+                    if (onMarkerChange && fullMatch) {
+                      onMarkerChange(
+                        fullMatch,
+                        buildWildcardMarker(displayId, newPath, frozen),
+                      );
                     }
                     setShowTooltip(false);
                   }}

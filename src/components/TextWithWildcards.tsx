@@ -9,11 +9,7 @@ interface TextWithWildcardsProps {
   className?: string;
   valueOnly?: boolean;
   enableTooltips?: boolean;
-  onWildcardPathChange?: (
-    displayId: string,
-    oldPath: string,
-    newPath: string,
-  ) => void;
+  onMarkerChange?: (oldMarker: string, newMarker: string) => void;
 }
 
 export function TextWithWildcards({
@@ -21,7 +17,7 @@ export function TextWithWildcards({
   className,
   valueOnly = false,
   enableTooltips = false,
-  onWildcardPathChange,
+  onMarkerChange,
 }: TextWithWildcardsProps) {
   const { data: wildcards } = api.wildcards.list.useQuery();
 
@@ -76,9 +72,11 @@ export function TextWithWildcards({
             wildcard={wildcard}
             displayId={match.displayId}
             path={match.path}
+            frozen={match.frozen}
+            fullMatch={match.fullMatch}
             valueOnly={valueOnly}
             enableTooltip={enableTooltips}
-            onPathChange={onWildcardPathChange}
+            onMarkerChange={onMarkerChange}
           />,
         );
       } else {
@@ -103,7 +101,7 @@ export function TextWithWildcards({
     }
 
     return result;
-  }, [text, wildcards, valueOnly, enableTooltips, onWildcardPathChange]);
+  }, [text, wildcards, valueOnly, enableTooltips, onMarkerChange]);
 
   return <span className={className}>{elements}</span>;
 }

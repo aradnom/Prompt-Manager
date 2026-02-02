@@ -16,7 +16,7 @@ import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { useStackOutput } from "@/contexts/StackOutputContext";
 import { useErrors } from "@/contexts/ErrorContext";
 import { api } from "@/lib/api";
-import { parseWildcards } from "@/lib/wildcard-parser";
+import { parseWildcards, buildWildcardMarker } from "@/lib/wildcard-parser";
 import { getRandomWildcardPath } from "@/lib/wildcard-random";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
@@ -150,16 +150,19 @@ export function StackOutputBlock() {
 
       let updatedText = block.text;
 
-      // Replace each wildcard with a random path
+      // Replace each non-frozen wildcard with a random path
       for (const match of wildcardMatches) {
+        if (match.frozen) continue;
+
         const wildcard = wildcards.find((w) => w.displayId === match.displayId);
         if (!wildcard) continue;
 
         const randomPath = getRandomWildcardPath(wildcard);
         if (randomPath !== null) {
-          const oldMarker = match.fullMatch;
-          const newMarker = `{{wildcard:${match.displayId}:${randomPath}}}`;
-          updatedText = updatedText.replace(oldMarker, newMarker);
+          updatedText = updatedText.replace(
+            match.fullMatch,
+            buildWildcardMarker(match.displayId, randomPath),
+          );
         }
       }
 
