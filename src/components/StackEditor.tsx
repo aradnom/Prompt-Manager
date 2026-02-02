@@ -98,6 +98,24 @@ export function StackEditor({ stack }: StackEditorProps) {
   // We cast here because we know we requested includeBlocks: true
   const stackWithBlocks = fullStack as StackWithBlocks;
 
+  // Apply comma separation to content if enabled
+  const applyCommaSeparation = useCallback(
+    (content: string): string => {
+      if (!stackWithBlocks?.commaSeparated) return content;
+      return content
+        .split("\n\n")
+        .map((block) => {
+          const trimmed = block.trimEnd();
+          if (trimmed.length === 0) return block;
+          if (trimmed.endsWith(",")) return block;
+          if (trimmed.endsWith(".")) return trimmed.slice(0, -1) + ",";
+          return trimmed + ",";
+        })
+        .join("\n\n");
+    },
+    [stackWithBlocks?.commaSeparated],
+  );
+
   // Update context whenever blocks change
   useEffect(() => {
     if (stackWithBlocks?.blocks) {
@@ -109,25 +127,28 @@ export function StackEditor({ stack }: StackEditorProps) {
         .filter((b) => !disabledIds.includes(b.id))
         .map((b) => b.text.trim())
         .filter((t) => t.length > 0)
-        .join("\n\n"); // Using double newline as requested
+        .join("\n\n");
 
-      const newRenderedContent = wildcards
+      const resolvedContent = wildcards
         ? resolveWildcardsInText(rawText, wildcards)
         : rawText;
 
-      if (wildcards) {
-        setRenderedContent(newRenderedContent);
-        setRenderedContentWithMarkers(
-          resolveWildcardsWithMarkers(rawText, wildcards),
-        );
-      } else {
-        setRenderedContent(rawText);
-        setRenderedContentWithMarkers(rawText);
-      }
+      const resolvedContentWithMarkers = wildcards
+        ? resolveWildcardsWithMarkers(rawText, wildcards)
+        : rawText;
+
+      // Apply comma separation before setting context and saving
+      const finalContent = applyCommaSeparation(resolvedContent);
+      const finalContentWithMarkers = applyCommaSeparation(
+        resolvedContentWithMarkers,
+      );
+
+      setRenderedContent(finalContent);
+      setRenderedContentWithMarkers(finalContentWithMarkers);
 
       // Save the rendered content to the revision (debounced)
       const timeoutId = setTimeout(() => {
-        saveContent(stack.id, newRenderedContent);
+        saveContent(stack.id, finalContent);
       }, 500);
 
       return () => clearTimeout(timeoutId);
@@ -141,6 +162,7 @@ export function StackEditor({ stack }: StackEditorProps) {
     setRenderedContentWithMarkers,
     stack.id,
     saveContent,
+    applyCommaSeparation,
   ]);
 
   const addBlockMutation = api.stacks.addBlock.useMutation({

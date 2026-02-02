@@ -81,13 +81,13 @@ export function StackOutputBlock() {
   const createStackMutation = api.stacks.create.useMutation();
 
   const handleConvertToBlock = async () => {
-    if (!processedContent) return;
+    if (!renderedContent) return;
     setIsConverting(true);
     try {
       const newBlock = await createBlockMutation.mutateAsync({
         uuid: generateUUID(),
         displayId: generateDisplayId(),
-        text: processedContent,
+        text: renderedContent,
       });
       const newStack = await createStackMutation.mutateAsync({
         uuid: generateUUID(),
@@ -113,25 +113,6 @@ export function StackOutputBlock() {
     });
   };
 
-  // Process content to add trailing commas if enabled
-  const getProcessedContent = (content: string): string => {
-    if (!commaSeparated) return content;
-
-    // Split by double newline to get individual blocks
-    const blocks = content.split("\n\n");
-
-    // Add trailing comma to each block if it doesn't already have one
-    const processedBlocks = blocks.map((block) => {
-      const trimmed = block.trimEnd();
-      if (trimmed.length === 0) return block;
-      if (trimmed.endsWith(",")) return block;
-      if (trimmed.endsWith(".")) return trimmed.slice(0, -1) + ",";
-      return trimmed + ",";
-    });
-
-    return processedBlocks.join("\n\n");
-  };
-
   const disabledBlockIds = activeStack?.disabledBlockIds || [];
 
   const hasWildcards =
@@ -141,11 +122,6 @@ export function StackOutputBlock() {
         parseWildcards(block.text).length > 0,
     ) ?? false;
 
-  const processedContent = getProcessedContent(renderedContent);
-  const processedContentWithMarkers = getProcessedContent(
-    renderedContentWithMarkers,
-  );
-
   const handleCopy = async () => {
     try {
       if (
@@ -154,7 +130,7 @@ export function StackOutputBlock() {
       ) {
         throw new Error("Clipboard API not available (requires HTTPS)");
       }
-      await navigator.clipboard.writeText(processedContent);
+      await navigator.clipboard.writeText(renderedContent);
     } catch (error) {
       addError(
         error instanceof Error ? error.message : "Failed to copy to clipboard",
@@ -395,7 +371,7 @@ export function StackOutputBlock() {
       {!isMinimized && (
         <CardContent className="pt-6 max-h-48 overflow-y-auto">
           <TextWithWildcards
-            text={processedContentWithMarkers}
+            text={renderedContentWithMarkers}
             className="text-base whitespace-pre-wrap font-mono"
             valueOnly={true}
           />
