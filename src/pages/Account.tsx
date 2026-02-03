@@ -214,15 +214,13 @@ export default function Account() {
   const handleSaveModel = async (provider: string, model: string) => {
     setIsSavingApiKey(true);
     try {
-      // We need to send a placeholder key since the backend requires it
-      // The backend will preserve the existing key
       const response = await fetch("/api/auth/api-keys", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ provider, apiKey: "__PRESERVE__", model }),
+        body: JSON.stringify({ provider, model }),
       });
 
       if (!response.ok) {

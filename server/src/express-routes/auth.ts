@@ -353,18 +353,17 @@ export function registerAuthRoutes(
       // Check if we're updating an existing provider or creating new
       const existingProvider = apiKeys[provider];
 
-      // If apiKey is '__PRESERVE__', keep the existing key (for model-only updates)
-      if (apiKey === "__PRESERVE__" && existingProvider?.key) {
-        // Just update the model, preserve the key
-        apiKeys[provider] = {
-          key: existingProvider.key,
-          ...(model && { model }),
-        };
-      } else if (apiKey) {
+      if (apiKey) {
         // Update or set new API key
         apiKeys[provider] = {
           key: apiKey,
           ...(model && { model }),
+        };
+      } else if (model && existingProvider?.key) {
+        // Model-only update: preserve existing key
+        apiKeys[provider] = {
+          key: existingProvider.key,
+          model,
         };
       } else {
         return res
