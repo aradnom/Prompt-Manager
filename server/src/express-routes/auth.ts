@@ -133,9 +133,8 @@ export function registerAuthRoutes(
 
       // Decrypt account data using the token
       if (!user.accountData) {
-        console.debug("Unable to decrypt user account data");
-
-        return res.status(500).json({ error: "Account data not found" });
+        console.debug("User exists but has no account data");
+        return res.status(401).json({ error: "Invalid token" });
       }
 
       const decryptedData = await decryptAccountData(
