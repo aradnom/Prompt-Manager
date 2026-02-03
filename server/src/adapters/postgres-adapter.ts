@@ -133,6 +133,22 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .execute();
   }
 
+  async setUserApiKey(userId: number, apiKey: string): Promise<void> {
+    await this.db
+      .updateTable("users")
+      .set({ api_key: apiKey, updated_at: new Date() })
+      .where("id", "=", userId)
+      .execute();
+  }
+
+  async clearUserApiKey(userId: number): Promise<void> {
+    await this.db
+      .updateTable("users")
+      .set({ api_key: null, updated_at: new Date() })
+      .where("id", "=", userId)
+      .execute();
+  }
+
   async createBlock(input: CreateBlockInput): Promise<Block> {
     const now = new Date();
 

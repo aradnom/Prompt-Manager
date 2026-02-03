@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import type { PostgresStorageAdapter } from "@server/adapters/postgres-adapter";
-import { validateKey } from "@server/lib/api-key";
+import { validateAPIKey } from "@server/lib/auth";
 
 // SSE connection manager
 const sseClients = new Map<number, Set<Response>>();
@@ -42,17 +42,15 @@ async function authenticateComfyUI(
   }
 
   if (!token) {
-    res
-      .status(401)
-      .json({
-        error:
-          "Authentication required. Provide token via Authorization header or query string.",
-      });
+    res.status(401).json({
+      error:
+        "Authentication required. Provide token via Authorization header or query string.",
+    });
     return null;
   }
 
   // Validate the token
-  if (!validateKey(token)) {
+  if (!validateAPIKey(token)) {
     res.status(401).json({ error: "Invalid token" });
     return null;
   }

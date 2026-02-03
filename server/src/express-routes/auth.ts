@@ -11,6 +11,7 @@ import {
   deriveEncryptionKey,
   decrypt,
   encrypt,
+  generateAPIKey,
 } from "@server/lib/auth";
 import { withDerivedKey } from "@server/middleware/account-data";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
@@ -277,7 +278,11 @@ export function registerAuthRoutes(
         }
       }
 
-      res.json({ accountData: decryptedData, apiKeys: apiKeyInfo });
+      res.json({
+        accountData: decryptedData,
+        apiKeys: apiKeyInfo,
+        hasIntegrationApiKey: user.apiKey !== null,
+      });
     } catch (error) {
       console.error("Error fetching account data:", error);
       res.status(500).json({ error: "Failed to fetch account data" });
@@ -589,6 +594,45 @@ export function registerAuthRoutes(
     } catch (error) {
       console.error("Error testing API key:", error);
       res.status(500).json({ error: "Failed to test API key" });
+    }
+  });
+
+  // ============================================================================
+  // Integration API Key (for ComfyUI / external integrations)
+  // ============================================================================
+
+  // Generate a new integration API key
+  app.post("/api/auth/integration-api-key", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const apiKey = generateAPIKey();
+      await storage.setUserApiKey(userId, apiKey);
+
+      res.json({ apiKey });
+    } catch (error) {
+      console.error("Error generating integration API key:", error);
+      res.status(500).json({ error: "Failed to generate API key" });
+    }
+  });
+
+  // Revoke integration API key
+  app.delete("/api/auth/integration-api-key", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      await storage.clearUserApiKey(userId);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error revoking integration API key:", error);
+      res.status(500).json({ error: "Failed to revoke API key" });
     }
   });
 }

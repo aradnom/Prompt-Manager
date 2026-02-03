@@ -40,6 +40,8 @@ export interface IStorageAdapter {
     userId: number,
     accountData: Record<string, string>,
   ): Promise<void>;
+  setUserApiKey(userId: number, apiKey: string): Promise<void>;
+  clearUserApiKey(userId: number): Promise<void>;
 
   createBlock(input: CreateBlockInput): Promise<Block>;
   getBlock(id: number): Promise<Block | null>;

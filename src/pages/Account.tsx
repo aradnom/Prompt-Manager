@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, KeyRound, AlertTriangle } from "lucide-react";
 import { RasterIcon } from "@/components/RasterIcon";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import {
@@ -56,6 +56,9 @@ export default function Account() {
   const [apiKeyInfo, setApiKeyInfo] = useState<
     Record<string, { configured: boolean; model?: string }>
   >({});
+  const [hasIntegrationApiKey, setHasIntegrationApiKey] = useState(false);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [isTestingApiKey, setIsTestingApiKey] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -106,6 +109,7 @@ export default function Account() {
       setAccountData(data.accountData);
       setApiKeyInfo(data.apiKeys || {});
       setActiveLLMPlatform(data.accountData?.activeLLMPlatform || "");
+      setHasIntegrationApiKey(data.hasIntegrationApiKey ?? false);
 
       // Pre-populate the model dropdown if a model is configured
       if (data.apiKeys?.vertex?.model) {
@@ -328,6 +332,56 @@ export default function Account() {
     }
   };
 
+  const handleGenerateIntegrationKey = async () => {
+    setIsGeneratingApiKey(true);
+    try {
+      const response = await fetch("/api/auth/integration-api-key", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate API key");
+      }
+
+      const data = await response.json();
+      setNewApiKey(data.apiKey);
+      setHasIntegrationApiKey(true);
+    } catch (err) {
+      console.error("Error generating integration API key:", err);
+      setError("Failed to generate API key");
+    } finally {
+      setIsGeneratingApiKey(false);
+    }
+  };
+
+  const handleRevokeIntegrationKey = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to revoke your integration API key? Any integrations using it will stop working.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/integration-api-key", {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to revoke API key");
+      }
+
+      setHasIntegrationApiKey(false);
+      setNewApiKey(null);
+    } catch (err) {
+      console.error("Error revoking integration API key:", err);
+      setError("Failed to revoke API key");
+    }
+  };
+
   const isLoading = sessionLoading || isLoadingAccount;
 
   return (
@@ -369,6 +423,74 @@ export default function Account() {
                     Log Out
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5" />
+                  Integration API Key
+                </CardTitle>
+                <CardDescription>
+                  Generate an API key for external integrations like ComfyUI.
+                  This key allows external tools to access your prompts.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {newApiKey ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                      <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+                      <p className="text-sm text-yellow-500">
+                        Save this key now — you won't be able to see it again.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 font-mono text-sm p-4 bg-cyan-dark/20 rounded-lg border-2 border-cyan-dark break-all">
+                      <span className="flex-1">{newApiKey}</span>
+                      <CopyButton text={newApiKey} />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => setNewApiKey(null)}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                ) : hasIntegrationApiKey ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <span className="text-sm">API key is active</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleGenerateIntegrationKey}
+                        disabled={isGeneratingApiKey}
+                      >
+                        {isGeneratingApiKey ? "Generating\u2026" : "Regenerate"}
+                      </Button>
+                      <Button
+                        variant="outline-magenta"
+                        onClick={handleRevokeIntegrationKey}
+                      >
+                        Revoke
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleGenerateIntegrationKey}
+                    disabled={isGeneratingApiKey}
+                  >
+                    {isGeneratingApiKey
+                      ? "Generating\u2026"
+                      : "Generate API Key"}
+                  </Button>
+                )}
               </CardContent>
             </Card>
 

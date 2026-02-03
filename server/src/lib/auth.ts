@@ -1,10 +1,66 @@
 import {
   randomBytes,
+  randomFillSync,
   createCipheriv,
   createDecipheriv,
   createHmac,
 } from "crypto";
 import { hkdf } from "@panva/hkdf";
+
+// ============================================================================
+// Integration API Key generation/validation (AES-256-GCM)
+// ============================================================================
+
+const API_KEY_SECRET = process.env.API_KEY_SECRET as string;
+const API_KEY_HEADER = process.env.API_KEY_HEADER as string;
+
+if (!API_KEY_SECRET) {
+  throw new Error("API_KEY_SECRET environment variable is required");
+}
+
+if (!API_KEY_HEADER) {
+  throw new Error("API_KEY_HEADER environment variable is required");
+}
+
+if (API_KEY_SECRET.length !== 32) {
+  throw new Error("API_KEY_SECRET must be exactly 32 characters for AES-256");
+}
+
+export function generateAPIKey(): string {
+  const payload = Buffer.alloc(24);
+  payload.write(API_KEY_HEADER, 0);
+  payload.writeBigUInt64BE(BigInt(Date.now()), API_KEY_HEADER.length);
+  randomFillSync(payload, 8 + API_KEY_HEADER.length, 10);
+
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", API_KEY_SECRET, iv);
+  const encrypted = Buffer.concat([cipher.update(payload), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  return Buffer.concat([iv, encrypted, tag]).toString("base64");
+}
+
+export function validateAPIKey(key: string): boolean {
+  try {
+    const buf = Buffer.from(key, "base64");
+    const iv = buf.slice(0, 12);
+    const encrypted = buf.slice(12, 36);
+    const tag = buf.slice(36);
+
+    const decipher = createDecipheriv("aes-256-gcm", API_KEY_SECRET, iv);
+    decipher.setAuthTag(tag);
+
+    const payload = Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]);
+    return (
+      payload.toString("ascii", 0, API_KEY_HEADER.length) === API_KEY_HEADER
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Generate a user-friendly access token
