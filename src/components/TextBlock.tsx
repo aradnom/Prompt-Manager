@@ -14,6 +14,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AnimatedButton } from "@/components/ui/animated-button";
+import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
 import { ExpandingIcon } from "@/components/ui/expanding-icon";
 import {
   ButtonGroup,
@@ -99,6 +100,9 @@ export function TextBlock({
   const [isLabelSearchOpen, setIsLabelSearchOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [isWildcardBrowserOpen, setIsWildcardBrowserOpen] = useState(false);
+  const [activeTransform, setActiveTransform] = useState<
+    "more" | "less" | "variation" | null
+  >(null);
   const blockRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const utils = api.useUtils();
@@ -191,10 +195,17 @@ export function TextBlock({
     if (!isActive || alwaysActive) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (blockRef.current && !blockRef.current.contains(e.target as Node)) {
-        setIsActive(false);
-        setShowRevisions(false);
+      const target = e.target as HTMLElement;
+      // Don't deactivate if clicking inside the block
+      if (blockRef.current && blockRef.current.contains(target)) {
+        return;
       }
+      // Don't deactivate if clicking on a dropdown menu (portaled outside the block)
+      if (target.closest("[data-radix-popper-content-wrapper]")) {
+        return;
+      }
+      setIsActive(false);
+      setShowRevisions(false);
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -212,6 +223,7 @@ export function TextBlock({
   };
 
   const handleMoreDescriptive = async () => {
+    setActiveTransform("more");
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
@@ -225,10 +237,13 @@ export function TextBlock({
       }
     } catch (error) {
       console.error("Transform failed:", error);
+    } finally {
+      setActiveTransform(null);
     }
   };
 
   const handleLessDescriptive = async () => {
+    setActiveTransform("less");
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
@@ -242,12 +257,15 @@ export function TextBlock({
       }
     } catch (error) {
       console.error("Transform failed:", error);
+    } finally {
+      setActiveTransform(null);
     }
   };
 
   const handleVariation = async (
     operation: "variation-slight" | "variation-fair" | "variation-very",
   ) => {
+    setActiveTransform("variation");
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
@@ -261,6 +279,8 @@ export function TextBlock({
       }
     } catch (error) {
       console.error("Transform failed:", error);
+    } finally {
+      setActiveTransform(null);
     }
   };
 
@@ -589,43 +609,42 @@ export function TextBlock({
         <div className="border-t pt-4">
           <div className="flex gap-2 flex-wrap">
             <ButtonGroup>
-              <AnimatedButton
+              <LoadingAnimatedButton
                 variant="secondary"
                 size="sm"
                 active={isActive}
                 onClick={handleMoreDescriptive}
-                disabled={transformMutation.isPending}
+                loading={activeTransform === "more"}
+                disabled={activeTransform !== null || exploreMutation.isPending}
               >
-                {transformMutation.isPending
-                  ? "Transforming..."
-                  : "More Descriptive"}
-              </AnimatedButton>
+                More Descriptive
+              </LoadingAnimatedButton>
               <ButtonGroupSeparator />
-              <AnimatedButton
+              <LoadingAnimatedButton
                 variant="secondary"
                 size="sm"
                 active={isActive}
                 onClick={handleLessDescriptive}
-                disabled={transformMutation.isPending}
+                loading={activeTransform === "less"}
+                disabled={activeTransform !== null || exploreMutation.isPending}
               >
-                {transformMutation.isPending
-                  ? "Transforming..."
-                  : "Less Descriptive"}
-              </AnimatedButton>
+                Less Descriptive
+              </LoadingAnimatedButton>
             </ButtonGroup>
             <ButtonGroup>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <AnimatedButton
+                  <LoadingAnimatedButton
                     variant="secondary"
                     size="sm"
                     active={isActive}
-                    disabled={transformMutation.isPending}
+                    loading={activeTransform === "variation"}
+                    disabled={
+                      activeTransform !== null || exploreMutation.isPending
+                    }
                   >
-                    {transformMutation.isPending
-                      ? "Transforming..."
-                      : "Variation"}
-                  </AnimatedButton>
+                    Variation
+                  </LoadingAnimatedButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem
@@ -646,17 +665,16 @@ export function TextBlock({
                 </DropdownMenuContent>
               </DropdownMenu>
               <ButtonGroupSeparator />
-              <AnimatedButton
+              <LoadingAnimatedButton
                 variant="secondary"
                 size="sm"
                 active={isActive}
                 onClick={handleExplore}
-                disabled={exploreMutation.isPending}
+                loading={exploreMutation.isPending}
+                disabled={activeTransform !== null || exploreMutation.isPending}
               >
-                {exploreMutation.isPending
-                  ? "Exploring..."
-                  : "Explore Variations"}
-              </AnimatedButton>
+                Explore Variations
+              </LoadingAnimatedButton>
             </ButtonGroup>
             <AnimatedButton
               variant="secondary"
