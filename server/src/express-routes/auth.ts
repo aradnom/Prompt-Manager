@@ -81,22 +81,30 @@ export function registerAuthRoutes(
       // Encrypt the derived key with the session key and store in session
       const encryptedDerivedKey = encryptDerivedKey(derivedKey, sessionKey);
 
-      // Establish session with encrypted derived key
-      req.session.userId = user.id;
-      req.session.encryptedDerivedKey = encryptedDerivedKey;
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Error regenerating session:", err);
+          return res.status(500).json({ error: "Failed to create account" });
+        }
 
-      // Send session key in httpOnly cookie
-      res.cookie("sessionKey", sessionKey, {
-        httpOnly: true,
-        secure: config.nodeEnv !== "development",
-        sameSite: "strict",
-        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        // Establish session with encrypted derived key
+        req.session.userId = user.id;
+        req.session.encryptedDerivedKey = encryptedDerivedKey;
+
+        // Send session key in httpOnly cookie
+        res.cookie("sessionKey", sessionKey, {
+          httpOnly: true,
+          secure: config.nodeEnv !== "development",
+          sameSite: "strict",
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        });
+
+        console.debug(`Created new user account: ${user.id}`);
+
+        // Return plaintext token to user (only time they'll see it unless they log in)
+        res.json({ token });
       });
-
-      console.debug(`Created new user account: ${user.id}`);
-
-      // Return plaintext token to user (only time they'll see it unless they log in)
-      res.json({ token });
     } catch (error) {
       console.error("Error creating account:", error);
       res.status(500).json({ error: "Failed to create account" });
@@ -148,22 +156,30 @@ export function registerAuthRoutes(
       // Encrypt the derived key with the session key and store in session
       const encryptedDerivedKey = encryptDerivedKey(derivedKey, sessionKey);
 
-      // Establish session with encrypted derived key
-      req.session.userId = user.id;
-      req.session.encryptedDerivedKey = encryptedDerivedKey;
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Error regenerating session:", err);
+          return res.status(500).json({ error: "Failed to log in" });
+        }
 
-      // Send session key in httpOnly cookie
-      res.cookie("sessionKey", sessionKey, {
-        httpOnly: true,
-        secure: config.nodeEnv !== "development",
-        sameSite: "strict",
-        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        // Establish session with encrypted derived key
+        req.session.userId = user.id;
+        req.session.encryptedDerivedKey = encryptedDerivedKey;
+
+        // Send session key in httpOnly cookie
+        res.cookie("sessionKey", sessionKey, {
+          httpOnly: true,
+          secure: config.nodeEnv !== "development",
+          sameSite: "strict",
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        });
+
+        console.debug(`User logged in: ${user.id}`);
+
+        // Return decrypted account data so user can view their token
+        res.json({ accountData: decryptedData });
       });
-
-      console.debug(`User logged in: ${user.id}`);
-
-      // Return decrypted account data so user can view their token
-      res.json({ accountData: decryptedData });
     } catch (error) {
       console.error("Error during login:", error);
       res.status(500).json({ error: "Failed to log in" });
