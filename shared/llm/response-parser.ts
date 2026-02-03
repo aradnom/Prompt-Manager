@@ -43,3 +43,25 @@ export function processLLMResponse(
   }
   return text.trim();
 }
+
+/** Operations where wildcards should be preserved and appended to the result */
+const WILDCARD_PRESERVE_OPERATIONS: LLMOperation[] = [
+  "more-descriptive",
+  "less-descriptive",
+  "variation-slight",
+  "variation-fair",
+  "variation-very",
+];
+
+/** Append wildcards to a transform result if the operation preserves them */
+export function appendWildcardsToResult(
+  result: string | string[],
+  operation: LLMOperation,
+  wildcards?: string[],
+): string | string[] {
+  if (!wildcards || wildcards.length === 0) return result;
+  if (!WILDCARD_PRESERVE_OPERATIONS.includes(operation)) return result;
+  if (typeof result !== "string") return result;
+
+  return result + " " + wildcards.join(" ");
+}

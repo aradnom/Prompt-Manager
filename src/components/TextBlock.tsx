@@ -22,7 +22,7 @@ import {
 import { TEXT_BLOCK_ANIMATION } from "@/lib/text-block-animation-settings";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { resolveWildcardsInText } from "@/lib/wildcard-resolver";
-import { insertWildcard } from "@/lib/wildcard-parser";
+import { insertWildcard, parseWildcards } from "@/lib/wildcard-parser";
 import { WildcardBrowser } from "@/components/WildcardBrowser";
 import { CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -206,12 +206,18 @@ export function TextBlock({
     setInlineText(block.text);
   }, [block.text]);
 
+  // Extract wildcard markers from text for preservation during transforms
+  const getWildcardMarkers = (text: string): string[] => {
+    return parseWildcards(text).map((match) => match.fullMatch);
+  };
+
   const handleMoreDescriptive = async () => {
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
         operation: "more-descriptive",
         style,
+        wildcards: getWildcardMarkers(block.text),
       });
 
       if (onTransform) {
@@ -228,6 +234,7 @@ export function TextBlock({
         text: getResolvedText(block.text),
         operation: "less-descriptive",
         style,
+        wildcards: getWildcardMarkers(block.text),
       });
 
       if (onTransform) {
@@ -246,6 +253,7 @@ export function TextBlock({
         text: getResolvedText(block.text),
         operation,
         style,
+        wildcards: getWildcardMarkers(block.text),
       });
 
       if (onTransform) {

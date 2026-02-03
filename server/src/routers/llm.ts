@@ -28,6 +28,7 @@ export const llmRouter = router({
         operation: llmOperationSchema,
         target: llmTargetSchema,
         style: outputStyleSchema,
+        wildcards: z.array(z.string()).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -86,6 +87,7 @@ export const llmRouter = router({
           operation: input.operation,
           target: targetToUse,
           style: input.style,
+          wildcards: input.wildcards,
         },
         userApiKey,
         userModel,

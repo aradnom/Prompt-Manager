@@ -6,6 +6,7 @@ import { LMStudioService } from "./lm-studio-service";
 import { GrokService } from "./grok-service";
 import { buildSystemPrompt } from "@shared/llm/prompts";
 import type { OutputStyle, LLMOperation } from "@shared/llm/types";
+import { appendWildcardsToResult } from "@shared/llm/response-parser";
 
 export type { LLMTarget } from "@server/config";
 export type { OutputStyle, LLMOperation } from "@shared/llm/types";
@@ -15,6 +16,7 @@ export interface TransformRequest {
   operation: LLMOperation;
   target: LLMTarget;
   style?: OutputStyle;
+  wildcards?: string[];
 }
 
 export interface TransformResponse {
@@ -56,18 +58,28 @@ export class LLMService {
     };
 
     // Route to appropriate handler
+    let response: TransformResponse;
     if (request.target === "lm-studio") {
-      return this.lmStudioService.transform(
+      response = await this.lmStudioService.transform(
         request,
         buildSystemPrompt(request.operation, request.text, request.style),
       );
     } else {
-      return handlers[request.target].transform(
+      response = await handlers[request.target].transform(
         request,
         buildSystemPrompt(request.operation, request.text, request.style),
         userApiKey,
         userModel,
       );
     }
+
+    // Append wildcards for operations that preserve them
+    response.result = appendWildcardsToResult(
+      response.result,
+      request.operation,
+      request.wildcards,
+    );
+
+    return response;
   }
 }

@@ -31,7 +31,6 @@ async function main() {
     const origins = process.env.CORS_ORIGINS.split(",").map((s) => s.trim());
     app.use(cors({ origin: origins, credentials: true }));
   } else if (config.nodeEnv === "development") {
-    console.log("this one is running");
     app.use(cors({ origin: true, credentials: true }));
   } else {
     app.use(cors());

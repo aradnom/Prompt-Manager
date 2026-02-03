@@ -10,6 +10,7 @@ interface TransformInput {
   operation: LLMOperation;
   target?: string;
   style?: OutputStyle;
+  wildcards?: string[];
 }
 
 interface TransformResult {
@@ -42,6 +43,7 @@ export function useTransform() {
             text: input.text,
             operation: input.operation as LLMOperation,
             style: input.style,
+            wildcards: input.wildcards,
           });
           return result;
         } finally {

@@ -10,6 +10,7 @@ import { useLLMStatus } from "./LLMStatusContext";
 import { buildSystemPrompt } from "@shared/llm/prompts";
 import { processLLMResponse } from "@shared/llm/response-parser";
 import type { LLMOperation, OutputStyle } from "@shared/llm/types";
+import { appendWildcardsToResult } from "@shared/llm/response-parser";
 import { storage } from "@/lib/storage";
 
 // Transformers.js types
@@ -64,6 +65,7 @@ interface TransformRequest {
   text: string;
   operation: LLMOperation;
   style?: OutputStyle;
+  wildcards?: string[];
 }
 
 interface TransformResponse {
@@ -210,15 +212,25 @@ export function ClientLLMProvider({ children }: ClientLLMProviderProps) {
     request: TransformRequest,
   ): Promise<TransformResponse> => {
     // Route to appropriate handler based on active target
+    let response: TransformResponse;
     if (activeTarget === "transformers-js") {
-      return transformWithTransformersJS(request);
+      response = await transformWithTransformersJS(request);
     } else if (activeTarget === "lm-studio") {
-      return transformWithLMStudio(request);
+      response = await transformWithLMStudio(request);
+    } else {
+      throw new Error(
+        `Client-side transform not supported for target: ${activeTarget}`,
+      );
     }
 
-    throw new Error(
-      `Client-side transform not supported for target: ${activeTarget}`,
+    // Append wildcards for operations that preserve them
+    response.result = appendWildcardsToResult(
+      response.result,
+      request.operation,
+      request.wildcards,
     );
+
+    return response;
   };
 
   const transformWithTransformersJS = async (
