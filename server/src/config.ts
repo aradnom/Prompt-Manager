@@ -54,6 +54,18 @@ function parseAllowedTargets(envValue: string | undefined): Set<string> {
 }
 
 export function loadConfig(): ServerConfig {
+  const requiredSecrets = [
+    "SESSION_SECRET",
+    "ENCRYPTION_SALT",
+    "TOKEN_SECRET",
+  ] as const;
+
+  for (const secret of requiredSecrets) {
+    if (!process.env[secret]) {
+      throw new Error(`${secret} environment variable is required`);
+    }
+  }
+
   return {
     port: parseInt(process.env.PORT || "3001", 10),
     nodeEnv: process.env.NODE_ENV || "development",
@@ -62,14 +74,9 @@ export function loadConfig(): ServerConfig {
       "postgresql://promptuser:promptpass@localhost:5432/prompt_manager",
     sessionDatabaseUrl:
       process.env.SESSION_DATABASE_URL || "redis://localhost:6379/0",
-    sessionSecret:
-      process.env.SESSION_SECRET ||
-      "change-this-to-a-random-secret-in-production",
-    encryptionSalt:
-      process.env.ENCRYPTION_SALT || "change-this-to-a-random-32-char-string",
-    tokenSecret:
-      process.env.TOKEN_SECRET ||
-      "change-this-to-a-random-secret-for-token-hashing",
+    sessionSecret: process.env.SESSION_SECRET!,
+    encryptionSalt: process.env.ENCRYPTION_SALT!,
+    tokenSecret: process.env.TOKEN_SECRET!,
     rateLimitDatabaseUrl:
       process.env.RATE_LIMIT_DATABASE_URL || "redis://localhost:6379/1",
     rateLimitWindowMs: parseInt(
