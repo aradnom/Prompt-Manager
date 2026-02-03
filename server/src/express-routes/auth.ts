@@ -610,7 +610,8 @@ export function registerAuthRoutes(
       }
 
       const apiKey = generateAPIKey();
-      await storage.setUserApiKey(userId, apiKey);
+      const apiKeyHash = hashToken(apiKey, config.tokenSecret);
+      await storage.setUserApiKey(userId, apiKeyHash);
 
       res.json({ apiKey });
     } catch (error) {

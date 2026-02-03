@@ -102,7 +102,7 @@ async function main() {
     windowMs: config.rateLimitWindowMs,
     maxRequests: config.rateLimitMaxRequests,
   });
-  registerIntegrationRoutes(app, storage);
+  registerIntegrationRoutes(app, storage, config);
   registerAuthRoutes(app, storage, config, rateLimiter);
   registerSystemRoutes(app);
 

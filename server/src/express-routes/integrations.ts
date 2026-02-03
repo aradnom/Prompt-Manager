@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import type { PostgresStorageAdapter } from "@server/adapters/postgres-adapter";
-import { validateAPIKey } from "@server/lib/auth";
+import { validateAPIKey, hashToken } from "@server/lib/auth";
+import type { ServerConfig } from "@server/config";
 
 // SSE connection manager
 const sseClients = new Map<number, Set<Response>>();
@@ -27,6 +28,7 @@ async function authenticateComfyUI(
   req: Request,
   res: Response,
   storage: PostgresStorageAdapter,
+  tokenSecret: string,
 ): Promise<number | null> {
   let token: string | undefined;
 
@@ -55,8 +57,9 @@ async function authenticateComfyUI(
     return null;
   }
 
-  // Get user ID by API key
-  const userId = await storage.getUserIdByApiKey(token);
+  // Get user ID by API key hash
+  const keyHash = hashToken(token, tokenSecret);
+  const userId = await storage.getUserIdByApiKey(keyHash);
   if (!userId) {
     res.status(401).json({ error: "Token not associated with any user" });
     return null;
@@ -68,6 +71,7 @@ async function authenticateComfyUI(
 export function registerIntegrationRoutes(
   app: Express,
   storage: PostgresStorageAdapter,
+  config: ServerConfig,
 ) {
   // ============================================================================
   // ComfyUI Integration Endpoints
@@ -75,7 +79,12 @@ export function registerIntegrationRoutes(
 
   app.get("/api/integrations/comfyui/prompts/list", async (req, res) => {
     try {
-      const userId = await authenticateComfyUI(req, res, storage);
+      const userId = await authenticateComfyUI(
+        req,
+        res,
+        storage,
+        config.tokenSecret,
+      );
       if (userId === null) return;
 
       const stacks = await storage.listStacks(userId);
@@ -90,7 +99,12 @@ export function registerIntegrationRoutes(
 
   app.get("/api/integrations/comfyui/prompts/get/raw", async (req, res) => {
     try {
-      const userId = await authenticateComfyUI(req, res, storage);
+      const userId = await authenticateComfyUI(
+        req,
+        res,
+        storage,
+        config.tokenSecret,
+      );
       if (userId === null) return;
 
       const displayId = req.query.display_id as string;
@@ -116,7 +130,12 @@ export function registerIntegrationRoutes(
 
   app.get("/api/integrations/comfyui/prompts/get", async (req, res) => {
     try {
-      const userId = await authenticateComfyUI(req, res, storage);
+      const userId = await authenticateComfyUI(
+        req,
+        res,
+        storage,
+        config.tokenSecret,
+      );
       if (userId === null) return;
 
       const displayId = req.query.display_id as string;
@@ -145,7 +164,12 @@ export function registerIntegrationRoutes(
 
   // SSE endpoint for ComfyUI integration
   app.get("/api/integrations/comfyui/events", async (req, res) => {
-    const userId = await authenticateComfyUI(req, res, storage);
+    const userId = await authenticateComfyUI(
+      req,
+      res,
+      storage,
+      config.tokenSecret,
+    );
     if (userId === null) return;
 
     // Set headers for SSE
