@@ -14,22 +14,21 @@ Review of `server/src/express-routes/auth.ts`, `server/src/lib/auth.ts`, and rel
 
 In practice the bias is small (~0.4% per character), but it's a well-known cryptographic anti-pattern. The standard fix is rejection sampling: discard any byte >= 232 (the largest multiple of 29 <= 256) and draw again.
 
-## Concern 3 — No session regeneration on login
+## Concern 3 — No session regeneration on login ✅ RESOLVED
 
 In `auth.ts:146-147`, after login, the session ID (`connect.sid`) stays the same — `req.session.userId` and `req.session.encryptedDerivedKey` are just set on the existing session object. This opens a classic **session fixation** vector: if an attacker can plant a session ID cookie in the victim's browser before they log in (e.g., via a subdomain or an HTTP->HTTPS downgrade), the attacker's known session ID becomes authenticated after the victim logs in.
 
-The fix is calling `req.session.regenerate()` before setting session data in both the `/register` and `/login` handlers. This issues a new session ID and invalidates the old one.
+**Resolution:** Added `req.session.regenerate()` calls to both `/register` and `/login` handlers. The session setup (userId, encryptedDerivedKey, sessionKey cookie) now happens inside the regenerate callback, ensuring a fresh session ID is issued before authentication completes.
 
 ## Concern 4 — No `sameSite` on `connect.sid` cookie ✅ RESOLVED
 
 The `sessionKey` cookie is set with `sameSite: "strict"` (`auth.ts:86`), but the express-session `connect.sid` cookie (`index.ts:62-66`) has no `sameSite` attribute. Browsers default to `Lax`, which is reasonable but inconsistent with the stricter policy on `sessionKey`. Since both cookies are needed for authenticated requests (session + derived key), the effective protection is the stricter of the two — but it's cleaner to be explicit. Adding `sameSite: "strict"` (or at least `"lax"`) to the session config would close the gap.
 
-## Concern 5 — Hardcoded fallback secrets
+## Concern 5 — Hardcoded fallback secrets ✅ RESOLVED
 
-`config.ts:63-69` — `sessionSecret`, `encryptionSalt`, and `tokenSecret` all have hardcoded fallback strings like `"change-this-to-a-random-secret-in-production"`. If someone deploys without setting env vars, the app runs silently with known secrets. Consider either:
+`config.ts:63-69` — `sessionSecret`, `encryptionSalt`, and `tokenSecret` all have hardcoded fallback strings like `"change-this-to-a-random-secret-in-production"`. If someone deploys without setting env vars, the app runs silently with known secrets.
 
-- Throwing at startup if these aren't set and `NODE_ENV !== "development"`
-- Or at minimum logging a loud warning
+**Resolution:** Removed all fallback values. `loadConfig()` now throws at startup if `SESSION_SECRET`, `ENCRYPTION_SALT`, or `TOKEN_SECRET` are not set. Updated `.env.example` to show empty values with comments specifying required lengths.
 
 ## Concern 6 — No rate limiting on auth endpoints ✅ RESOLVED
 
@@ -37,12 +36,12 @@ The `sessionKey` cookie is set with `sameSite: "strict"` (`auth.ts:86`), but the
 
 ## Lower-priority observations
 
-- **`__PRESERVE__` sentinel** (`auth.ts:326`): If a user's actual API key happened to be the literal string `__PRESERVE__`, it would silently preserve the old key. Extremely unlikely but a code smell. A dedicated boolean flag in the request body would be more explicit.
+- **`__PRESERVE__` sentinel** — ✅ RESOLVED. Model-only updates now detected by presence of `model` without `apiKey` in the request body, eliminating the magic string.
 
-- **Error response differentiation** in `/login`: "Invalid token" (401) vs. "Account data not found" (500) tells an attacker whether a token hash exists in the DB. With the token being hashed this is low-risk, but a uniform error response for both cases would be tighter.
+- **Error response differentiation** in `/login` — ✅ RESOLVED. Both "user not found" and "user has no account data" now return the same 401 "Invalid token" response.
 
 - **The `withDerivedKey` middleware** design is solid — requiring both the session _and_ the httpOnly `sessionKey` cookie to reconstruct the derived key means a compromised session store alone isn't enough to decrypt account data. Good architectural decision.
 
 ## Priority
 
-Concern 1 (token entropy) has been resolved by increasing token length to 16 characters (~79 bits). Concern 3 (session regeneration) is the most impactful remaining issue — a well-known vulnerability class with a one-line fix. The rest are hardening measures worth doing but less urgent.
+All primary concerns (1–6) have been resolved. The lower-priority observations remain as potential future improvements.
