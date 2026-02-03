@@ -15,6 +15,7 @@ import { RasterIcon } from "@/components/RasterIcon";
 import { HorizontalRule } from "@/components/ui/horizontal-rule";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import { AccountTokenModal } from "@/components/AccountTokenModal";
+import { PromptSwitcher } from "@/components/PromptSwitcher";
 
 function HomeContent() {
   const { activeStack } = useActiveStack();
@@ -89,6 +90,7 @@ function HomeContent() {
         </motion.div>
       ) : activeStack ? (
         <StackContentProvider>
+          <PromptSwitcher />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -177,7 +179,9 @@ function HomeContent() {
               <p>You don't currently have an active prompt selected.</p>
             </div>
 
-            <div>
+            <PromptSwitcher />
+
+            <div className="mt-4">
               <Link
                 to="/prompts"
                 className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"

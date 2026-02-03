@@ -430,7 +430,7 @@ export default function Account() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <KeyRound className="h-5 w-5" />
-                  Integration API Key
+                  ComfyUI API Key
                 </CardTitle>
                 <CardDescription>
                   Generate an API key for external integrations like ComfyUI.
