@@ -43,7 +43,7 @@ export function BlockSearchDialog({
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: blocks, isLoading } = api.blocks.search.useQuery(
+  const { data: searchData, isLoading } = api.blocks.search.useQuery(
     {
       query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
       typeId,
@@ -57,7 +57,7 @@ export function BlockSearchDialog({
     },
   );
 
-  const filteredBlocks = blocks || [];
+  const filteredBlocks = searchData?.items || [];
 
   // Get type name if filtering by type
   const typeName = filteredBlocks[0]?.type?.name;

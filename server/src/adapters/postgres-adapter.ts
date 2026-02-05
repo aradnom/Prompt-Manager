@@ -25,6 +25,8 @@ import type {
   SearchBlocksOptions,
   SearchStacksOptions,
   SearchWildcardsOptions,
+  PaginationOptions,
+  PaginatedResult,
   User,
   CreateUserInput,
 } from "@server/adapters/storage-adapter.interface";
@@ -440,7 +442,10 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     });
   }
 
-  async listBlocks(userId?: number): Promise<Block[]> {
+  async listBlocks(
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Block>> {
     let query = this.db
       .selectFrom("blocks")
       .leftJoin("types", "blocks.type_id", "types.id")
@@ -475,9 +480,24 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
     query = query.orderBy("blocks.updated_at", "desc");
 
-    const results = await query.execute();
+    // Count query
+    let countQuery = this.db
+      .selectFrom("blocks")
+      .select((eb) => eb.fn.countAll<number>().as("count"));
+    if (userId !== undefined) {
+      countQuery = countQuery.where("blocks.user_id", "=", userId);
+    }
 
-    return results.map((r) => {
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const [results, countResult] = await Promise.all([
+      query.execute(),
+      countQuery.executeTakeFirst(),
+    ]);
+
+    const items = results.map((r) => {
       const type = r.type_id_joined
         ? {
             id: r.type_id_joined,
@@ -490,6 +510,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       block.text = r.text || "";
       return block;
     });
+
+    return { items, total: Number(countResult?.count ?? 0) };
   }
 
   async countBlocks(userId?: number): Promise<number> {
@@ -508,7 +530,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   async searchBlocks(
     options: SearchBlocksOptions,
     userId?: number,
-  ): Promise<Block[]> {
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Block>> {
     let qb = this.db
       .selectFrom("blocks")
       .leftJoin("types", "blocks.type_id", "types.id")
@@ -537,10 +560,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         "types.description as type_description",
       ]);
 
+    // Build a parallel count query with the same filters
+    let countQb = this.db
+      .selectFrom("blocks")
+      .select((eb) => eb.fn.countAll<number>().as("count"));
+
     // Text search filter
     if (options.query) {
       const searchPattern = `%${options.query}%`;
-      qb = qb.where((eb) =>
+      const textSearchFilter = (
+        eb: Parameters<typeof qb.where>[0] extends (eb: infer E) => unknown
+          ? E
+          : never,
+      ) =>
         eb.or([
           eb("blocks.display_id", "ilike", searchPattern),
           eb(
@@ -560,37 +592,52 @@ export class PostgresStorageAdapter implements IStorageAdapter {
             "ilike",
             searchPattern,
           ),
-        ]),
-      );
+        ]);
+      qb = qb.where(textSearchFilter);
+      countQb = countQb.where(textSearchFilter);
     }
 
     // Type filter
     if (options.typeId !== undefined) {
       qb = qb.where("blocks.type_id", "=", options.typeId);
+      countQb = countQb.where("blocks.type_id", "=", options.typeId);
     }
 
     // Label filter - match any of the provided labels
     if (options.labels && options.labels.length > 0) {
-      qb = qb.where((eb) =>
+      const labelFilter = (
+        eb: Parameters<typeof qb.where>[0] extends (eb: infer E) => unknown
+          ? E
+          : never,
+      ) =>
         eb.or(
           options.labels!.map((label) =>
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
           ),
-        ),
-      );
+        );
+      qb = qb.where(labelFilter);
+      countQb = countQb.where(labelFilter);
     }
 
     // User filter
     if (userId !== undefined) {
       qb = qb.where("blocks.user_id", "=", userId);
+      countQb = countQb.where("blocks.user_id", "=", userId);
     }
 
     qb = qb.orderBy("blocks.updated_at", "desc");
 
-    const results = await qb.execute();
+    if (pagination) {
+      qb = qb.limit(pagination.limit).offset(pagination.offset);
+    }
 
-    return results.map((r) => {
+    const [results, countResult] = await Promise.all([
+      qb.execute(),
+      countQb.executeTakeFirst(),
+    ]);
+
+    const items = results.map((r) => {
       const type = r.type_id_joined
         ? {
             id: r.type_id_joined,
@@ -603,6 +650,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       block.text = r.text || "";
       return block;
     });
+
+    return { items, total: Number(countResult?.count ?? 0) };
   }
 
   async createRevision(input: CreateRevisionInput): Promise<BlockRevision> {

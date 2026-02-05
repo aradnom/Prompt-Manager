@@ -75,7 +75,8 @@ export default function Stacks() {
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
     { enabled: activeStackId !== null },
   );
-  const { data: blocks } = api.blocks.list.useQuery();
+  const { data: blocksData } = api.blocks.list.useQuery();
+  const blocks = blocksData?.items;
   const revisionsQuery = api.stacks.getRevisions.useQuery(
     { stackId: showRevisionsForStack! },
     { enabled: showRevisionsForStack !== null },

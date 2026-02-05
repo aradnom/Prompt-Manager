@@ -48,9 +48,16 @@ export interface IStorageAdapter {
   getBlockByUuid(uuid: string): Promise<Block | null>;
   updateBlock(id: number, updates: UpdateBlockInput): Promise<Block>;
   deleteBlock(id: number): Promise<void>;
-  listBlocks(userId?: number): Promise<Block[]>;
+  listBlocks(
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Block>>;
   countBlocks(userId?: number): Promise<number>;
-  searchBlocks(options: SearchBlocksOptions, userId?: number): Promise<Block[]>;
+  searchBlocks(
+    options: SearchBlocksOptions,
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Block>>;
 
   createRevision(input: CreateRevisionInput): Promise<BlockRevision>;
   getRevisions(blockId: number): Promise<BlockRevision[]>;
@@ -139,4 +146,14 @@ export interface SearchStacksOptions {
 
 export interface SearchWildcardsOptions {
   query?: string;
+}
+
+export interface PaginationOptions {
+  limit: number;
+  offset: number;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
 }

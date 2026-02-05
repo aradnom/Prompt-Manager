@@ -7,10 +7,14 @@ import { generateUUID } from "@/lib/uuid";
 import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+
+const PAGE_SIZE = 50;
 
 export default function Blocks() {
   const [isCreating, setIsCreating] = useState(false);
@@ -19,29 +23,45 @@ export default function Blocks() {
   const [blockToDelete, setBlockToDelete] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
 
-  const { data: blocks, isLoading, refetch } = api.blocks.list.useQuery();
+  const offset = page * PAGE_SIZE;
+
+  const {
+    data: blocksData,
+    isLoading,
+    refetch,
+  } = api.blocks.list.useQuery({
+    limit: PAGE_SIZE,
+    offset,
+  });
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(0);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [search]);
 
   // Fetch search results when there's a search query
-  const { data: searchResults, isLoading: isSearching } =
+  const { data: searchData, isLoading: isSearching } =
     api.blocks.search.useQuery(
       {
         query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+        limit: PAGE_SIZE,
+        offset,
       },
       { enabled: debouncedSearch.length > 0 },
     );
 
   // Use search results if searching, otherwise use all blocks
-  const displayBlocks = debouncedSearch.length > 0 ? searchResults : blocks;
+  const currentData = debouncedSearch.length > 0 ? searchData : blocksData;
+  const displayBlocks = currentData?.items;
+  const total = currentData?.total ?? 0;
+  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
 
   const createMutation = api.blocks.create.useMutation({
@@ -139,54 +159,105 @@ export default function Blocks() {
           {debouncedSearch.length > 0 ? "Searching..." : "Loading blocks..."}
         </div>
       ) : displayBlocks && displayBlocks.length > 0 ? (
-        <div className="space-y-4">
-          {displayBlocks.map((block, index) => (
-            <motion.div
-              className={cn(
-                "border-standard-dark-cyan",
-                index === 0 && "accent-border-gradient",
-              )}
-              key={block.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-            >
-              {editingId === block.id ? (
-                <BlockForm
-                  mode="edit"
-                  initialValues={{
-                    name: block.name ?? undefined,
-                    displayId: block.displayId,
-                    text: block.text,
-                    labels: block.labels,
-                    typeId: block.typeId ?? undefined,
-                  }}
-                  onSubmit={(values) => handleUpdate(block.id, values)}
-                  onCancel={() => setEditingId(null)}
-                  onDelete={() => handleDelete(block.id)}
-                  isSubmitting={updateMutation.isPending}
-                />
-              ) : (
-                <TextBlock
-                  block={block}
-                  onEdit={() => setEditingId(block.id)}
-                  onDelete={() => handleDelete(block.id)}
-                  onTransform={(blockId, transformedText) =>
-                    handleUpdate(blockId, {
+        <>
+          <div className="space-y-4">
+            {displayBlocks.map((block, index) => (
+              <motion.div
+                className={cn(
+                  "border-standard-dark-cyan",
+                  index === 0 && page === 0 && "accent-border-gradient",
+                )}
+                key={block.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                {editingId === block.id ? (
+                  <BlockForm
+                    mode="edit"
+                    initialValues={{
                       name: block.name ?? undefined,
                       displayId: block.displayId,
-                      text: transformedText,
+                      text: block.text,
                       labels: block.labels,
                       typeId: block.typeId ?? undefined,
-                    })
-                  }
-                  isDeleting={deleteMutation.isPending}
-                  alwaysActive={true}
-                />
-              )}
-            </motion.div>
-          ))}
-        </div>
+                    }}
+                    onSubmit={(values) => handleUpdate(block.id, values)}
+                    onCancel={() => setEditingId(null)}
+                    onDelete={() => handleDelete(block.id)}
+                    isSubmitting={updateMutation.isPending}
+                  />
+                ) : (
+                  <TextBlock
+                    block={block}
+                    onEdit={() => setEditingId(block.id)}
+                    onDelete={() => handleDelete(block.id)}
+                    onTransform={(blockId, transformedText) =>
+                      handleUpdate(blockId, {
+                        name: block.name ?? undefined,
+                        displayId: block.displayId,
+                        text: transformedText,
+                        labels: block.labels,
+                        typeId: block.typeId ?? undefined,
+                      })
+                    }
+                    isDeleting={deleteMutation.isPending}
+                    alwaysActive={true}
+                  />
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-6">
+              <span className="text-sm text-cyan-medium">
+                Showing {offset + 1}&ndash;{Math.min(offset + PAGE_SIZE, total)}{" "}
+                of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage(0)}
+                >
+                  First
+                </Button>
+                <ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </ButtonGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(lastPage)}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : debouncedSearch.length > 0 ? (
         <Card>
           <CardContent className="py-12 border-standard-dark-cyan">

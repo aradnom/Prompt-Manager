@@ -155,9 +155,21 @@ export const blocksRouter = router({
       return { success: true };
     }),
 
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.storage.listBlocks(ctx.userId);
-  }),
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listBlocks(
+        ctx.userId,
+        input ? { limit: input.limit, offset: input.offset } : undefined,
+      );
+    }),
 
   count: protectedProcedure.query(async ({ ctx }) => {
     return { count: await ctx.storage.countBlocks(ctx.userId) };
@@ -169,6 +181,8 @@ export const blocksRouter = router({
         query: z.string().optional(),
         typeId: z.number().optional(),
         labels: z.array(z.string()).optional(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
       }),
     )
     .query(async ({ input, ctx }) => {
@@ -179,6 +193,7 @@ export const blocksRouter = router({
           labels: input.labels,
         },
         ctx.userId,
+        { limit: input.limit, offset: input.offset },
       );
     }),
 });
