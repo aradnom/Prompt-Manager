@@ -74,7 +74,6 @@ export default function Blocks() {
   const updateMutation = api.blocks.update.useMutation({
     onSuccess: () => {
       refetch();
-      setEditingId(null);
     },
   });
 

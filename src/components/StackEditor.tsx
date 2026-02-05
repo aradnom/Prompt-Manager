@@ -174,7 +174,6 @@ export function StackEditor({ stack }: StackEditorProps) {
   const updateBlockMutation = api.blocks.update.useMutation({
     onSuccess: () => {
       refetch();
-      setEditingBlockId(null);
     },
   });
 

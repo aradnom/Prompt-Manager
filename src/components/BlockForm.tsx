@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   generateDisplayId,
   normalizeDisplayId,
@@ -61,27 +61,89 @@ export function BlockForm({
   );
   const [wildcardBrowserOpen, setWildcardBrowserOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasPendingSave = useRef(false);
 
-  const handleSubmit = () => {
-    if (!displayId.trim() || !text.trim()) return;
-
-    onSubmit({
-      name: name.trim() || undefined,
-      displayId: displayId.trim(),
-      text: text.trim(),
-      labels: labels.trim() ? labels.split(",").map((l) => l.trim()) : [],
-      typeId: typeId ?? null,
-    });
+  // Keep a ref to the latest form values for autosave
+  const formValuesRef = useRef({
+    name,
+    displayId,
+    text,
+    labels,
+    typeId,
+  });
+  formValuesRef.current = {
+    name,
+    displayId,
+    text,
+    labels,
+    typeId,
   };
 
-  const handleWildcardSelect = (displayId: string, path?: string) => {
+  const getFormValues = (): BlockFormValues | null => {
+    const vals = formValuesRef.current;
+    if (!vals.displayId.trim() || !vals.text.trim()) return null;
+
+    return {
+      name: vals.name.trim() || undefined,
+      displayId: vals.displayId.trim(),
+      text: vals.text.trim(),
+      labels: vals.labels.trim()
+        ? vals.labels.split(",").map((l) => l.trim())
+        : [],
+      typeId: vals.typeId ?? null,
+    };
+  };
+
+  const handleSubmit = () => {
+    const values = getFormValues();
+    if (!values) return;
+    hasPendingSave.current = false;
+    onSubmit(values);
+  };
+
+  const debouncedSave = () => {
+    if (mode !== "edit") return;
+
+    hasPendingSave.current = true;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      handleSubmit();
+    }, 500);
+  };
+
+  // Save pending changes on unmount (edit mode only)
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      if (mode === "edit" && hasPendingSave.current) {
+        const values = getFormValues();
+        if (values) {
+          onSubmit(values);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleWildcardSelect = (wildcardDisplayId: string, path?: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const cursorPosition = textarea.selectionStart || text.length;
-    const result = insertWildcard(text, cursorPosition, displayId, path);
+    const result = insertWildcard(
+      text,
+      cursorPosition,
+      wildcardDisplayId,
+      path,
+    );
 
     setText(result.text);
+    debouncedSave();
 
     // Set cursor position after the inserted wildcard
     setTimeout(() => {
@@ -91,6 +153,11 @@ export function BlockForm({
         result.newCursorPosition,
       );
     }, 0);
+  };
+
+  const handleTypeChange = (value: string) => {
+    setTypeId(value === "none" ? undefined : Number(value));
+    debouncedSave();
   };
 
   return (
@@ -133,6 +200,8 @@ export function BlockForm({
                 setName(e.target.value);
                 if (mode === "create") {
                   setDisplayId(normalizeDisplayId(e.target.value));
+                } else {
+                  debouncedSave();
                 }
               }}
               disabled={isSubmitting}
@@ -145,12 +214,18 @@ export function BlockForm({
                 placeholder="e.g., mountain-scene-v1"
                 className="flex-1"
                 value={displayId}
-                onChange={setDisplayId}
+                onChange={(value) => {
+                  setDisplayId(value);
+                  debouncedSave();
+                }}
                 disabled={isSubmitting}
               />
               <Button
                 variant="outline"
-                onClick={() => setDisplayId(generateDisplayId())}
+                onClick={() => {
+                  setDisplayId(generateDisplayId());
+                  debouncedSave();
+                }}
                 type="button"
                 disabled={isSubmitting}
               >
@@ -162,9 +237,7 @@ export function BlockForm({
             <label className="text-sm font-medium mb-2 block">Type</label>
             <Select
               value={typeId?.toString() || "none"}
-              onValueChange={(value) =>
-                setTypeId(value === "none" ? undefined : Number(value))
-              }
+              onValueChange={handleTypeChange}
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full">
@@ -187,7 +260,10 @@ export function BlockForm({
               placeholder="Enter your prompt text..."
               className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background min-h-30"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                debouncedSave();
+              }}
               disabled={isSubmitting}
               autoFocus
             />
@@ -211,29 +287,28 @@ export function BlockForm({
               placeholder="e.g., scene, landscape, outdoor"
               className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={labels}
-              onChange={(e) => setLabels(e.target.value)}
+              onChange={(e) => {
+                setLabels(e.target.value);
+                debouncedSave();
+              }}
               disabled={isSubmitting}
             />
           </div>
           <div className="flex gap-4">
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !displayId.trim() || !text.trim()}
-            >
-              {isSubmitting
-                ? mode === "create"
-                  ? "Creating..."
-                  : "Saving..."
-                : mode === "create"
-                  ? "Create"
-                  : "Save"}
-            </Button>
+            {mode === "create" && (
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !displayId.trim() || !text.trim()}
+              >
+                {isSubmitting ? "Creating..." : "Create"}
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={onCancel}
               disabled={isSubmitting}
             >
-              Cancel
+              {mode === "create" ? "Cancel" : "Done"}
             </Button>
           </div>
         </div>

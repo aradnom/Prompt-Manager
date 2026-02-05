@@ -1,15 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  X,
-  Info,
-  Clock,
-  Save,
-  RefreshCw,
-  Trash2,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { X, Info, Clock, RefreshCw, Trash2, Eye, EyeOff } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -91,7 +82,7 @@ export function TextBlock({
   style,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
-  const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [isInlineEditing, setIsInlineEditing] = useState(true);
   const [inlineText, setInlineText] = useState(block.text);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [exploreVariations, setExploreVariations] = useState<string[]>([]);
@@ -105,6 +96,9 @@ export function TextBlock({
   >(null);
   const blockRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inlineSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasPendingInlineSave = useRef(false);
+  const inlineTextRef = useRef(block.text);
   const utils = api.useUtils();
   const transformMutation = useTransform();
   const exploreMutation = useTransform();
@@ -184,11 +178,28 @@ export function TextBlock({
     setTimeout(() => textareaRef.current?.focus(), 0);
   };
 
-  const handleSaveInlineEdit = () => {
-    if (inlineText !== block.text && onTransform) {
-      onTransform(block.id, inlineText);
+  const handleSaveInlineEdit = (closeEditor = true) => {
+    if (inlineSaveTimeoutRef.current) {
+      clearTimeout(inlineSaveTimeoutRef.current);
     }
-    setIsInlineEditing(false);
+    hasPendingInlineSave.current = false;
+    const textToSave = inlineTextRef.current;
+    if (textToSave !== block.text && onTransform) {
+      onTransform(block.id, textToSave);
+    }
+    if (closeEditor) {
+      setIsInlineEditing(false);
+    }
+  };
+
+  const debouncedInlineSave = () => {
+    hasPendingInlineSave.current = true;
+    if (inlineSaveTimeoutRef.current) {
+      clearTimeout(inlineSaveTimeoutRef.current);
+    }
+    inlineSaveTimeoutRef.current = setTimeout(() => {
+      handleSaveInlineEdit(false);
+    }, 500);
   };
 
   // Close active state when clicking outside
@@ -216,7 +227,24 @@ export function TextBlock({
   // Update inline text when block text changes
   useEffect(() => {
     setInlineText(block.text);
+    inlineTextRef.current = block.text;
   }, [block.text]);
+
+  // Save pending inline edits on unmount
+  useEffect(() => {
+    return () => {
+      if (inlineSaveTimeoutRef.current) {
+        clearTimeout(inlineSaveTimeoutRef.current);
+      }
+      if (hasPendingInlineSave.current && onTransform) {
+        const textToSave = inlineTextRef.current;
+        if (textToSave !== block.text) {
+          onTransform(block.id, textToSave);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Extract wildcard markers from text for preservation during transforms
   const getWildcardMarkers = (text: string): string[] => {
@@ -571,26 +599,21 @@ export function TextBlock({
       <CardContent>
         <div className="group relative mb-4">
           {isInlineEditing ? (
-            <div className="relative">
-              <TextareaAutosize
-                ref={textareaRef}
-                value={inlineText}
-                onChange={(e) => setInlineText(e.target.value)}
-                onBlur={handleSaveInlineEdit}
-                className="w-full text-sm whitespace-pre-wrap bg-cyan-dark/50 border border-cyan-medium rounded p-2 focus:outline-none focus:ring-2 focus:ring-magenta-medium resize-none"
-                minRows={1}
-              />
-              <button
-                onClick={handleSaveInlineEdit}
-                className="absolute top-2 right-2 p-1 rounded bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors"
-                aria-label="Save"
-              >
-                <Save className="h-3 w-3" />
-              </button>
-            </div>
+            <TextareaAutosize
+              ref={textareaRef}
+              value={inlineText}
+              onChange={(e) => {
+                setInlineText(e.target.value);
+                inlineTextRef.current = e.target.value;
+                debouncedInlineSave();
+              }}
+              onBlur={() => handleSaveInlineEdit(true)}
+              className="box-content w-full text-sm leading-6 whitespace-pre-wrap bg-cyan-dark/50 border-cyan-medium rounded p-2 -m-2 focus:outline-none focus:ring-2 focus:ring-magenta-medium resize-none"
+              minRows={1}
+            />
           ) : (
             <div
-              className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 transition-colors"
+              className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 border-transparent transition-colors"
               onClick={handleTextClick}
             >
               <TextWithWildcards
