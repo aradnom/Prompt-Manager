@@ -14,7 +14,7 @@ import { RasterIcon } from "@/components/RasterIcon";
 import { SearchInput } from "@/components/ui/search-input";
 import { X, Clock, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
-type Stack = RouterOutput["stacks"]["list"][number];
+type Stack = RouterOutput["stacks"]["list"]["items"][number];
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
 import {

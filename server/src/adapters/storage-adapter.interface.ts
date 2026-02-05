@@ -126,11 +126,15 @@ export interface IStorageAdapter {
   getWildcardByUuid(uuid: string): Promise<Wildcard | null>;
   updateWildcard(id: number, updates: UpdateWildcardInput): Promise<Wildcard>;
   deleteWildcard(id: number): Promise<void>;
-  listWildcards(userId?: number): Promise<Wildcard[]>;
+  listWildcards(
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Wildcard>>;
   searchWildcards(
     options: SearchWildcardsOptions,
     userId?: number,
-  ): Promise<Wildcard[]>;
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Wildcard>>;
 }
 
 export interface GetStackOptions {

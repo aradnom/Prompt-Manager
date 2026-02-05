@@ -53,7 +53,7 @@ import { TextWithWildcards } from "@/components/TextWithWildcards";
 import { useTransform } from "@/hooks/useTransform";
 import type { OutputStyle } from "@/types/schema";
 
-type Block = RouterOutput["blocks"]["list"][number];
+type Block = RouterOutput["blocks"]["list"]["items"][number];
 
 interface TextBlockProps {
   block: Block;
@@ -108,7 +108,8 @@ export function TextBlock({
   const utils = api.useUtils();
   const transformMutation = useTransform();
   const exploreMutation = useTransform();
-  const { data: wildcards } = api.wildcards.list.useQuery();
+  const { data: wildcardsData } = api.wildcards.list.useQuery();
+  const wildcards = wildcardsData?.items;
   const setActiveRevisionMutation = api.blocks.setActiveRevision.useMutation({
     onSuccess: () => {
       // Refetch blocks list and stacks to show updated text

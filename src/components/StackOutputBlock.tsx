@@ -25,7 +25,8 @@ export function StackOutputBlock() {
   const { isMinimized, setIsMinimized } = useStackOutput();
   const { renderedContent, renderedContentWithMarkers } = useStackContent();
   const { activeStack, activeStackBlocks, setActiveStack } = useActiveStack();
-  const { data: wildcards } = api.wildcards.list.useQuery();
+  const { data: wildcardsData } = api.wildcards.list.useQuery();
+  const wildcards = wildcardsData?.items;
   const { addError } = useErrors();
   const navigate = useNavigate();
   const utils = api.useUtils();

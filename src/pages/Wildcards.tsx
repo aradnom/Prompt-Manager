@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import yaml from "js-yaml";
-import { Sparkles, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { validateWildcardContent } from "@/lib/wildcard-validation";
 import { useTransform } from "@/hooks/useTransform";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
 import { SearchInput } from "@/components/ui/search-input";
 import {
@@ -33,6 +34,8 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WildcardContentEditor } from "@/components/WildcardContentEditor";
+
+const PAGE_SIZE = 20;
 
 interface WildcardFormValues {
   displayId: string;
@@ -225,30 +228,44 @@ export default function Wildcards() {
   const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
 
-  const { data: wildcards, isLoading, refetch } = api.wildcards.list.useQuery();
+  const {
+    data: wildcardsData,
+    isLoading,
+    refetch,
+  } = api.wildcards.list.useQuery({
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+  });
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(0);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [search]);
 
   // Fetch search results when there's a search query
-  const { data: searchResults, isLoading: isSearching } =
+  const { data: searchData, isLoading: isSearching } =
     api.wildcards.search.useQuery(
       {
         query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
       },
       { enabled: debouncedSearch.length > 0 },
     );
 
   // Use search results if searching, otherwise use all wildcards
-  const displayWildcards =
-    debouncedSearch.length > 0 ? searchResults : wildcards;
+  const activeData = debouncedSearch.length > 0 ? searchData : wildcardsData;
+  const displayWildcards = activeData?.items;
+  const total = activeData?.total ?? 0;
+  const offset = page * PAGE_SIZE;
+  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
 
   const createMutation = api.wildcards.create.useMutation({
@@ -429,84 +446,135 @@ export default function Wildcards() {
           {debouncedSearch.length > 0 ? "Searching..." : "Loading wildcards..."}
         </div>
       ) : displayWildcards && displayWildcards.length > 0 ? (
-        <div className="space-y-4">
-          {displayWildcards.map((wildcard, index) => (
-            <motion.div
-              key={wildcard.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className={cn(
-                "relative border-standard-dark-cyan",
-                index === 0 && "accent-border-gradient",
-              )}
-            >
-              {editingId === wildcard.id ? (
-                <WildcardForm
-                  mode="edit"
-                  initialValues={{
-                    displayId: wildcard.displayId,
-                    name: wildcard.name,
-                    format: wildcard.format,
-                    content: wildcard.content,
-                  }}
-                  onSubmit={(values) => handleUpdate(wildcard.id, values)}
-                  onCancel={() => setEditingId(null)}
-                  onDelete={() => handleDelete(wildcard.id)}
-                  isSubmitting={updateMutation.isPending}
-                />
-              ) : (
-                <Card>
-                  <CardHeader>
-                    <div
-                      className="flex items-start justify-between cursor-pointer"
-                      onClick={(e) => {
-                        if (!(e.target as HTMLElement).closest("button")) {
-                          setEditingId(wildcard.id);
-                        }
-                      }}
-                    >
-                      <div>
-                        <CardTitle className="text-xl">
-                          {wildcard.name}
-                        </CardTitle>
-                        <div className="flex gap-2 mt-2 text-sm text-cyan-medium">
-                          <span className="font-mono">
-                            {wildcard.displayId}
-                          </span>
-                          <span>•</span>
-                          <span className="capitalize">{wildcard.format}</span>
+        <>
+          <div className="space-y-4">
+            {displayWildcards.map((wildcard, index) => (
+              <motion.div
+                key={wildcard.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className={cn(
+                  "relative border-standard-dark-cyan",
+                  index === 0 && "accent-border-gradient",
+                )}
+              >
+                {editingId === wildcard.id ? (
+                  <WildcardForm
+                    mode="edit"
+                    initialValues={{
+                      displayId: wildcard.displayId,
+                      name: wildcard.name,
+                      format: wildcard.format,
+                      content: wildcard.content,
+                    }}
+                    onSubmit={(values) => handleUpdate(wildcard.id, values)}
+                    onCancel={() => setEditingId(null)}
+                    onDelete={() => handleDelete(wildcard.id)}
+                    isSubmitting={updateMutation.isPending}
+                  />
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <div
+                        className="flex items-start justify-between cursor-pointer"
+                        onClick={(e) => {
+                          if (!(e.target as HTMLElement).closest("button")) {
+                            setEditingId(wildcard.id);
+                          }
+                        }}
+                      >
+                        <div>
+                          <CardTitle className="text-xl">
+                            {wildcard.name}
+                          </CardTitle>
+                          <div className="flex gap-2 mt-2 text-sm text-cyan-medium">
+                            <span className="font-mono">
+                              {wildcard.displayId}
+                            </span>
+                            <span>•</span>
+                            <span className="capitalize">
+                              {wildcard.format}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingId(wildcard.id)}
+                          >
+                            Edit Wildcard
+                          </Button>
+                          <button
+                            onClick={() => handleDelete(wildcard.id)}
+                            disabled={deleteMutation.isPending}
+                            className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                            aria-label="Delete wildcard"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingId(wildcard.id)}
-                        >
-                          Edit Wildcard
-                        </Button>
-                        <button
-                          onClick={() => handleDelete(wildcard.id)}
-                          disabled={deleteMutation.isPending}
-                          className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-                          aria-label="Delete wildcard"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-cyan-dark p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap wrap-break-word">
-                      {wildcard.content}
-                    </pre>
-                  </CardContent>
-                </Card>
-              )}
-            </motion.div>
-          ))}
-        </div>
+                    </CardHeader>
+                    <CardContent>
+                      <pre className="bg-cyan-dark p-4 rounded-md text-sm font-mono overflow-x-auto whitespace-pre-wrap wrap-break-word">
+                        {wildcard.content}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-6">
+              <span className="text-sm text-cyan-medium">
+                Showing {offset + 1}&ndash;
+                {Math.min(offset + PAGE_SIZE, total)} of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage(0)}
+                >
+                  First
+                </Button>
+                <ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </ButtonGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(lastPage)}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : debouncedSearch.length > 0 ? (
         <Card>
           <CardContent className="py-12 border-standard-dark-cyan">

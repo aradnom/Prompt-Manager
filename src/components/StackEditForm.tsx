@@ -20,7 +20,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import type { OutputStyle } from "@/types/schema";
 
-type Stack = RouterOutput["stacks"]["list"][number];
+type Stack = RouterOutput["stacks"]["list"]["items"][number];
 type StackWithBlocks = RouterOutput["stacks"]["get"];
 
 interface StackEditFormProps {
@@ -36,7 +36,8 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
   const [negative, setNegative] = useState(stack.negative);
   const [style, setStyle] = useState<OutputStyle>(stack.style);
 
-  const { data: wildcards } = api.wildcards.list.useQuery();
+  const { data: wildcardsData } = api.wildcards.list.useQuery();
+  const wildcards = wildcardsData?.items;
   const utils = api.useUtils();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 

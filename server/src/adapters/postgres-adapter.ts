@@ -1929,48 +1929,84 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db.deleteFrom("wildcards").where("id", "=", id).execute();
   }
 
-  async listWildcards(userId?: number): Promise<Wildcard[]> {
+  async listWildcards(
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Wildcard>> {
     let query = this.db
       .selectFrom("wildcards")
       .selectAll()
       .orderBy("updated_at", "desc");
 
+    let countQuery = this.db
+      .selectFrom("wildcards")
+      .select((eb) => eb.fn.countAll<number>().as("count"));
+
     if (userId !== undefined) {
       query = query.where("user_id", "=", userId);
+      countQuery = countQuery.where("user_id", "=", userId);
     }
 
-    const results = await query.execute();
-    return results.map((r) => this.mapWildcard(r));
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const [results, countResult] = await Promise.all([
+      query.execute(),
+      countQuery.executeTakeFirst(),
+    ]);
+
+    return {
+      items: results.map((r) => this.mapWildcard(r)),
+      total: Number(countResult?.count ?? 0),
+    };
   }
 
   async searchWildcards(
     options: SearchWildcardsOptions,
     userId?: number,
-  ): Promise<Wildcard[]> {
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Wildcard>> {
     let query = this.db.selectFrom("wildcards").selectAll();
+    let countQuery = this.db
+      .selectFrom("wildcards")
+      .select((eb) => eb.fn.countAll<number>().as("count"));
 
     // Text search filter
     if (options.query) {
       const searchPattern = `%${options.query}%`;
-      query = query.where((eb) =>
+      const searchFilter = (eb: any) =>
         eb.or([
           eb("wildcards.uuid", "ilike", searchPattern),
           eb("wildcards.display_id", "ilike", searchPattern),
           eb("wildcards.name", "ilike", searchPattern),
           eb("wildcards.content", "ilike", searchPattern),
-        ]),
-      );
+        ]);
+      query = query.where(searchFilter);
+      countQuery = countQuery.where(searchFilter);
     }
 
     // User filter
     if (userId !== undefined) {
       query = query.where("wildcards.user_id", "=", userId);
+      countQuery = countQuery.where("wildcards.user_id", "=", userId);
     }
 
     query = query.orderBy("wildcards.updated_at", "desc");
 
-    const results = await query.execute();
-    return results.map((r) => this.mapWildcard(r));
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const [results, countResult] = await Promise.all([
+      query.execute(),
+      countQuery.executeTakeFirst(),
+    ]);
+
+    return {
+      items: results.map((r) => this.mapWildcard(r)),
+      total: Number(countResult?.count ?? 0),
+    };
   }
 
   private async expandStack(

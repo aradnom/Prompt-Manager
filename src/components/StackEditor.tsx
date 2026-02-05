@@ -84,7 +84,8 @@ export function StackEditor({ stack }: StackEditorProps) {
     includeBlocks: true,
   });
 
-  const { data: wildcards } = api.wildcards.list.useQuery();
+  const { data: wildcardsData } = api.wildcards.list.useQuery();
+  const wildcards = wildcardsData?.items;
 
   const updateContentMutation = api.stacks.updateContent.useMutation();
 

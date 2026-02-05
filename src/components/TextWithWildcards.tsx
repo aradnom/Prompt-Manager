@@ -19,7 +19,8 @@ export function TextWithWildcards({
   enableTooltips = false,
   onMarkerChange,
 }: TextWithWildcardsProps) {
-  const { data: wildcards } = api.wildcards.list.useQuery();
+  const { data: wildcardsData } = api.wildcards.list.useQuery();
+  const wildcards = wildcardsData?.items;
 
   const elements = useMemo(() => {
     // 1. Parse standard wildcards

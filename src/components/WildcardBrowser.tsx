@@ -27,7 +27,8 @@ export function WildcardBrowser({
   const [expandedWildcards, setExpandedWildcards] = useState<Set<number>>(
     new Set(),
   );
-  const { data: wildcards, isLoading } = api.wildcards.list.useQuery();
+  const { data: wildcardsData, isLoading } = api.wildcards.list.useQuery();
+  const wildcards = wildcardsData?.items;
 
   const filteredWildcards = wildcards?.filter((wildcard) => {
     const query = searchQuery.toLowerCase();

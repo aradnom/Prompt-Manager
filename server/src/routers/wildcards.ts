@@ -96,14 +96,28 @@ export const wildcardsRouter = router({
       return { success: true };
     }),
 
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.storage.listWildcards(ctx.userId);
-  }),
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).default(20),
+          offset: z.number().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listWildcards(
+        ctx.userId,
+        input ? { limit: input.limit, offset: input.offset } : undefined,
+      );
+    }),
 
   search: protectedProcedure
     .input(
       z.object({
         query: z.string().optional(),
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
       }),
     )
     .query(async ({ input, ctx }) => {
@@ -112,6 +126,7 @@ export const wildcardsRouter = router({
           query: input.query,
         },
         ctx.userId,
+        { limit: input.limit, offset: input.offset },
       );
     }),
 });

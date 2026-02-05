@@ -87,7 +87,7 @@ export function registerIntegrationRoutes(
       );
       if (userId === null) return;
 
-      const stacks = await storage.listStacks(userId);
+      const { items: stacks } = await storage.listStacks(userId);
       const displayIds = stacks.map((stack) => stack.displayId);
 
       res.json({ prompts: displayIds });
