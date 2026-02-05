@@ -4,6 +4,7 @@ import { MainMenu } from "./MainMenu";
 import { ErrorBanner } from "./ErrorBanner";
 import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
 import { ParallaxCircle } from "./ParallaxCircle";
+import { Scratchpad } from "./Scratchpad";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
@@ -73,6 +74,7 @@ function LayoutContent({ children }: LayoutProps) {
       />
       <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
       <MainMenu />
+      <Scratchpad />
       {location.pathname !== "/account" && (
         <AnimatedBorderButton
           onClick={() => navigate("/account")}

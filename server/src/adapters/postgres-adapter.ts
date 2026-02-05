@@ -75,6 +75,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       accountData: result.account_data as Record<string, string> | null,
       apiKey: result.api_key,
       adminUser: result.admin_user ?? false,
+      scratchpad: result.scratchpad,
     };
   }
 
@@ -95,6 +96,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       accountData: result.account_data as Record<string, string> | null,
       apiKey: result.api_key,
       adminUser: result.admin_user ?? false,
+      scratchpad: result.scratchpad,
     };
   }
 
@@ -118,6 +120,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       accountData: result.account_data as Record<string, string> | null,
       apiKey: result.api_key,
       adminUser: result.admin_user ?? false,
+      scratchpad: result.scratchpad,
     };
   }
 
@@ -147,6 +150,23 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db
       .updateTable("users")
       .set({ api_key: null, updated_at: new Date() })
+      .where("id", "=", userId)
+      .execute();
+  }
+
+  async getUserScratchpad(userId: number): Promise<string | null> {
+    const result = await this.db
+      .selectFrom("users")
+      .select("scratchpad")
+      .where("id", "=", userId)
+      .executeTakeFirst();
+    return result?.scratchpad ?? null;
+  }
+
+  async setUserScratchpad(userId: number, content: string): Promise<void> {
+    await this.db
+      .updateTable("users")
+      .set({ scratchpad: content, updated_at: new Date() })
       .where("id", "=", userId)
       .execute();
   }

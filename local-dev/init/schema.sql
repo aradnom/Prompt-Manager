@@ -7,6 +7,7 @@ CREATE TABLE users (
     token_hash character varying(255) UNIQUE,
     account_data jsonb,
     api_key character varying(255),
+    scratchpad text,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
 );

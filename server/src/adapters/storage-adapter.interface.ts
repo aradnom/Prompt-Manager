@@ -22,6 +22,7 @@ export interface User {
   accountData: Record<string, string> | null;
   apiKey: string | null;
   adminUser: boolean;
+  scratchpad: string | null;
 }
 
 export interface CreateUserInput {
@@ -42,6 +43,8 @@ export interface IStorageAdapter {
   ): Promise<void>;
   setUserApiKey(userId: number, apiKey: string): Promise<void>;
   clearUserApiKey(userId: number): Promise<void>;
+  getUserScratchpad(userId: number): Promise<string | null>;
+  setUserScratchpad(userId: number, content: string): Promise<void>;
 
   createBlock(input: CreateBlockInput): Promise<Block>;
   getBlock(id: number): Promise<Block | null>;
