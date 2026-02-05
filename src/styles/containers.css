@@ -4,6 +4,6 @@
   }
 
   .standard-page-container {
-    @apply container mx-auto p-8 pt-12;
+    @apply container mx-auto p-12;
   }
 }
