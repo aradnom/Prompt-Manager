@@ -7,6 +7,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useMenu } from "@/contexts/MenuContext";
+import { DotDivider } from "@/components/ui/dot-divider";
 import { MainMenuBorder } from "@/components/MainMenuBorder";
 import { MiniMenu } from "@/components/MiniMenu";
 import { RasterIcon } from "@/components/RasterIcon";
@@ -24,29 +25,33 @@ export function MainMenu() {
     disabled?: boolean;
   };
 
-  const baseMenuItems: MenuItem[] = [
-    { path: "/", label: "Home", icon: "home" },
-    { path: "/prompts", label: "Prompts", icon: "chat" },
-    { path: "/blocks", label: "Blocks", icon: "blocks" },
-    { path: "/wildcards", label: "Wildcards", icon: "dice" },
-    { path: "/account", label: "Account", icon: "user" },
-    {
-      path: "/what-is-this",
-      label: "What is This Thing?",
-      icon: "question-mark",
-    },
+  const menuSections: (MenuItem[] | "divider")[] = [
+    [{ path: "/", label: "Home", icon: "home" }],
+    "divider",
+    [
+      { path: "/prompts", label: "Prompts", icon: "chat" },
+      { path: "/blocks", label: "Blocks", icon: "blocks" },
+      { path: "/wildcards", label: "Wildcards", icon: "dice" },
+    ],
+    "divider",
+    [
+      { path: "/account", label: "Account", icon: "user" },
+      {
+        path: "/what-is-this",
+        label: "What is This Thing?",
+        icon: "question-mark",
+      },
+      ...(isAdmin
+        ? [
+            {
+              path: "/developer-settings",
+              label: "Developer Settings",
+              icon: "gear",
+            },
+          ]
+        : []),
+    ],
   ];
-
-  const menuItems = isAdmin
-    ? [
-        ...baseMenuItems,
-        {
-          path: "/developer-settings",
-          label: "Developer Settings",
-          icon: "gear",
-        },
-      ]
-    : baseMenuItems;
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -70,32 +75,42 @@ export function MainMenu() {
             <SheetTitle className="sr-only">Main Menu</SheetTitle>
           </SheetHeader>
           <nav className="mt-8 flex flex-col gap-2">
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => !item.disabled && setOpen(false)}
-                className={`block ${
-                  item.disabled ? "pointer-events-none opacity-50" : ""
-                }`}
-              >
-                <Button
-                  variant={isActive(item.path) ? "default" : "ghost"}
-                  className="w-full justify-start hover:bg-cyan-medium/30"
-                  disabled={item.disabled}
-                >
-                  {item.icon && (
-                    <RasterIcon name={item.icon} size={20} className="mr-2" />
-                  )}
-                  {item.label}
-                  {item.disabled && (
-                    <span className="ml-auto text-xs text-cyan-medium">
-                      Soon
-                    </span>
-                  )}
-                </Button>
-              </Link>
-            ))}
+            {menuSections.map((section, i) =>
+              section === "divider" ? (
+                <DotDivider key={`divider-${i}`} />
+              ) : (
+                section.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => !item.disabled && setOpen(false)}
+                    className={`block ${
+                      item.disabled ? "pointer-events-none opacity-50" : ""
+                    }`}
+                  >
+                    <Button
+                      variant={isActive(item.path) ? "default" : "ghost"}
+                      className="w-full justify-start hover:bg-cyan-medium/30"
+                      disabled={item.disabled}
+                    >
+                      {item.icon && (
+                        <RasterIcon
+                          name={item.icon}
+                          size={20}
+                          className="mr-2"
+                        />
+                      )}
+                      {item.label}
+                      {item.disabled && (
+                        <span className="ml-auto text-xs text-cyan-medium">
+                          Soon
+                        </span>
+                      )}
+                    </Button>
+                  </Link>
+                ))
+              ),
+            )}
           </nav>
         </SheetContent>
       </Sheet>
