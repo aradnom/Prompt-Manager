@@ -58,6 +58,7 @@ export interface BlockStacksTable {
   display_id: string;
   name: string | null;
   comma_separated: boolean;
+  negative: ColumnType<boolean, boolean | undefined, boolean | undefined>;
   style: ColumnType<
     "t5" | "clip" | null,
     "t5" | "clip" | null,

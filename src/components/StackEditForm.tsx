@@ -33,6 +33,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
   const [editName, setEditName] = useState(stack.name || "");
   const [editDisplayId, setEditDisplayId] = useState(stack.displayId);
   const [commaSeparated, setCommaSeparated] = useState(stack.commaSeparated);
+  const [negative, setNegative] = useState(stack.negative);
   const [style, setStyle] = useState<OutputStyle>(stack.style);
 
   const { data: wildcards } = api.wildcards.list.useQuery();
@@ -54,6 +55,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
       name: editName.trim() || undefined,
       displayId: editDisplayId.trim(),
       commaSeparated,
+      negative,
       style,
     });
   };
@@ -181,6 +183,35 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
                   className="cursor-pointer"
                 />
                 Comma Separated
+              </label>
+            </div>
+
+            <div className="flex-1">
+              <label
+                className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Checkbox
+                  checked={negative}
+                  onCheckedChange={(checked) => {
+                    setNegative(checked as boolean);
+                    if (saveTimeoutRef.current) {
+                      clearTimeout(saveTimeoutRef.current);
+                    }
+                    setTimeout(() => {
+                      updateMutation.mutate({
+                        id: stack.id,
+                        name: editName.trim() || undefined,
+                        displayId: editDisplayId.trim(),
+                        commaSeparated,
+                        negative: checked as boolean,
+                        style,
+                      });
+                    }, 0);
+                  }}
+                  className="cursor-pointer"
+                />
+                Negative Prompt
               </label>
             </div>
 

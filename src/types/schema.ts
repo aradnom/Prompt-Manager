@@ -42,6 +42,7 @@ export interface BlockStack {
   displayId: string;
   name: string | null;
   commaSeparated: boolean;
+  negative: boolean;
   style: OutputStyle;
   createdAt: Date;
   updatedAt: Date;
@@ -96,6 +97,7 @@ export interface CreateStackInput {
   name?: string;
   displayId: string;
   commaSeparated?: boolean;
+  negative?: boolean;
   style?: OutputStyle;
   userId?: number;
   blockIds?: number[];
@@ -105,6 +107,7 @@ export interface UpdateStackInput {
   name?: string;
   displayId?: string;
   commaSeparated?: boolean;
+  negative?: boolean;
   style?: OutputStyle;
 }
 

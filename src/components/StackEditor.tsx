@@ -495,6 +495,11 @@ export function StackEditor({ stack }: StackEditorProps) {
             <div>
               <CardTitle className="text-2xl">
                 Active Prompt: {stack.name || stack.displayId}
+                {stack.negative && (
+                  <span className="ml-3 align-middle text-xs px-2 py-0.5 rounded bg-magenta-dark/30 border border-magenta-medium text-magenta-light">
+                    Negative
+                  </span>
+                )}
               </CardTitle>
               {stack.name && (
                 <CardDescription className="font-mono text-xs mt-1">

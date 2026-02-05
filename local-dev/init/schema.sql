@@ -55,6 +55,7 @@ CREATE TABLE stacks (
     display_id character varying(255) UNIQUE,
     name character varying(255),
     comma_separated boolean DEFAULT true,
+    negative boolean DEFAULT false,
     style character varying(32),
     created_at timestamp with time zone,
     updated_at timestamp with time zone,

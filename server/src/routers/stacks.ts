@@ -9,6 +9,7 @@ export const stacksRouter = router({
         name: z.string().optional(),
         displayId: z.string(),
         commaSeparated: z.boolean().optional(),
+        negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
         blockIds: z.array(z.number()).optional(),
       }),
@@ -71,6 +72,7 @@ export const stacksRouter = router({
         name: z.string().optional(),
         displayId: z.string().optional(),
         commaSeparated: z.boolean().optional(),
+        negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
       }),
     )
