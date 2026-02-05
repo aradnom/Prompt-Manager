@@ -74,6 +74,7 @@ export const stacksRouter = router({
         commaSeparated: z.boolean().optional(),
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
+        notes: z.string().max(4000).nullable().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {

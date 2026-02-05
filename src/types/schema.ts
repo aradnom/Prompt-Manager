@@ -44,6 +44,7 @@ export interface BlockStack {
   commaSeparated: boolean;
   negative: boolean;
   style: OutputStyle;
+  notes: string | null;
   createdAt: Date;
   updatedAt: Date;
   userId: number | null;
@@ -109,6 +110,7 @@ export interface UpdateStackInput {
   commaSeparated?: boolean;
   negative?: boolean;
   style?: OutputStyle;
+  notes?: string | null;
 }
 
 export interface CreateRevisionInput {

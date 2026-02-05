@@ -58,6 +58,7 @@ CREATE TABLE stacks (
     comma_separated boolean DEFAULT true,
     negative boolean DEFAULT false,
     style character varying(32),
+    notes character varying(4000),
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,

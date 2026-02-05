@@ -837,6 +837,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       updateData.comma_separated = updates.commaSeparated;
     if (updates.negative !== undefined) updateData.negative = updates.negative;
     if (updates.style !== undefined) updateData.style = updates.style;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
 
     const stackResult = await this.db
       .updateTable("stacks")
@@ -2158,6 +2159,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       commaSeparated: row.comma_separated,
       negative: row.negative ?? false,
       style: row.style,
+      notes: row.notes,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       userId: row.user_id,

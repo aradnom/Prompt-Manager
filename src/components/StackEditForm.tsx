@@ -35,11 +35,31 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
   const [commaSeparated, setCommaSeparated] = useState(stack.commaSeparated);
   const [negative, setNegative] = useState(stack.negative);
   const [style, setStyle] = useState<OutputStyle>(stack.style);
+  const [notes, setNotes] = useState(stack.notes || "");
 
   const { data: wildcardsData } = api.wildcards.list.useQuery();
   const wildcards = wildcardsData?.items;
   const utils = api.useUtils();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasPendingSave = useRef(false);
+
+  // Keep a ref to the latest form values for the cleanup effect
+  const formValuesRef = useRef({
+    editName,
+    editDisplayId,
+    commaSeparated,
+    negative,
+    style,
+    notes,
+  });
+  formValuesRef.current = {
+    editName,
+    editDisplayId,
+    commaSeparated,
+    negative,
+    style,
+    notes,
+  };
 
   const updateMutation = api.stacks.update.useMutation({
     onSuccess: () => {
@@ -49,34 +69,56 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
   });
 
   const saveChanges = () => {
-    if (!editDisplayId.trim()) return;
+    const vals = formValuesRef.current;
+    if (!vals.editDisplayId.trim()) return;
+    hasPendingSave.current = false;
 
     updateMutation.mutate({
       id: stack.id,
-      name: editName.trim() || undefined,
-      displayId: editDisplayId.trim(),
-      commaSeparated,
-      negative,
-      style,
+      name: vals.editName.trim() || undefined,
+      displayId: vals.editDisplayId.trim(),
+      commaSeparated: vals.commaSeparated,
+      negative: vals.negative,
+      style: vals.style,
+      notes: vals.notes.trim() || null,
     });
   };
 
   const debouncedSave = () => {
+    hasPendingSave.current = true;
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
       saveChanges();
-    }, 5000);
+    }, 500);
   };
 
-  // Cleanup timeout on unmount
+  // Save pending changes on unmount
   useEffect(() => {
+    const mutate = updateMutation.mutate;
+    const stackId = stack.id;
+
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      if (hasPendingSave.current) {
+        const vals = formValuesRef.current;
+        if (vals.editDisplayId.trim()) {
+          mutate({
+            id: stackId,
+            name: vals.editName.trim() || undefined,
+            displayId: vals.editDisplayId.trim(),
+            commaSeparated: vals.commaSeparated,
+            negative: vals.negative,
+            style: vals.style,
+            notes: vals.notes.trim() || null,
+          });
+        }
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getProcessedContent = (content: string): string => {
@@ -317,6 +359,25 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">Notes</label>
+          <textarea
+            placeholder="Add notes about this prompt..."
+            className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background resize-none h-24 font-mono text-sm"
+            value={notes}
+            maxLength={4000}
+            onChange={(e) => {
+              setNotes(e.target.value);
+              debouncedSave();
+            }}
+            onBlur={saveChanges}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="text-xs text-cyan-medium mt-1 text-right">
+            {notes.length}/4000
+          </div>
         </div>
       </CardContent>
     </motion.div>

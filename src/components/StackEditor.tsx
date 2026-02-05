@@ -32,6 +32,7 @@ import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
+import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -73,6 +74,7 @@ export function StackEditor({ stack }: StackEditorProps) {
   const [generateConcept, setGenerateConcept] = useState("");
   const [generateResults, setGenerateResults] = useState<string[]>([]);
   const [isEditingConcept, setIsEditingConcept] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const generateMutation = useTransform();
 
   const {
@@ -88,6 +90,11 @@ export function StackEditor({ stack }: StackEditorProps) {
   const wildcards = wildcardsData?.items;
 
   const updateContentMutation = api.stacks.updateContent.useMutation();
+  const updateStackMutation = api.stacks.update.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
 
   const saveContent = useCallback((stackId: number, content: string) => {
     updateContentMutation.mutate({
@@ -522,6 +529,13 @@ export function StackEditor({ stack }: StackEditorProps) {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setIsNotesOpen(true)}
+              >
+                Notes
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => navigate(`/prompts/${stack.displayId}`)}
               >
                 Prompt Settings
@@ -884,6 +898,17 @@ export function StackEditor({ stack }: StackEditorProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <NotesDialog
+        title="Prompt Notes"
+        placeholder="Add notes about this prompt..."
+        initialNotes={stackWithBlocks?.notes ?? null}
+        open={isNotesOpen}
+        onOpenChange={setIsNotesOpen}
+        onSave={(notes) => {
+          updateStackMutation.mutate({ id: stack.id, notes });
+        }}
+      />
     </>
   );
 }
