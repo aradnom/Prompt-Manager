@@ -56,7 +56,9 @@ function WildcardForm({
   isSubmitting,
 }: WildcardFormProps) {
   const { addError } = useErrors();
-  const [displayId, setDisplayId] = useState(initialValues?.displayId || "");
+  const [displayId, setDisplayId] = useState(
+    initialValues?.displayId || generateDisplayId(),
+  );
   const [name, setName] = useState(initialValues?.name || "");
   const [format, setFormat] = useState(initialValues?.format || "json");
   const [content, setContent] = useState(initialValues?.content || "");
@@ -119,21 +121,6 @@ function WildcardForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "create" && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Display ID
-              </label>
-              <DisplayIdInput
-                value={displayId}
-                onChange={setDisplayId}
-                placeholder="unique-id"
-                className="w-full"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-          )}
           <div>
             <label className="text-sm font-medium mb-2 block">Name</label>
             <input
@@ -146,6 +133,31 @@ function WildcardForm({
               disabled={isSubmitting}
             />
           </div>
+          {mode === "create" && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Display ID
+              </label>
+              <div className="flex gap-2">
+                <DisplayIdInput
+                  value={displayId}
+                  onChange={setDisplayId}
+                  placeholder="unique-id"
+                  className="flex-1"
+                  required
+                  disabled={isSubmitting}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => setDisplayId(generateDisplayId())}
+                  type="button"
+                  disabled={isSubmitting}
+                >
+                  Regenerate
+                </Button>
+              </div>
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium mb-2 block">Format</label>
             <Select
