@@ -7,8 +7,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useMenu } from "@/contexts/MenuContext";
-import { AnimatedBorderButton } from "@/components/AnimatedBorderButton";
 import { MainMenuBorder } from "@/components/MainMenuBorder";
+import { MiniMenu } from "@/components/MiniMenu";
 import { RasterIcon } from "@/components/RasterIcon";
 import { useSession } from "@/contexts/SessionContext";
 
@@ -57,19 +57,7 @@ export function MainMenu() {
 
   return (
     <>
-      <AnimatedBorderButton onClick={() => setOpen(true)} position="left">
-        <div className="opacity-75 group-hover:opacity-100 transition-opacity duration-300">
-          <RasterIcon name="menu" size={20} opacity={0.8} />
-        </div>
-      </AnimatedBorderButton>
-      {location.pathname !== "/" && (
-        <Link
-          to="/"
-          className="fixed top-17 left-8 z-100 opacity-75 transition-opacity hover:opacity-100"
-        >
-          <RasterIcon name="home" size={20} opacity={0.8} />
-        </Link>
-      )}
+      <MiniMenu />
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
