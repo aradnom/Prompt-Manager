@@ -1,4 +1,5 @@
 import { forwardRef, InputHTMLAttributes } from "react";
+import { normalizeDisplayId } from "@/lib/generate-display-id";
 
 export interface DisplayIdInputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -16,11 +17,7 @@ export interface DisplayIdInputProps extends Omit<
 export const DisplayIdInput = forwardRef<HTMLInputElement, DisplayIdInputProps>(
   ({ value, onChange, className = "", ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const normalized = e.target.value
-        .toLowerCase()
-        .replace(/\s+/g, "-") // Replace spaces with dashes
-        .replace(/[^\p{L}\p{N}-]/gu, ""); // Remove anything that's not a letter, number, or dash
-      onChange(normalized);
+      onChange(normalizeDisplayId(e.target.value));
     };
 
     return (

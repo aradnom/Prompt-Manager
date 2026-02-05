@@ -1,5 +1,8 @@
 import { useState, useRef } from "react";
-import { generateDisplayId } from "@/lib/generate-display-id";
+import {
+  generateDisplayId,
+  normalizeDisplayId,
+} from "@/lib/generate-display-id";
 import { useTypes } from "@/contexts/TypesContext";
 import { insertWildcard } from "@/lib/wildcard-parser";
 import { Trash2 } from "lucide-react";
@@ -126,7 +129,12 @@ export function BlockForm({
               placeholder="e.g., Mountain Landscape"
               className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (mode === "create") {
+                  setDisplayId(normalizeDisplayId(e.target.value));
+                }
+              }}
               disabled={isSubmitting}
             />
           </div>

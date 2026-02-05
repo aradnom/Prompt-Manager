@@ -5,7 +5,10 @@ import { Sparkles, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
 import { cn } from "@/lib/utils";
-import { generateDisplayId } from "@/lib/generate-display-id";
+import {
+  generateDisplayId,
+  normalizeDisplayId,
+} from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
 import { useTransform } from "@/hooks/useTransform";
@@ -126,7 +129,12 @@ function WildcardForm({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (mode === "create") {
+                  setDisplayId(normalizeDisplayId(e.target.value));
+                }
+              }}
               placeholder="My Wildcard"
               className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               required

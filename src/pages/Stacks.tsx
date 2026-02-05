@@ -3,7 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
-import { generateDisplayId } from "@/lib/generate-display-id";
+import {
+  generateDisplayId,
+  normalizeDisplayId,
+} from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
@@ -243,7 +246,10 @@ export default function Stacks() {
                   placeholder="e.g., Summer Landscape"
                   className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setDisplayId(normalizeDisplayId(e.target.value));
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleCreate();
                     if (e.key === "Escape") {
