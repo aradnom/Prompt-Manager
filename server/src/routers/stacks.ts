@@ -166,9 +166,21 @@ export const stacksRouter = router({
       return { success: true };
     }),
 
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.storage.listStacks(ctx.userId);
-  }),
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).default(20),
+          offset: z.number().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listStacks(
+        ctx.userId,
+        input ? { limit: input.limit, offset: input.offset } : undefined,
+      );
+    }),
 
   count: protectedProcedure.query(async ({ ctx }) => {
     return { count: await ctx.storage.countStacks(ctx.userId) };
@@ -178,6 +190,8 @@ export const stacksRouter = router({
     .input(
       z.object({
         query: z.string().optional(),
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
       }),
     )
     .query(async ({ input, ctx }) => {
@@ -186,6 +200,7 @@ export const stacksRouter = router({
           query: input.query,
         },
         ctx.userId,
+        { limit: input.limit, offset: input.offset },
       );
     }),
 

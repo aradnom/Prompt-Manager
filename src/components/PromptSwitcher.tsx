@@ -18,10 +18,11 @@ export function PromptSwitcher() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: searchResults } = api.stacks.search.useQuery(
+  const { data: searchData } = api.stacks.search.useQuery(
     { query: debouncedSearch.length > 0 ? debouncedSearch : undefined },
     { enabled: debouncedSearch.length > 0 },
   );
+  const searchResults = searchData?.items;
 
   // Open dropdown when there are results
   useEffect(() => {

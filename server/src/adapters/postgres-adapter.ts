@@ -1144,7 +1144,10 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db.deleteFrom("stacks").where("id", "=", id).execute();
   }
 
-  async listStacks(userId?: number): Promise<BlockStack[]> {
+  async listStacks(
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<BlockStack>> {
     let query = this.db
       .selectFrom("stacks")
       .selectAll("stacks")
@@ -1188,13 +1191,31 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
     query = query.orderBy("stacks.updated_at", "desc");
 
-    const results = await query.execute();
-    return results.map((r) => {
+    // Count query
+    let countQuery = this.db
+      .selectFrom("stacks")
+      .select((eb) => eb.fn.countAll<number>().as("count"));
+    if (userId !== undefined) {
+      countQuery = countQuery.where("stacks.user_id", "=", userId);
+    }
+
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const [results, countResult] = await Promise.all([
+      query.execute(),
+      countQuery.executeTakeFirst(),
+    ]);
+
+    const items = results.map((r) => {
       const stack = this.mapStack(r);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
       return stack;
     });
+
+    return { items, total: Number(countResult?.count ?? 0) };
   }
 
   async countStacks(userId?: number): Promise<number> {
@@ -1213,7 +1234,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   async searchStacks(
     options: SearchStacksOptions,
     userId?: number,
-  ): Promise<BlockStack[]> {
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<BlockStack>> {
     let query = this.db
       .selectFrom("stacks")
       .leftJoin(
@@ -1256,33 +1278,59 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           .as("disabled_block_ids"),
       ]);
 
+    // Build a parallel count query with the same filters
+    let countQuery = this.db
+      .selectFrom("stacks")
+      .leftJoin(
+        "stack_revisions",
+        "stacks.active_revision_id",
+        "stack_revisions.id",
+      )
+      .select((eb) => eb.fn.countAll<number>().as("count"));
+
     // Text search filter
     if (options.query) {
       const searchPattern = `%${options.query}%`;
-      query = query.where((eb) =>
+      const searchFilter = (
+        eb: Parameters<typeof query.where>[0] extends (eb: infer E) => unknown
+          ? E
+          : never,
+      ) =>
         eb.or([
           eb("stacks.uuid", "ilike", searchPattern),
           eb("stacks.display_id", "ilike", searchPattern),
           eb("stacks.name", "ilike", searchPattern),
           eb("stack_revisions.rendered_content", "ilike", searchPattern),
-        ]),
-      );
+        ]);
+      query = query.where(searchFilter);
+      countQuery = countQuery.where(searchFilter);
     }
 
     // User filter
     if (userId !== undefined) {
       query = query.where("stacks.user_id", "=", userId);
+      countQuery = countQuery.where("stacks.user_id", "=", userId);
     }
 
     query = query.orderBy("stacks.updated_at", "desc");
 
-    const results = await query.execute();
-    return results.map((r) => {
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const [results, countResult] = await Promise.all([
+      query.execute(),
+      countQuery.executeTakeFirst(),
+    ]);
+
+    const items = results.map((r) => {
       const stack = this.mapStack(r);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
       return stack;
     });
+
+    return { items, total: Number(countResult?.count ?? 0) };
   }
 
   async getCompiledPrompt(

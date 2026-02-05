@@ -12,7 +12,7 @@ import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { SearchInput } from "@/components/ui/search-input";
-import { X, Clock, Trash2 } from "lucide-react";
+import { X, Clock, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Stack = RouterOutput["stacks"]["list"][number];
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+
+const PAGE_SIZE = 20;
 
 export default function Stacks() {
   const [isCreating, setIsCreating] = useState(false);
@@ -44,32 +47,49 @@ export default function Stacks() {
   >(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
   const navigate = useNavigate();
   const { displayId: urlDisplayId } = useParams<{ displayId: string }>();
   const { setActiveStack } = useActiveStack();
 
-  const { data: stacks, isLoading, refetch } = api.stacks.list.useQuery();
+  const offset = page * PAGE_SIZE;
+
+  const {
+    data: stacksData,
+    isLoading,
+    refetch,
+  } = api.stacks.list.useQuery({
+    limit: PAGE_SIZE,
+    offset,
+  });
+  const stacks = stacksData?.items;
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(0);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [search]);
 
   // Fetch search results when there's a search query
-  const { data: searchResults, isLoading: isSearching } =
+  const { data: searchData, isLoading: isSearching } =
     api.stacks.search.useQuery(
       {
         query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+        limit: PAGE_SIZE,
+        offset,
       },
       { enabled: debouncedSearch.length > 0 },
     );
 
   // Use search results if searching, otherwise use all stacks
-  const displayStacks = debouncedSearch.length > 0 ? searchResults : stacks;
+  const currentData = debouncedSearch.length > 0 ? searchData : stacksData;
+  const displayStacks = currentData?.items;
+  const total = currentData?.total ?? 0;
+  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
   const { data: activeStackDetails } = api.stacks.get.useQuery(
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
@@ -337,249 +357,300 @@ export default function Stacks() {
           {debouncedSearch.length > 0 ? "Searching..." : "Loading prompts..."}
         </div>
       ) : displayStacks && displayStacks.length > 0 ? (
-        <div className="space-y-4">
-          {displayStacks.map((stack, index) => {
-            const isActive = activeStackId === stack.id;
-            return (
-              <motion.div
-                key={stack.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                data-stack-card
-                className={cn(
-                  "relative border-standard-dark-cyan",
-                  index === 0 && "accent-border-gradient",
-                )}
-              >
-                <Card
-                  className={`transition-all ${isActive ? "ring-2 ring-magenta-dark" : ""}`}
+        <>
+          <div className="space-y-4">
+            {displayStacks.map((stack, index) => {
+              const isActive = activeStackId === stack.id;
+              return (
+                <motion.div
+                  key={stack.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  data-stack-card
+                  className={cn(
+                    "relative border-standard-dark-cyan",
+                    index === 0 && page === 0 && "accent-border-gradient",
+                  )}
                 >
-                  <CardHeader
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      // Don't toggle if clicking on buttons
-                      if (!(e.target as HTMLElement).closest("button")) {
-                        handleStackClick(stack.id, stack);
-                      }
-                    }}
+                  <Card
+                    className={`transition-all ${isActive ? "ring-2 ring-magenta-dark" : ""}`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-xl">
-                            {stack.name || stack.displayId}
-                          </CardTitle>
+                    <CardHeader
+                      className="cursor-pointer"
+                      onClick={(e) => {
+                        // Don't toggle if clicking on buttons
+                        if (!(e.target as HTMLElement).closest("button")) {
+                          handleStackClick(stack.id, stack);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-xl">
+                              {stack.name || stack.displayId}
+                            </CardTitle>
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowRevisionsForStack(stack.id);
+                                    }}
+                                    className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                                    aria-label="Show revisions"
+                                  >
+                                    <Clock className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  View prompt history
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <CardDescription className="text-xs mt-2">
+                            {stack.blockIds.length} block
+                            {stack.blockIds.length !== 1 ? "s" : ""}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStackClick(stack.id, stack);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            Edit Prompt
+                          </Button>
                           <TooltipProvider delayDuration={0}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <button
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowRevisionsForStack(stack.id);
+                                    handleDuplicate(stack.id);
                                   }}
-                                  className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                                  aria-label="Show revisions"
+                                  disabled={duplicateMutation.isPending}
+                                  className="cursor-pointer"
                                 >
-                                  <Clock className="h-4 w-4" />
-                                </button>
+                                  Duplicate Prompt
+                                </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                View prompt history
+                                Creates a shallow copy (references same blocks)
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMakeActive(stack);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            Make Active
+                          </Button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(stack.id);
+                            }}
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                            aria-label="Delete stack"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
-                        <CardDescription className="text-xs mt-2">
-                          {stack.blockIds.length} block
-                          {stack.blockIds.length !== 1 ? "s" : ""}
-                        </CardDescription>
                       </div>
-                      <div className="flex gap-2 items-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStackClick(stack.id, stack);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          Edit Prompt
-                        </Button>
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDuplicate(stack.id);
-                                }}
-                                disabled={duplicateMutation.isPending}
-                                className="cursor-pointer"
-                              >
-                                Duplicate Prompt
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Creates a shallow copy (references same blocks)
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMakeActive(stack);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          Make Active
-                        </Button>
+                    </CardHeader>
+                    <AnimatePresence>
+                      {isActive && activeStackDetails && (
+                        <StackEditForm
+                          stack={stack}
+                          stackDetails={activeStackDetails}
+                          onClose={() => setActiveStackId(null)}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </Card>
+
+                  {/* Revisions overlay */}
+                  <AnimatePresence>
+                    {showRevisionsForStack === stack.id && (
+                      <motion.div
+                        className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden border"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(stack.id);
+                            setShowRevisionsForStack(null);
                           }}
-                          className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                          aria-label="Delete stack"
+                          className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                          aria-label="Close revisions"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <X className="h-4 w-4" />
                         </button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <AnimatePresence>
-                    {isActive && activeStackDetails && (
-                      <StackEditForm
-                        stack={stack}
-                        stackDetails={activeStackDetails}
-                        onClose={() => setActiveStackId(null)}
-                      />
+                        <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
+                          {revisionsQuery.isLoading ? (
+                            <div className="flex items-center justify-center w-full">
+                              <p className="text-sm text-cyan-medium">
+                                Loading revisions...
+                              </p>
+                            </div>
+                          ) : sortedRevisions.length > 0 ? (
+                            sortedRevisions.map((revision) => {
+                              const isActiveRevision =
+                                revision.id === stack.activeRevisionId;
+                              return (
+                                <div
+                                  key={revision.id}
+                                  className="shrink-0 w-100 h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      await setActiveRevisionMutation.mutateAsync(
+                                        {
+                                          stackId: stack.id,
+                                          revisionId: revision.id,
+                                        },
+                                      );
+                                      setShowRevisionsForStack(null);
+                                    } catch (error) {
+                                      console.error(
+                                        "Failed to set active revision:",
+                                        error,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  {isActiveRevision && (
+                                    <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
+                                      Active
+                                    </div>
+                                  )}
+                                  <div className="space-y-1 mb-3">
+                                    <p className="text-xs text-cyan-medium">
+                                      <span className="font-medium">
+                                        Created:
+                                      </span>{" "}
+                                      {new Date(
+                                        revision.createdAt,
+                                      ).toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-cyan-medium">
+                                      <span className="font-medium">
+                                        Updated:
+                                      </span>{" "}
+                                      {new Date(
+                                        revision.updatedAt,
+                                      ).toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="flex-1 overflow-auto">
+                                    <p className="text-xs font-medium mb-2">
+                                      Blocks ({revision.blockIds.length}):
+                                    </p>
+                                    {revision.blockIds.length > 0 ? (
+                                      <ol className="space-y-1 text-sm list-decimal list-inside">
+                                        {revision.blockIds.map(
+                                          (blockId: number) => (
+                                            <li
+                                              key={blockId}
+                                              className="text-foreground"
+                                            >
+                                              {getBlockDisplayName(blockId)}
+                                            </li>
+                                          ),
+                                        )}
+                                      </ol>
+                                    ) : (
+                                      <p className="text-xs text-cyan-medium italic">
+                                        No blocks
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="flex items-center justify-center w-full">
+                              <p className="text-sm text-cyan-medium">
+                                No revisions found
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
                     )}
                   </AnimatePresence>
-                </Card>
+                </motion.div>
+              );
+            })}
+          </div>
 
-                {/* Revisions overlay */}
-                <AnimatePresence>
-                  {showRevisionsForStack === stack.id && (
-                    <motion.div
-                      className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden border"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowRevisionsForStack(null);
-                        }}
-                        className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                        aria-label="Close revisions"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                      <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
-                        {revisionsQuery.isLoading ? (
-                          <div className="flex items-center justify-center w-full">
-                            <p className="text-sm text-cyan-medium">
-                              Loading revisions...
-                            </p>
-                          </div>
-                        ) : sortedRevisions.length > 0 ? (
-                          sortedRevisions.map((revision) => {
-                            const isActiveRevision =
-                              revision.id === stack.activeRevisionId;
-                            return (
-                              <div
-                                key={revision.id}
-                                className="shrink-0 w-100 h-full border rounded-md p-4 bg-cyan-dark flex flex-col cursor-pointer hover:bg-cyan-dark/80 transition-colors relative"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  try {
-                                    await setActiveRevisionMutation.mutateAsync(
-                                      {
-                                        stackId: stack.id,
-                                        revisionId: revision.id,
-                                      },
-                                    );
-                                    setShowRevisionsForStack(null);
-                                  } catch (error) {
-                                    console.error(
-                                      "Failed to set active revision:",
-                                      error,
-                                    );
-                                  }
-                                }}
-                              >
-                                {isActiveRevision && (
-                                  <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
-                                    Active
-                                  </div>
-                                )}
-                                <div className="space-y-1 mb-3">
-                                  <p className="text-xs text-cyan-medium">
-                                    <span className="font-medium">
-                                      Created:
-                                    </span>{" "}
-                                    {new Date(
-                                      revision.createdAt,
-                                    ).toLocaleString()}
-                                  </p>
-                                  <p className="text-xs text-cyan-medium">
-                                    <span className="font-medium">
-                                      Updated:
-                                    </span>{" "}
-                                    {new Date(
-                                      revision.updatedAt,
-                                    ).toLocaleString()}
-                                  </p>
-                                </div>
-                                <div className="flex-1 overflow-auto">
-                                  <p className="text-xs font-medium mb-2">
-                                    Blocks ({revision.blockIds.length}):
-                                  </p>
-                                  {revision.blockIds.length > 0 ? (
-                                    <ol className="space-y-1 text-sm list-decimal list-inside">
-                                      {revision.blockIds.map(
-                                        (blockId: number) => (
-                                          <li
-                                            key={blockId}
-                                            className="text-foreground"
-                                          >
-                                            {getBlockDisplayName(blockId)}
-                                          </li>
-                                        ),
-                                      )}
-                                    </ol>
-                                  ) : (
-                                    <p className="text-xs text-cyan-medium italic">
-                                      No blocks
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="flex items-center justify-center w-full">
-                            <p className="text-sm text-cyan-medium">
-                              No revisions found
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            );
-          })}
-        </div>
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-6">
+              <span className="text-sm text-cyan-medium">
+                Showing {offset + 1}&ndash;{Math.min(offset + PAGE_SIZE, total)}{" "}
+                of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage(0)}
+                >
+                  First
+                </Button>
+                <ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-28"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </ButtonGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(lastPage)}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : debouncedSearch.length > 0 ? (
         <Card>
           <CardContent className="py-12 border-standard-dark-cyan">

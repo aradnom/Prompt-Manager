@@ -84,12 +84,16 @@ export interface IStorageAdapter {
   getCompiledPrompt(displayId: string, userId: number): Promise<string | null>;
   getRenderedPrompt(displayId: string, userId: number): Promise<string | null>;
   deleteStack(id: number): Promise<void>;
-  listStacks(userId?: number): Promise<BlockStack[]>;
+  listStacks(
+    userId?: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<BlockStack>>;
   countStacks(userId?: number): Promise<number>;
   searchStacks(
     options: SearchStacksOptions,
     userId?: number,
-  ): Promise<BlockStack[]>;
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<BlockStack>>;
 
   addBlockToStack(
     stackId: number,
