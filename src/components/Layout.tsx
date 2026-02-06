@@ -85,7 +85,7 @@ function LayoutContent({ children }: LayoutProps) {
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="fixed top-4 right-4 z-50 w-[50px] h-[50px]">
+              <span className="fixed top-4 right-4 z-50 w-12.5 h-12.5">
                 <AnimatedBorderButton
                   onClick={() => navigate("/account")}
                   position="right"

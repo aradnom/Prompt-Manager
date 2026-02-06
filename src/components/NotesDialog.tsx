@@ -66,7 +66,7 @@ export function NotesDialog({
             onChange={(e) => handleChange(e.target.value)}
             placeholder={placeholder}
             maxLength={maxLength}
-            className="flex-1 min-h-[300px] resize-none bg-transparent border border-cyan-medium rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-magenta-medium font-mono text-sm"
+            className="flex-1 min-h-75 resize-none bg-transparent border border-cyan-medium rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-magenta-medium font-mono text-sm"
             autoFocus
           />
           <div className="text-xs text-cyan-medium mt-2 text-right">
