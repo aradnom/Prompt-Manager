@@ -50,6 +50,10 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
+import {
+  TextSelectionMenu,
+  normalizeToWordBoundaries,
+} from "@/components/TextSelectionMenu";
 
 import { useTransform } from "@/hooks/useTransform";
 import type { OutputStyle } from "@/types/schema";
@@ -105,6 +109,12 @@ export function TextBlock({
   const [activeTransform, setActiveTransform] = useState<
     "more" | "less" | "variation" | null
   >(null);
+  const [textSelection, setTextSelection] = useState<{
+    text: string;
+    range: Range;
+    startOffset: number;
+    endOffset: number;
+  } | null>(null);
   const blockRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inlineSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -187,12 +197,133 @@ export function TextBlock({
     setIsActive(!isActive);
   };
 
-  const handleTextClick = (e: React.MouseEvent) => {
+  const handleTextMouseUp = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Check if user has selected text
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      const range = selection.getRangeAt(0);
+
+      // Find the offsets in the block text
+      // We need to figure out where in block.text this selection is
+      const textContainer = e.currentTarget;
+      const treeWalker = document.createTreeWalker(
+        textContainer,
+        NodeFilter.SHOW_TEXT,
+      );
+
+      let charCount = 0;
+      let startOffset = 0;
+      let endOffset = 0;
+      let foundStart = false;
+      let foundEnd = false;
+
+      while (treeWalker.nextNode()) {
+        const node = treeWalker.currentNode as Text;
+        const nodeLength = node.textContent?.length || 0;
+
+        if (!foundStart && node === range.startContainer) {
+          startOffset = charCount + range.startOffset;
+          foundStart = true;
+        }
+
+        if (!foundEnd && node === range.endContainer) {
+          endOffset = charCount + range.endOffset;
+          foundEnd = true;
+        }
+
+        charCount += nodeLength;
+      }
+
+      if (foundStart && foundEnd) {
+        // Normalize to word boundaries
+        const normalized = normalizeToWordBoundaries(
+          block.text,
+          startOffset,
+          endOffset,
+        );
+
+        if (normalized.text) {
+          setTextSelection({
+            text: normalized.text,
+            range,
+            startOffset: normalized.start,
+            endOffset: normalized.end,
+          });
+          return;
+        }
+      }
+    }
+
+    // No valid selection = simple click, enter edit mode
+    setTextSelection(null);
     setIsInlineEditing(true);
     setInlineText(block.text);
     // Focus textarea after state update
     setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const handleTextClick = (e: React.MouseEvent) => {
+    // Prevent click from bubbling when text is selected
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleSelectionApply = (
+    newText: string,
+    startOffset: number,
+    endOffset: number,
+  ) => {
+    if (isInlineEditing) {
+      // Update inline text
+      const updatedText =
+        inlineText.slice(0, startOffset) +
+        newText +
+        inlineText.slice(endOffset);
+      setInlineText(updatedText);
+      inlineTextRef.current = updatedText;
+      debouncedInlineSave();
+
+      // Update textarea selection
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(
+            startOffset,
+            startOffset + newText.length,
+          );
+        }
+      }, 0);
+    } else {
+      // Update via transform
+      const updatedText =
+        block.text.slice(0, startOffset) +
+        newText +
+        block.text.slice(endOffset);
+
+      if (onTransform) {
+        onTransform(block.id, updatedText);
+      }
+    }
+
+    // Update selection to reflect new text
+    setTextSelection((prev) =>
+      prev
+        ? {
+            ...prev,
+            text: newText,
+            endOffset: startOffset + newText.length,
+          }
+        : null,
+    );
+  };
+
+  const handleSelectionClose = () => {
+    setTextSelection(null);
+    window.getSelection()?.removeAllRanges();
   };
 
   const handleSaveInlineEdit = (closeEditor = true) => {
@@ -648,13 +779,67 @@ export function TextBlock({
                 inlineTextRef.current = e.target.value;
                 debouncedInlineSave();
               }}
-              onBlur={() => handleSaveInlineEdit(true)}
+              onBlur={(e) => {
+                // Don't close if clicking on the selection menu
+                const relatedTarget = e.relatedTarget as HTMLElement;
+                if (relatedTarget?.closest("[data-selection-menu]")) {
+                  return;
+                }
+                handleSaveInlineEdit(true);
+              }}
+              onMouseUp={(e) => {
+                const textarea = e.currentTarget;
+                const { selectionStart, selectionEnd } = textarea;
+
+                if (selectionStart !== selectionEnd) {
+                  // Normalize to word boundaries
+                  const normalized = normalizeToWordBoundaries(
+                    inlineText,
+                    selectionStart,
+                    selectionEnd,
+                  );
+
+                  if (normalized.text) {
+                    // Create a fake range for positioning based on textarea position
+                    const rect = textarea.getBoundingClientRect();
+                    const fakeRange = {
+                      getBoundingClientRect: () => ({
+                        top: rect.top,
+                        bottom: rect.top + 24,
+                        left: rect.left + rect.width / 4,
+                        right: rect.left + (rect.width * 3) / 4,
+                        width: rect.width / 2,
+                        height: 24,
+                        x: rect.left + rect.width / 4,
+                        y: rect.top,
+                        toJSON: () => ({}),
+                      }),
+                    } as Range;
+
+                    setTextSelection({
+                      text: normalized.text,
+                      range: fakeRange,
+                      startOffset: normalized.start,
+                      endOffset: normalized.end,
+                    });
+
+                    // Update textarea selection to match normalized
+                    textarea.setSelectionRange(
+                      normalized.start,
+                      normalized.end,
+                    );
+                  }
+                } else {
+                  setTextSelection(null);
+                }
+              }}
               className="box-content w-full text-sm leading-6 whitespace-pre-wrap bg-cyan-dark/50 border-cyan-medium rounded p-2 -m-2 focus:outline-none focus:ring-2 focus:ring-magenta-medium resize-none"
               minRows={1}
             />
           ) : (
             <div
               className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 border-transparent transition-colors"
+              onMouseUp={handleTextMouseUp}
               onClick={handleTextClick}
             >
               <TextWithWildcards
@@ -989,6 +1174,12 @@ export function TextBlock({
             notes,
           });
         }}
+      />
+
+      <TextSelectionMenu
+        selection={textSelection}
+        onApply={handleSelectionApply}
+        onClose={handleSelectionClose}
       />
     </motion.div>
   );
