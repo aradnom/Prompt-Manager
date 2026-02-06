@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
@@ -7,34 +7,270 @@ import { generateUUID } from "@/lib/uuid";
 import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  FolderPlus,
+  Folder,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const PAGE_SIZE = 50;
+
+interface FolderRowProps {
+  folder: { id: number; name: string; description: string | null };
+  index: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+  editingId: number | null;
+  setEditingId: (id: number | null) => void;
+  handleUpdate: (id: number, values: BlockFormValues) => void;
+  handleDelete: (id: number) => void;
+  updateMutation: { isPending: boolean };
+  deleteMutation: { isPending: boolean };
+  refetch: () => void;
+}
+
+function FolderRow({
+  folder,
+  index,
+  isExpanded,
+  onToggle,
+  onDelete,
+  editingId,
+  setEditingId,
+  handleUpdate,
+  handleDelete,
+  updateMutation,
+  deleteMutation,
+  refetch,
+}: FolderRowProps) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [folderName, setFolderName] = useState(folder.name);
+
+  const updateFolderMutation = api.blockFolders.update.useMutation({
+    onSuccess: () => {
+      refetch();
+      setIsEditingName(false);
+    },
+  });
+
+  const handleSaveFolderName = () => {
+    if (folderName.trim() && folderName !== folder.name) {
+      updateFolderMutation.mutate({ id: folder.id, name: folderName.trim() });
+    } else {
+      setFolderName(folder.name);
+      setIsEditingName(false);
+    }
+  };
+
+  // Lazy load folder contents when expanded
+  const { data: folderBlocks, isLoading: isLoadingBlocks } =
+    api.blockFolders.getBlocks.useQuery(
+      { folderId: folder.id },
+      { enabled: isExpanded },
+    );
+
+  return (
+    <motion.div
+      key={folder.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+    >
+      <div
+        className={cn(
+          "border border-cyan-medium/30 rounded-lg overflow-hidden",
+          index === 0 && "accent-border-gradient",
+        )}
+      >
+        {/* Folder header */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 bg-cyan-dark/50 cursor-pointer hover:bg-cyan-dark/70 transition-colors"
+          onClick={onToggle}
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-cyan-medium transition-transform",
+              !isExpanded && "-rotate-90",
+            )}
+          />
+          <Folder className="h-5 w-5 text-cyan-medium" />
+          {isEditingName ? (
+            <input
+              type="text"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              onBlur={handleSaveFolderName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSaveFolderName();
+                } else if (e.key === "Escape") {
+                  setFolderName(folder.name);
+                  setIsEditingName(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 font-medium bg-background border border-cyan-medium rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-magenta-medium"
+              autoFocus
+            />
+          ) : (
+            <span className="font-medium flex-1">{folder.name}</span>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditingName(true);
+            }}
+            className="text-cyan-medium hover:text-foreground transition-colors p-1"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="text-cyan-medium hover:text-destructive transition-colors p-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Delete folder. Will not delete blocks in the folder.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {/* Folder contents */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="p-4 space-y-4 bg-background/50">
+                {isLoadingBlocks ? (
+                  <div className="text-center py-4 text-cyan-medium">
+                    Loading blocks...
+                  </div>
+                ) : folderBlocks && folderBlocks.length > 0 ? (
+                  folderBlocks.map((block) => (
+                    <div key={block.id} className="border-standard-dark-cyan">
+                      {editingId === block.id ? (
+                        <BlockForm
+                          mode="edit"
+                          initialValues={{
+                            name: block.name ?? undefined,
+                            displayId: block.displayId,
+                            text: block.text,
+                            labels: block.labels,
+                            typeId: block.typeId ?? undefined,
+                            folderId: block.folderId ?? undefined,
+                            notes: block.notes ?? undefined,
+                          }}
+                          onSubmit={(values) => {
+                            handleUpdate(block.id, values);
+                            refetch();
+                          }}
+                          onCancel={() => setEditingId(null)}
+                          onDelete={() => handleDelete(block.id)}
+                          isSubmitting={updateMutation.isPending}
+                        />
+                      ) : (
+                        <TextBlock
+                          block={block}
+                          onEdit={() => setEditingId(block.id)}
+                          onDelete={() => handleDelete(block.id)}
+                          onTransform={(blockId, transformedText) => {
+                            handleUpdate(blockId, {
+                              name: block.name ?? undefined,
+                              displayId: block.displayId,
+                              text: transformedText,
+                              labels: block.labels,
+                              typeId: block.typeId ?? undefined,
+                              folderId: block.folderId ?? undefined,
+                              notes: block.notes ?? undefined,
+                            });
+                            refetch();
+                          }}
+                          isDeleting={deleteMutation.isPending}
+                        />
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-cyan-medium">
+                    No blocks in this folder
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function Blocks() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [blockToDelete, setBlockToDelete] = useState<number | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
+  const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(
+    new Set(),
+  );
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   const offset = page * PAGE_SIZE;
+  const utils = api.useUtils();
 
+  // Use listWithFolders when not searching
   const {
-    data: blocksData,
+    data: foldersData,
     isLoading,
     refetch,
-  } = api.blocks.list.useQuery({
-    limit: PAGE_SIZE,
-    offset,
-  });
+  } = api.blocks.listWithFolders.useQuery(
+    {
+      limit: PAGE_SIZE,
+      offset,
+    },
+    { enabled: debouncedSearch.length === 0 },
+  );
 
   // Debounce search input
   useEffect(() => {
@@ -57,16 +293,30 @@ export default function Blocks() {
       { enabled: debouncedSearch.length > 0 },
     );
 
-  // Use search results if searching, otherwise use all blocks
-  const currentData = debouncedSearch.length > 0 ? searchData : blocksData;
-  const displayBlocks = currentData?.items;
-  const total = currentData?.total ?? 0;
+  // Calculate totals for pagination
+  const isSearchMode = debouncedSearch.length > 0;
+  const total = isSearchMode
+    ? (searchData?.total ?? 0)
+    : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseBlocks ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
+  const showLoading = isSearchMode ? isSearching : isLoading;
+
+  const toggleFolder = (folderId: number) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  };
 
   const createMutation = api.blocks.create.useMutation({
     onSuccess: () => {
       refetch();
+      utils.blockFolders.getBlocks.invalidate();
       setIsCreating(false);
     },
   });
@@ -74,10 +324,26 @@ export default function Blocks() {
   const updateMutation = api.blocks.update.useMutation({
     onSuccess: () => {
       refetch();
+      utils.blockFolders.getBlocks.invalidate();
     },
   });
 
   const deleteMutation = api.blocks.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+      utils.blockFolders.getBlocks.invalidate();
+    },
+  });
+
+  const createFolderMutation = api.blockFolders.create.useMutation({
+    onSuccess: () => {
+      refetch();
+      setNewFolderDialogOpen(false);
+      setNewFolderName("");
+    },
+  });
+
+  const deleteFolderMutation = api.blockFolders.delete.useMutation({
     onSuccess: () => {
       refetch();
     },
@@ -91,6 +357,7 @@ export default function Blocks() {
       text: values.text,
       labels: values.labels,
       typeId: values.typeId,
+      folderId: values.folderId,
     });
   };
 
@@ -102,7 +369,21 @@ export default function Blocks() {
       text: values.text,
       labels: values.labels,
       typeId: values.typeId,
+      folderId: values.folderId,
+      notes: values.notes,
     });
+  };
+
+  const handleDeleteFolder = (folderId: number) => {
+    setFolderToDelete(folderId);
+    setDeleteFolderDialogOpen(true);
+  };
+
+  const confirmDeleteFolder = () => {
+    if (folderToDelete !== null) {
+      deleteFolderMutation.mutate({ id: folderToDelete });
+      setFolderToDelete(null);
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -139,7 +420,14 @@ export default function Blocks() {
           />
         </div>
       ) : (
-        <div className="mb-8 flex justify-end">
+        <div className="mb-8 flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setNewFolderDialogOpen(true)}
+          >
+            <FolderPlus className="h-4 w-4 mr-2" />
+            New Folder
+          </Button>
           <Button onClick={() => setIsCreating(true)}>Create New Block</Button>
         </div>
       )}
@@ -155,21 +443,168 @@ export default function Blocks() {
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          {debouncedSearch.length > 0 ? "Searching..." : "Loading blocks..."}
+          {isSearchMode ? "Searching..." : "Loading blocks..."}
         </div>
-      ) : displayBlocks && displayBlocks.length > 0 ? (
+      ) : isSearchMode ? (
+        // Search mode: flat list of blocks
+        searchData && searchData.items.length > 0 ? (
+          <>
+            <div className="space-y-4">
+              {searchData.items.map((block, index) => (
+                <motion.div
+                  className="border-standard-dark-cyan"
+                  key={block.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  {editingId === block.id ? (
+                    <BlockForm
+                      mode="edit"
+                      initialValues={{
+                        name: block.name ?? undefined,
+                        displayId: block.displayId,
+                        text: block.text,
+                        labels: block.labels,
+                        typeId: block.typeId ?? undefined,
+                        folderId: block.folderId ?? undefined,
+                        notes: block.notes ?? undefined,
+                      }}
+                      onSubmit={(values) => handleUpdate(block.id, values)}
+                      onCancel={() => setEditingId(null)}
+                      onDelete={() => handleDelete(block.id)}
+                      isSubmitting={updateMutation.isPending}
+                    />
+                  ) : (
+                    <TextBlock
+                      block={block}
+                      onEdit={() => setEditingId(block.id)}
+                      onDelete={() => handleDelete(block.id)}
+                      onTransform={(blockId, transformedText) =>
+                        handleUpdate(blockId, {
+                          name: block.name ?? undefined,
+                          displayId: block.displayId,
+                          text: transformedText,
+                          labels: block.labels,
+                          typeId: block.typeId ?? undefined,
+                          folderId: block.folderId ?? undefined,
+                          notes: block.notes ?? undefined,
+                        })
+                      }
+                      isDeleting={deleteMutation.isPending}
+                      alwaysActive={true}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+
+            {searchData.total > PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-6">
+                <span className="text-sm text-cyan-medium">
+                  Showing {offset + 1}&ndash;
+                  {Math.min(offset + PAGE_SIZE, searchData.total)} of{" "}
+                  {searchData.total}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage(0)}
+                  >
+                    First
+                  </Button>
+                  <ButtonGroup>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page >= lastPage}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage(lastPage)}
+                  >
+                    Last
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card>
+            <CardContent className="py-12 border-standard-dark-cyan">
+              <div className="text-center text-cyan-medium">
+                <p className="mb-4">
+                  No blocks found matching "{debouncedSearch}"
+                </p>
+                <Button onClick={() => setSearch("")} variant="outline">
+                  Clear Search
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      ) : foldersData &&
+        (foldersData.folders.length > 0 ||
+          foldersData.looseBlocks.length > 0) ? (
+        // Folder mode: folders first, then loose blocks
         <>
           <div className="space-y-4">
-            {displayBlocks.map((block, index) => (
+            {/* Folders */}
+            {foldersData.folders.map((folder, index) => (
+              <FolderRow
+                key={folder.id}
+                folder={folder}
+                index={index}
+                isExpanded={expandedFolders.has(folder.id)}
+                onToggle={() => toggleFolder(folder.id)}
+                onDelete={() => handleDeleteFolder(folder.id)}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                handleUpdate={handleUpdate}
+                handleDelete={handleDelete}
+                updateMutation={updateMutation}
+                deleteMutation={deleteMutation}
+                refetch={refetch}
+              />
+            ))}
+
+            {/* Loose blocks */}
+            {foldersData.looseBlocks.map((block, index) => (
               <motion.div
                 className={cn(
                   "border-standard-dark-cyan",
-                  index === 0 && page === 0 && "accent-border-gradient",
+                  index === 0 &&
+                    page === 0 &&
+                    foldersData.folders.length === 0 &&
+                    "accent-border-gradient",
                 )}
                 key={block.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{
+                  duration: 0.3,
+                  delay: (foldersData.folders.length + index) * 0.05,
+                }}
               >
                 {editingId === block.id ? (
                   <BlockForm
@@ -180,6 +615,8 @@ export default function Blocks() {
                       text: block.text,
                       labels: block.labels,
                       typeId: block.typeId ?? undefined,
+                      folderId: block.folderId ?? undefined,
+                      notes: block.notes ?? undefined,
                     }}
                     onSubmit={(values) => handleUpdate(block.id, values)}
                     onCancel={() => setEditingId(null)}
@@ -198,6 +635,8 @@ export default function Blocks() {
                         text: transformedText,
                         labels: block.labels,
                         typeId: block.typeId ?? undefined,
+                        folderId: block.folderId ?? undefined,
+                        notes: block.notes ?? undefined,
                       })
                     }
                     isDeleting={deleteMutation.isPending}
@@ -257,19 +696,6 @@ export default function Blocks() {
             </div>
           )}
         </>
-      ) : debouncedSearch.length > 0 ? (
-        <Card>
-          <CardContent className="py-12 border-standard-dark-cyan">
-            <div className="text-center text-cyan-medium">
-              <p className="mb-4">
-                No blocks found matching "{debouncedSearch}"
-              </p>
-              <Button onClick={() => setSearch("")} variant="outline">
-                Clear Search
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       ) : (
         <Card>
           <CardContent className="py-12">
@@ -292,6 +718,65 @@ export default function Blocks() {
         confirmText="Delete"
         variant="destructive"
       />
+
+      <ConfirmDialog
+        open={deleteFolderDialogOpen}
+        onOpenChange={setDeleteFolderDialogOpen}
+        onConfirm={confirmDeleteFolder}
+        title="Delete Folder"
+        description="Are you sure you want to delete this folder? Blocks in the folder will not be deleted."
+        confirmText="Delete"
+        variant="destructive"
+      />
+
+      <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Folder Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Character Descriptions"
+                className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newFolderName.trim()) {
+                    createFolderMutation.mutate({ name: newFolderName.trim() });
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setNewFolderDialogOpen(false);
+                  setNewFolderName("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  createFolderMutation.mutate({ name: newFolderName.trim() })
+                }
+                disabled={
+                  !newFolderName.trim() || createFolderMutation.isPending
+                }
+              >
+                {createFolderMutation.isPending ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
