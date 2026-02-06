@@ -5,6 +5,7 @@ import {
 } from "@/lib/generate-display-id";
 import { useTypes } from "@/contexts/TypesContext";
 import { insertWildcard } from "@/lib/wildcard-parser";
+import { api } from "@/lib/api";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
@@ -30,6 +31,8 @@ export interface BlockFormValues {
   text: string;
   labels: string[];
   typeId?: number | null;
+  folderId?: number | null;
+  notes?: string | null;
 }
 
 interface BlockFormProps {
@@ -50,6 +53,7 @@ export function BlockForm({
   mode = "create",
 }: BlockFormProps) {
   const { types } = useTypes();
+  const { data: folders } = api.blockFolders.list.useQuery();
   const [name, setName] = useState(initialValues?.name || "");
   const [displayId, setDisplayId] = useState(
     initialValues?.displayId || generateDisplayId(),
@@ -59,6 +63,10 @@ export function BlockForm({
   const [typeId, setTypeId] = useState<number | undefined>(
     initialValues?.typeId ?? undefined,
   );
+  const [folderId, setFolderId] = useState<number | undefined>(
+    initialValues?.folderId ?? undefined,
+  );
+  const [notes, setNotes] = useState(initialValues?.notes || "");
   const [wildcardBrowserOpen, setWildcardBrowserOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -71,6 +79,8 @@ export function BlockForm({
     text,
     labels,
     typeId,
+    folderId,
+    notes,
   });
   formValuesRef.current = {
     name,
@@ -78,6 +88,8 @@ export function BlockForm({
     text,
     labels,
     typeId,
+    folderId,
+    notes,
   };
 
   const getFormValues = (): BlockFormValues | null => {
@@ -92,6 +104,8 @@ export function BlockForm({
         ? vals.labels.split(",").map((l) => l.trim())
         : [],
       typeId: vals.typeId ?? null,
+      folderId: vals.folderId ?? null,
+      notes: vals.notes.trim() || null,
     };
   };
 
@@ -158,6 +172,27 @@ export function BlockForm({
   const handleTypeChange = (value: string) => {
     setTypeId(value === "none" ? undefined : Number(value));
     debouncedSave();
+  };
+
+  const handleFolderChange = (value: string) => {
+    const newFolderId = value === "none" ? undefined : Number(value);
+    setFolderId(newFolderId);
+
+    if (mode === "edit") {
+      // Update ref immediately so getFormValues gets the new value
+      formValuesRef.current.folderId = newFolderId;
+
+      // Save immediately and close the form
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      const values = getFormValues();
+      if (values) {
+        onSubmit(values);
+      }
+      hasPendingSave.current = false;
+      onCancel();
+    }
   };
 
   return (
@@ -254,6 +289,26 @@ export function BlockForm({
             </Select>
           </div>
           <div>
+            <label className="text-sm font-medium mb-2 block">Folder</label>
+            <Select
+              value={folderId?.toString() || "none"}
+              onValueChange={handleFolderChange}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {folders?.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id.toString()}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <label className="text-sm font-medium mb-2 block">Text</label>
             <textarea
               ref={textareaRef}
@@ -293,6 +348,23 @@ export function BlockForm({
               }}
               disabled={isSubmitting}
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Notes</label>
+            <textarea
+              placeholder="Add notes about this block..."
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background resize-none h-24 font-mono text-sm"
+              value={notes}
+              maxLength={4000}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                debouncedSave();
+              }}
+              disabled={isSubmitting}
+            />
+            <div className="text-xs text-cyan-medium mt-1 text-right">
+              {notes.length}/4000
+            </div>
           </div>
           <div className="flex gap-4">
             {mode === "create" && (
