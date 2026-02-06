@@ -11,6 +11,12 @@ import { useClientLLM } from "@/contexts/ClientLLMContext";
 import { useErrors } from "@/contexts/ErrorContext";
 import { AnimatedBorderButton } from "./AnimatedBorderButton";
 import { RasterIcon } from "./RasterIcon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const TRANSFORMERS_PROGRESS_ID = "transformers-js-load";
 
@@ -76,15 +82,24 @@ function LayoutContent({ children }: LayoutProps) {
       <MainMenu />
       <Scratchpad />
       {location.pathname !== "/account" && (
-        <AnimatedBorderButton
-          onClick={() => navigate("/account")}
-          position="right"
-          color="border-cyan-medium"
-        >
-          <div className="opacity-75 group-hover:opacity-100 transition-opacity duration-300">
-            <RasterIcon name="user-cyan" size={20} opacity={0.8} />
-          </div>
-        </AnimatedBorderButton>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="fixed top-4 right-4 z-50 w-[50px] h-[50px]">
+                <AnimatedBorderButton
+                  onClick={() => navigate("/account")}
+                  position="right"
+                  color="border-cyan-medium"
+                >
+                  <div className="opacity-75 group-hover:opacity-100 transition-opacity duration-300">
+                    <RasterIcon name="user-cyan" size={20} opacity={0.8} />
+                  </div>
+                </AnimatedBorderButton>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left">Account</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}

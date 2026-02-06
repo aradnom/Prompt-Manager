@@ -2,12 +2,18 @@ import { Link } from "react-router-dom";
 import { useMenu } from "@/contexts/MenuContext";
 import { AnimatedBorderButton } from "@/components/AnimatedBorderButton";
 import { RasterIcon } from "@/components/RasterIcon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const navItems = [
-  { path: "/", icon: "home" },
-  { path: "/prompts", icon: "chat" },
-  { path: "/blocks", icon: "blocks" },
-  { path: "/wildcards", icon: "dice" },
+  { path: "/", icon: "home", label: null },
+  { path: "/prompts", icon: "chat", label: "Prompts" },
+  { path: "/blocks", icon: "blocks", label: "Blocks" },
+  { path: "/wildcards", icon: "dice", label: "Wildcards" },
 ];
 
 export function MiniMenu() {
@@ -21,15 +27,31 @@ export function MiniMenu() {
         </div>
       </AnimatedBorderButton>
       <nav className="fixed top-17 left-8 z-50 flex flex-col gap-4">
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className="opacity-75 transition-opacity hover:opacity-100"
-          >
-            <RasterIcon name={item.icon} size={20} opacity={0.8} />
-          </Link>
-        ))}
+        {navItems.map((item) =>
+          item.label ? (
+            <TooltipProvider key={item.path} delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={item.path}
+                    className="opacity-75 transition-opacity hover:opacity-100"
+                  >
+                    <RasterIcon name={item.icon} size={20} opacity={0.8} />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Link
+              key={item.path}
+              to={item.path}
+              className="opacity-75 transition-opacity hover:opacity-100"
+            >
+              <RasterIcon name={item.icon} size={20} opacity={0.8} />
+            </Link>
+          ),
+        )}
       </nav>
     </>
   );
