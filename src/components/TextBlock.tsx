@@ -1,6 +1,15 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Info, Clock, RefreshCw, Trash2, Eye, EyeOff } from "lucide-react";
+import {
+  X,
+  Info,
+  Clock,
+  RefreshCw,
+  Trash2,
+  Eye,
+  EyeOff,
+  StickyNote,
+} from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -39,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
+import { NotesDialog } from "@/components/NotesDialog";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 
 import { useTransform } from "@/hooks/useTransform";
@@ -82,7 +92,7 @@ export function TextBlock({
   style,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
-  const [isInlineEditing, setIsInlineEditing] = useState(true);
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineText, setInlineText] = useState(block.text);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [exploreVariations, setExploreVariations] = useState<string[]>([]);
@@ -91,6 +101,7 @@ export function TextBlock({
   const [isLabelSearchOpen, setIsLabelSearchOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [isWildcardBrowserOpen, setIsWildcardBrowserOpen] = useState(false);
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [activeTransform, setActiveTransform] = useState<
     "more" | "less" | "variation" | null
   >(null);
@@ -107,6 +118,12 @@ export function TextBlock({
   const setActiveRevisionMutation = api.blocks.setActiveRevision.useMutation({
     onSuccess: () => {
       // Refetch blocks list and stacks to show updated text
+      utils.blocks.list.invalidate();
+      utils.stacks.invalidate();
+    },
+  });
+  const updateNotesMutation = api.blocks.update.useMutation({
+    onSuccess: () => {
       utils.blocks.list.invalidate();
       utils.stacks.invalidate();
     },
@@ -548,6 +565,30 @@ export function TextBlock({
                     {block.type.name}
                   </button>
                 )}
+                <ExpandingIcon active={isActive} origin="right">
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsNotesDialogOpen(true);
+                          }}
+                          className={cn(
+                            "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
+                            block.notes && "text-foreground",
+                          )}
+                          aria-label="Edit notes"
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {block.notes ? "Edit notes" : "Add notes"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </ExpandingIcon>
                 {onToggleDisable && (
                   <ExpandingIcon active={isActive} origin="right">
                     <TooltipProvider delayDuration={0}>
@@ -934,6 +975,20 @@ export function TextBlock({
         open={isWildcardBrowserOpen}
         onOpenChange={setIsWildcardBrowserOpen}
         onSelect={handleWildcardSelect}
+      />
+
+      <NotesDialog
+        title="Block Notes"
+        placeholder="Add notes about this block..."
+        initialNotes={block.notes}
+        open={isNotesDialogOpen}
+        onOpenChange={setIsNotesDialogOpen}
+        onSave={(notes) => {
+          updateNotesMutation.mutate({
+            id: block.id,
+            notes,
+          });
+        }}
       />
     </motion.div>
   );

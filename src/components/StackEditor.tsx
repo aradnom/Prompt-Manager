@@ -265,6 +265,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         text: values.text,
         labels: values.labels,
         typeId: values.typeId,
+        notes: values.notes,
       });
 
       // 2. Add to stack
@@ -292,6 +293,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         text: values.text,
         labels: values.labels,
         typeId: values.typeId,
+        notes: values.notes,
       });
     } catch (error) {
       console.error("Failed to update block:", error);
@@ -617,6 +619,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                                   text: block.text,
                                   labels: block.labels,
                                   typeId: block.typeId ?? undefined,
+                                  notes: block.notes ?? undefined,
                                 }}
                                 onSubmit={(values) =>
                                   handleUpdateBlock(block.id, values)
@@ -647,6 +650,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                                     text: transformedText,
                                     labels: block.labels,
                                     typeId: block.typeId ?? undefined,
+                                    notes: block.notes ?? undefined,
                                   })
                                 }
                                 onSelectBlock={handleAddExistingBlock}
