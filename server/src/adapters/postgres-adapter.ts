@@ -4,12 +4,15 @@ import crypto from "crypto";
 import type { Database } from "@/types/database";
 import type {
   Block,
+  BlockFolder,
   BlockRevision,
   BlockStack,
   BlockWithRevisions,
   StackWithBlocks,
   CreateBlockInput,
+  CreateBlockFolderInput,
   UpdateBlockInput,
+  UpdateBlockFolderInput,
   CreateStackInput,
   UpdateStackInput,
   CreateRevisionInput,
@@ -27,6 +30,7 @@ import type {
   SearchWildcardsOptions,
   PaginationOptions,
   PaginatedResult,
+  BlocksWithFoldersResult,
   User,
   CreateUserInput,
 } from "@server/adapters/storage-adapter.interface";
@@ -183,7 +187,9 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           name: input.name ?? null,
           display_id: input.displayId,
           type_id: input.typeId ?? null,
+          folder_id: input.folderId ?? null,
           labels: input.labels ?? [],
+          notes: input.notes ?? null,
           user_id: input.userId ?? null,
           meta: input.meta ? JSON.stringify(input.meta) : null,
           created_at: now,
@@ -241,6 +247,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const result = await this.db
       .selectFrom("blocks")
       .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
       .selectAll("blocks")
       .select((eb) => [
         // First try to get text from active_revision_id if set, otherwise get latest revision
@@ -264,6 +271,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         "types.id as type_id_joined",
         "types.name as type_name",
         "types.description as type_description",
+        "block_folders.name as folder_name",
       ])
       .where("blocks.id", "=", id)
       .executeTakeFirst();
@@ -278,7 +286,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         }
       : null;
 
-    const block = this.mapBlock(result, type);
+    const block = this.mapBlock(result, type, result.folder_name ?? null);
     block.text = result.text!;
     return block;
   }
@@ -287,6 +295,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const result = await this.db
       .selectFrom("blocks")
       .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
       .selectAll("blocks")
       .select((eb) => [
         // First try to get text from active_revision_id if set, otherwise get latest revision
@@ -310,6 +319,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         "types.id as type_id_joined",
         "types.name as type_name",
         "types.description as type_description",
+        "block_folders.name as folder_name",
       ])
       .where("blocks.uuid", "=", uuid)
       .executeTakeFirst();
@@ -324,7 +334,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         }
       : null;
 
-    const block = this.mapBlock(result, type);
+    const block = this.mapBlock(result, type, result.folder_name ?? null);
     block.text = result.text!;
     return block;
   }
@@ -340,7 +350,10 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         updateData.display_id = updates.displayId;
       if (updates.typeId !== undefined)
         updateData.type_id = updates.typeId ?? null;
+      if (updates.folderId !== undefined)
+        updateData.folder_id = updates.folderId ?? null;
       if (updates.labels !== undefined) updateData.labels = updates.labels;
+      if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
       if (updates.meta !== undefined) {
         updateData.meta = updates.meta ? JSON.stringify(updates.meta) : null;
       }
@@ -408,7 +421,20 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         }
       }
 
-      const block = this.mapBlock(blockResult, type);
+      // Fetch folder name
+      let folderName: string | null = null;
+      if (blockResult.folder_id) {
+        const folderResult = await trx
+          .selectFrom("block_folders")
+          .select("name")
+          .where("id", "=", blockResult.folder_id)
+          .executeTakeFirst();
+        if (folderResult) {
+          folderName = folderResult.name;
+        }
+      }
+
+      const block = this.mapBlock(blockResult, type, folderName);
       block.text = text;
       return block;
     });
@@ -469,6 +495,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     let query = this.db
       .selectFrom("blocks")
       .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
       .selectAll("blocks")
       .select((eb) => [
         // First try to get text from active_revision_id if set, otherwise get latest revision
@@ -492,6 +519,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         "types.id as type_id_joined",
         "types.name as type_name",
         "types.description as type_description",
+        "block_folders.name as folder_name",
       ]);
 
     if (userId !== undefined) {
@@ -526,7 +554,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           }
         : null;
 
-      const block = this.mapBlock(r, type);
+      const block = this.mapBlock(r, type, r.folder_name ?? null);
       block.text = r.text || "";
       return block;
     });
@@ -555,6 +583,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     let qb = this.db
       .selectFrom("blocks")
       .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
       .selectAll("blocks")
       .select((eb) => [
         // First try to get text from active_revision_id if set, otherwise get latest revision
@@ -578,6 +607,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         "types.id as type_id_joined",
         "types.name as type_name",
         "types.description as type_description",
+        "block_folders.name as folder_name",
       ]);
 
     // Build a parallel count query with the same filters
@@ -666,12 +696,249 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           }
         : null;
 
-      const block = this.mapBlock(r, type);
+      const block = this.mapBlock(r, type, r.folder_name ?? null);
       block.text = r.text || "";
       return block;
     });
 
     return { items, total: Number(countResult?.count ?? 0) };
+  }
+
+  async listBlocksWithFolders(
+    userId: number,
+    pagination: PaginationOptions,
+  ): Promise<BlocksWithFoldersResult> {
+    // Get total counts
+    const [folderCountResult, looseBlockCountResult] = await Promise.all([
+      this.db
+        .selectFrom("block_folders")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("user_id", "=", userId)
+        .executeTakeFirst(),
+      this.db
+        .selectFrom("blocks")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("user_id", "=", userId)
+        .where("folder_id", "is", null)
+        .executeTakeFirst(),
+    ]);
+
+    const totalFolders = Number(folderCountResult?.count ?? 0);
+    const totalLooseBlocks = Number(looseBlockCountResult?.count ?? 0);
+
+    const { limit, offset } = pagination;
+    let folders: BlockFolder[] = [];
+    let looseBlocks: Block[] = [];
+
+    // Determine how many folders and loose blocks to fetch for this page
+    if (offset < totalFolders) {
+      // We need some folders
+      const foldersToFetch = Math.min(limit, totalFolders - offset);
+      const folderResults = await this.db
+        .selectFrom("block_folders")
+        .selectAll()
+        .where("user_id", "=", userId)
+        .orderBy("name", "asc")
+        .limit(foldersToFetch)
+        .offset(offset)
+        .execute();
+
+      folders = folderResults.map((r) => this.mapBlockFolder(r));
+
+      // If we didn't fill the page with folders, get loose blocks
+      const remainingSlots = limit - folders.length;
+      if (remainingSlots > 0) {
+        looseBlocks = await this.fetchLooseBlocks(userId, remainingSlots, 0);
+      }
+    } else {
+      // All folders are before this page, only fetch loose blocks
+      const looseBlockOffset = offset - totalFolders;
+      looseBlocks = await this.fetchLooseBlocks(
+        userId,
+        limit,
+        looseBlockOffset,
+      );
+    }
+
+    return {
+      folders,
+      looseBlocks,
+      totalFolders,
+      totalLooseBlocks,
+    };
+  }
+
+  private async fetchLooseBlocks(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<Block[]> {
+    const results = await this.db
+      .selectFrom("blocks")
+      .leftJoin("types", "blocks.type_id", "types.id")
+      .selectAll("blocks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("block_revisions as active_rev")
+              .select("active_rev.text")
+              .whereRef("active_rev.id", "=", "blocks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("block_revisions")
+              .select("text")
+              .whereRef("block_revisions.block_id", "=", "blocks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("text"),
+      ])
+      .select([
+        "types.id as type_id_joined",
+        "types.name as type_name",
+        "types.description as type_description",
+      ])
+      .where("blocks.user_id", "=", userId)
+      .where("blocks.folder_id", "is", null)
+      .orderBy("blocks.updated_at", "desc")
+      .limit(limit)
+      .offset(offset)
+      .execute();
+
+    return results.map((r) => {
+      const type = r.type_id_joined
+        ? {
+            id: r.type_id_joined,
+            name: r.type_name!,
+            description: r.type_description,
+          }
+        : null;
+
+      const block = this.mapBlock(r, type, null);
+      block.text = r.text || "";
+      return block;
+    });
+  }
+
+  async getFolderBlocks(folderId: number): Promise<Block[]> {
+    const results = await this.db
+      .selectFrom("blocks")
+      .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
+      .selectAll("blocks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("block_revisions as active_rev")
+              .select("active_rev.text")
+              .whereRef("active_rev.id", "=", "blocks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("block_revisions")
+              .select("text")
+              .whereRef("block_revisions.block_id", "=", "blocks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("text"),
+      ])
+      .select([
+        "types.id as type_id_joined",
+        "types.name as type_name",
+        "types.description as type_description",
+        "block_folders.name as folder_name",
+      ])
+      .where("blocks.folder_id", "=", folderId)
+      .orderBy("blocks.updated_at", "desc")
+      .execute();
+
+    return results.map((r) => {
+      const type = r.type_id_joined
+        ? {
+            id: r.type_id_joined,
+            name: r.type_name!,
+            description: r.type_description,
+          }
+        : null;
+
+      const block = this.mapBlock(r, type, r.folder_name ?? null);
+      block.text = r.text || "";
+      return block;
+    });
+  }
+
+  async createBlockFolder(input: CreateBlockFolderInput): Promise<BlockFolder> {
+    const now = new Date();
+    const result = await this.db
+      .insertInto("block_folders")
+      .values({
+        name: input.name,
+        description: input.description ?? null,
+        user_id: input.userId ?? null,
+        created_at: now,
+        updated_at: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapBlockFolder(result);
+  }
+
+  async getBlockFolder(id: number): Promise<BlockFolder | null> {
+    const result = await this.db
+      .selectFrom("block_folders")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    return result ? this.mapBlockFolder(result) : null;
+  }
+
+  async updateBlockFolder(
+    id: number,
+    updates: UpdateBlockFolderInput,
+  ): Promise<BlockFolder> {
+    const updateData: Updateable<Database["block_folders"]> = {
+      updated_at: new Date(),
+    };
+
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.description !== undefined)
+      updateData.description = updates.description ?? null;
+
+    const result = await this.db
+      .updateTable("block_folders")
+      .set(updateData)
+      .where("id", "=", id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapBlockFolder(result);
+  }
+
+  async deleteBlockFolder(id: number): Promise<void> {
+    // Set folder_id to NULL for all blocks in this folder
+    await this.db
+      .updateTable("blocks")
+      .set({ folder_id: null, updated_at: new Date() })
+      .where("folder_id", "=", id)
+      .execute();
+
+    // Delete the folder
+    await this.db.deleteFrom("block_folders").where("id", "=", id).execute();
+  }
+
+  async listBlockFolders(userId: number): Promise<BlockFolder[]> {
+    const results = await this.db
+      .selectFrom("block_folders")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .orderBy("name", "asc")
+      .execute();
+
+    return results.map((r) => this.mapBlockFolder(r));
   }
 
   async createRevision(input: CreateRevisionInput): Promise<BlockRevision> {
@@ -2118,11 +2385,13 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   private mapBlock(
     row: Selectable<Database["blocks"]>,
     type: Type | null = null,
+    folderName: string | null = null,
   ): Block {
     return {
       id: row.id,
       uuid: row.uuid,
       name: row.name,
+      notes: row.notes,
       displayId: row.display_id,
       text: "", // To be filled by revision
       activeRevisionId: row.active_revision_id,
@@ -2130,9 +2399,24 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       updatedAt: new Date(row.updated_at),
       typeId: row.type_id,
       type: type,
+      folderId: row.folder_id,
+      folderName: folderName,
       labels: row.labels,
       userId: row.user_id,
       meta: typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta,
+    };
+  }
+
+  private mapBlockFolder(
+    row: Selectable<Database["block_folders"]>,
+  ): BlockFolder {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      userId: row.user_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     };
   }
 

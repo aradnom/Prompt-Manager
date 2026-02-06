@@ -1,5 +1,6 @@
 import { router } from "@server/trpc";
 import { blocksRouter } from "@server/routers/blocks";
+import { blockFoldersRouter } from "@server/routers/block-folders";
 import { revisionsRouter } from "@server/routers/revisions";
 import { stacksRouter } from "@server/routers/stacks";
 import { typesRouter } from "@server/routers/types";
@@ -10,6 +11,7 @@ import { usersRouter } from "@server/routers/users";
 
 export const appRouter = router({
   blocks: blocksRouter,
+  blockFolders: blockFoldersRouter,
   revisions: revisionsRouter,
   stacks: stacksRouter,
   types: typesRouter,

@@ -21,14 +21,25 @@ export interface TypesTable {
   description: string | null;
 }
 
+export interface BlockFoldersTable {
+  id: ColumnType<number, never, never>;
+  name: string;
+  description: string | null;
+  user_id: number | null;
+  created_at: ColumnType<Date, Date | undefined, Date | undefined>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
 export interface BlocksTable {
   id: ColumnType<number, never, never>;
   uuid: string;
   display_id: string;
   name: string | null;
+  notes: ColumnType<string | null, string | null, string | null>;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
   type_id: number | null;
+  folder_id: number | null;
   labels: string[];
   user_id: number | null;
   meta: ColumnType<
@@ -107,6 +118,7 @@ export interface WildcardsTable {
 export interface Database {
   users: UsersTable;
   types: TypesTable;
+  block_folders: BlockFoldersTable;
   blocks: BlocksTable;
   block_revisions: BlockRevisionsTable;
   stacks: BlockStacksTable;

@@ -1,11 +1,14 @@
 import type {
   Block,
+  BlockFolder,
   BlockRevision,
   BlockStack,
   BlockWithRevisions,
   StackWithBlocks,
   CreateBlockInput,
+  CreateBlockFolderInput,
   UpdateBlockInput,
+  UpdateBlockFolderInput,
   CreateStackInput,
   UpdateStackInput,
   CreateRevisionInput,
@@ -61,6 +64,20 @@ export interface IStorageAdapter {
     userId?: number,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Block>>;
+  listBlocksWithFolders(
+    userId: number,
+    pagination: PaginationOptions,
+  ): Promise<BlocksWithFoldersResult>;
+  getFolderBlocks(folderId: number): Promise<Block[]>;
+
+  createBlockFolder(input: CreateBlockFolderInput): Promise<BlockFolder>;
+  getBlockFolder(id: number): Promise<BlockFolder | null>;
+  updateBlockFolder(
+    id: number,
+    updates: UpdateBlockFolderInput,
+  ): Promise<BlockFolder>;
+  deleteBlockFolder(id: number): Promise<void>;
+  listBlockFolders(userId: number): Promise<BlockFolder[]>;
 
   createRevision(input: CreateRevisionInput): Promise<BlockRevision>;
   getRevisions(blockId: number): Promise<BlockRevision[]>;
@@ -167,4 +184,11 @@ export interface PaginationOptions {
 export interface PaginatedResult<T> {
   items: T[];
   total: number;
+}
+
+export interface BlocksWithFoldersResult {
+  folders: BlockFolder[];
+  looseBlocks: Block[];
+  totalFolders: number;
+  totalLooseBlocks: number;
 }

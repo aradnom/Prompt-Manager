@@ -8,16 +8,28 @@ export interface Type {
   description: string | null;
 }
 
+export interface BlockFolder {
+  id: number;
+  name: string;
+  description: string | null;
+  userId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Block {
   id: number;
   uuid: string;
   displayId: string;
   name: string | null;
+  notes: string | null;
   text: string; // Derived from latest revision
   createdAt: Date;
   updatedAt: Date;
   typeId: number | null;
   type: Type | null;
+  folderId: number | null;
+  folderName: string | null;
   labels: string[];
   userId: number | null;
   meta: Record<string, unknown> | null;
@@ -79,7 +91,9 @@ export interface CreateBlockInput {
   name?: string;
   text: string;
   typeId?: number | null;
+  folderId?: number | null;
   labels?: string[];
+  notes?: string | null;
   userId?: number;
   meta?: Record<string, unknown>;
 }
@@ -89,8 +103,21 @@ export interface UpdateBlockInput {
   displayId?: string;
   text?: string;
   typeId?: number | null;
+  folderId?: number | null;
   labels?: string[];
+  notes?: string | null;
   meta?: Record<string, unknown>;
+}
+
+export interface CreateBlockFolderInput {
+  name: string;
+  description?: string;
+  userId?: number;
+}
+
+export interface UpdateBlockFolderInput {
+  name?: string;
+  description?: string;
 }
 
 export interface CreateStackInput {

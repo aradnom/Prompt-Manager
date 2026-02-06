@@ -20,6 +20,17 @@ CREATE TABLE types (
     description character varying(512)
 );
 
+-- block_folders
+
+CREATE TABLE block_folders (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name character varying(255),
+    description character varying(512),
+    user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
 -- blocks
 
 CREATE TABLE blocks (
@@ -27,9 +38,11 @@ CREATE TABLE blocks (
     uuid character varying(255) UNIQUE,
     display_id character varying(255) UNIQUE,
     name character varying(255),
+    notes character varying(4000),
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     type_id integer REFERENCES types(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    folder_id integer REFERENCES block_folders(id) ON DELETE SET NULL ON UPDATE CASCADE,
     labels character varying(255)[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     meta json,

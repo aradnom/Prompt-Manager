@@ -10,7 +10,9 @@ export const blocksRouter = router({
         displayId: z.string(),
         text: z.string(),
         typeId: z.number().nullish(),
+        folderId: z.number().nullish(),
         labels: z.array(z.string()).optional(),
+        notes: z.string().nullish(),
         meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -100,7 +102,9 @@ export const blocksRouter = router({
         displayId: z.string().optional(),
         text: z.string().optional(),
         typeId: z.number().nullish(),
+        folderId: z.number().nullish(),
         labels: z.array(z.string()).optional(),
+        notes: z.string().nullish(),
         meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -195,5 +199,19 @@ export const blocksRouter = router({
         ctx.userId,
         { limit: input.limit, offset: input.offset },
       );
+    }),
+
+  listWithFolders: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listBlocksWithFolders(ctx.userId, {
+        limit: input.limit,
+        offset: input.offset,
+      });
     }),
 });
