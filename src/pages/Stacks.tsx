@@ -12,6 +12,7 @@ import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { SearchInput } from "@/components/ui/search-input";
+import { DotDivider } from "@/components/ui/dot-divider";
 import { X, Clock, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
@@ -344,13 +345,15 @@ export default function Stacks() {
       )}
 
       {/* Search */}
-      <div className="mb-8">
+      <div className="mb-2">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search prompts by name, display ID, UUID, or content..."
         />
       </div>
+
+      <DotDivider className="mb-2" />
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">

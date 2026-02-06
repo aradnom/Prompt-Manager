@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
 import { SearchInput } from "@/components/ui/search-input";
+import { DotDivider } from "@/components/ui/dot-divider";
 import {
   Select,
   SelectContent,
@@ -433,13 +434,15 @@ export default function Wildcards() {
       )}
 
       {/* Search */}
-      <div className="mb-8">
+      <div className="mb-2">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search wildcards by name, display ID, UUID, or content..."
         />
       </div>
+
+      <DotDivider className="mb-2" />
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">

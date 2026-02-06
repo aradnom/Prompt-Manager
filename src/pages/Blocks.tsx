@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DotDivider } from "@/components/ui/dot-divider";
 
 const PAGE_SIZE = 50;
 
@@ -433,13 +434,15 @@ export default function Blocks() {
       )}
 
       {/* Search */}
-      <div className="mb-8">
+      <div className="mb-2">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Search blocks by name, display ID, or text content..."
         />
       </div>
+
+      <DotDivider className="mb-2" />
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">

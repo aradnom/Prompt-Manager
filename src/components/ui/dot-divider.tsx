@@ -1,6 +1,12 @@
-export function DotDivider() {
+import { cn } from "@/lib/utils";
+
+interface DotDividerProps {
+  className?: string;
+}
+
+export function DotDivider({ className }: DotDividerProps) {
   return (
-    <div className="flex justify-center gap-1 py-4">
+    <div className={cn("flex justify-center gap-1 py-4", className)}>
       {Array.from({ length: 5 }, (_, i) => (
         <div
           key={i}
