@@ -618,11 +618,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     // Text search filter
     if (options.query) {
       const searchPattern = `%${options.query}%`;
-      const textSearchFilter = (
-        eb: Parameters<typeof qb.where>[0] extends (eb: infer E) => unknown
-          ? E
-          : never,
-      ) =>
+      qb = qb.where((eb) =>
         eb.or([
           eb("blocks.display_id", "ilike", searchPattern),
           eb(
@@ -642,9 +638,30 @@ export class PostgresStorageAdapter implements IStorageAdapter {
             "ilike",
             searchPattern,
           ),
-        ]);
-      qb = qb.where(textSearchFilter);
-      countQb = countQb.where(textSearchFilter);
+        ]),
+      );
+      countQb = countQb.where((eb) =>
+        eb.or([
+          eb("blocks.display_id", "ilike", searchPattern),
+          eb(
+            eb.fn.coalesce(
+              eb
+                .selectFrom("block_revisions as active_rev")
+                .select("active_rev.text")
+                .whereRef("active_rev.id", "=", "blocks.active_revision_id")
+                .limit(1),
+              eb
+                .selectFrom("block_revisions")
+                .select("text")
+                .whereRef("block_revisions.block_id", "=", "blocks.id")
+                .orderBy("created_at", "desc")
+                .limit(1),
+            ),
+            "ilike",
+            searchPattern,
+          ),
+        ]),
+      );
     }
 
     // Type filter
@@ -655,19 +672,22 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
     // Label filter - match any of the provided labels
     if (options.labels && options.labels.length > 0) {
-      const labelFilter = (
-        eb: Parameters<typeof qb.where>[0] extends (eb: infer E) => unknown
-          ? E
-          : never,
-      ) =>
+      qb = qb.where((eb) =>
         eb.or(
           options.labels!.map((label) =>
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
           ),
-        );
-      qb = qb.where(labelFilter);
-      countQb = countQb.where(labelFilter);
+        ),
+      );
+      countQb = countQb.where((eb) =>
+        eb.or(
+          options.labels!.map((label) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
+          ),
+        ),
+      );
     }
 
     // User filter
@@ -1579,19 +1599,22 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     // Text search filter
     if (options.query) {
       const searchPattern = `%${options.query}%`;
-      const searchFilter = (
-        eb: Parameters<typeof query.where>[0] extends (eb: infer E) => unknown
-          ? E
-          : never,
-      ) =>
+      query = query.where((eb) =>
         eb.or([
           eb("stacks.uuid", "ilike", searchPattern),
           eb("stacks.display_id", "ilike", searchPattern),
           eb("stacks.name", "ilike", searchPattern),
           eb("stack_revisions.rendered_content", "ilike", searchPattern),
-        ]);
-      query = query.where(searchFilter);
-      countQuery = countQuery.where(searchFilter);
+        ]),
+      );
+      countQuery = countQuery.where((eb) =>
+        eb.or([
+          eb("stacks.uuid", "ilike", searchPattern),
+          eb("stacks.display_id", "ilike", searchPattern),
+          eb("stacks.name", "ilike", searchPattern),
+          eb("stack_revisions.rendered_content", "ilike", searchPattern),
+        ]),
+      );
     }
 
     // User filter
