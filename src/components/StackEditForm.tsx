@@ -199,63 +199,66 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
 
         <div>
           <label className="text-sm font-medium mb-2 block">Settings</label>
-          <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-            <div className="flex-1">
-              <label
-                className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Checkbox
-                  checked={commaSeparated}
-                  onCheckedChange={(checked) => {
-                    setCommaSeparated(checked as boolean);
-                    // Save immediately on checkbox change
-                    if (saveTimeoutRef.current) {
-                      clearTimeout(saveTimeoutRef.current);
-                    }
-                    setTimeout(() => {
-                      updateMutation.mutate({
-                        id: stack.id,
-                        name: editName.trim() || undefined,
-                        displayId: editDisplayId.trim(),
-                        commaSeparated: checked as boolean,
-                        style,
-                      });
-                    }, 0);
-                  }}
-                  className="cursor-pointer"
-                />
-                Comma Separated
-              </label>
-            </div>
+          <hr className="mb-4" />
+          <div className="flex flex-col md:flex-row md:gap-4">
+            <div className="flex flex-1 gap-4 mb-4">
+              <div className="">
+                <label
+                  className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={commaSeparated}
+                    onCheckedChange={(checked) => {
+                      setCommaSeparated(checked as boolean);
+                      // Save immediately on checkbox change
+                      if (saveTimeoutRef.current) {
+                        clearTimeout(saveTimeoutRef.current);
+                      }
+                      setTimeout(() => {
+                        updateMutation.mutate({
+                          id: stack.id,
+                          name: editName.trim() || undefined,
+                          displayId: editDisplayId.trim(),
+                          commaSeparated: checked as boolean,
+                          style,
+                        });
+                      }, 0);
+                    }}
+                    className="cursor-pointer"
+                  />
+                  Comma Separated
+                </label>
+              </div>
 
-            <div className="flex-1">
-              <label
-                className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Checkbox
-                  checked={negative}
-                  onCheckedChange={(checked) => {
-                    setNegative(checked as boolean);
-                    if (saveTimeoutRef.current) {
-                      clearTimeout(saveTimeoutRef.current);
-                    }
-                    setTimeout(() => {
-                      updateMutation.mutate({
-                        id: stack.id,
-                        name: editName.trim() || undefined,
-                        displayId: editDisplayId.trim(),
-                        commaSeparated,
-                        negative: checked as boolean,
-                        style,
-                      });
-                    }, 0);
-                  }}
-                  className="cursor-pointer"
-                />
-                Negative Prompt
-              </label>
+              <div className="">
+                <label
+                  className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={negative}
+                    onCheckedChange={(checked) => {
+                      setNegative(checked as boolean);
+                      if (saveTimeoutRef.current) {
+                        clearTimeout(saveTimeoutRef.current);
+                      }
+                      setTimeout(() => {
+                        updateMutation.mutate({
+                          id: stack.id,
+                          name: editName.trim() || undefined,
+                          displayId: editDisplayId.trim(),
+                          commaSeparated,
+                          negative: checked as boolean,
+                          style,
+                        });
+                      }, 0);
+                    }}
+                    className="cursor-pointer"
+                  />
+                  Negative Prompt
+                </label>
+              </div>
             </div>
 
             <div className="flex-1" onClick={(e) => e.stopPropagation()}>
