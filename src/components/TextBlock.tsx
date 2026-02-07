@@ -113,6 +113,22 @@ function getTextareaCaretPosition(
   };
 }
 
+/**
+ * Check if a selection range overlaps with any wildcard marker in the text
+ */
+function selectionOverlapsWildcard(
+  text: string,
+  selectionStart: number,
+  selectionEnd: number,
+): boolean {
+  const wildcards = parseWildcards(text);
+  return wildcards.some((w) => {
+    const wildcardEnd = w.index + w.fullMatch.length;
+    // Check if ranges overlap
+    return selectionStart < wildcardEnd && selectionEnd > w.index;
+  });
+}
+
 type Block = RouterOutput["blocks"]["list"]["items"][number];
 
 interface TextBlockProps {
@@ -170,6 +186,7 @@ export function TextBlock({
     startOffset: number;
     endOffset: number;
   } | null>(null);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
   const blockRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inlineSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -260,6 +277,16 @@ export function TextBlock({
     if (selection && selection.toString().length > 0) {
       const range = selection.getRangeAt(0);
 
+      // Don't show modifier menu if selection is inside a span (wildcards, modifiers)
+      const ancestor = range.commonAncestorContainer;
+      const parentElement =
+        ancestor.nodeType === Node.TEXT_NODE
+          ? ancestor.parentElement
+          : (ancestor as Element);
+      if (parentElement?.closest("span")) {
+        return;
+      }
+
       // Find the offsets in the block text
       // We need to figure out where in block.text this selection is
       const textContainer = e.currentTarget;
@@ -299,13 +326,22 @@ export function TextBlock({
           endOffset,
         );
 
-        if (normalized.text) {
+        // Don't show modifier menu for wildcard content
+        if (
+          normalized.text &&
+          !selectionOverlapsWildcard(
+            block.text,
+            normalized.start,
+            normalized.end,
+          )
+        ) {
           setTextSelection({
             text: normalized.text,
             range,
             startOffset: normalized.start,
             endOffset: normalized.end,
           });
+          setIsMenuVisible(true);
           return;
         }
       }
@@ -313,6 +349,7 @@ export function TextBlock({
 
     // No valid selection = simple click, enter edit mode
     setTextSelection(null);
+    setIsMenuVisible(false);
     setIsInlineEditing(true);
     setInlineText(block.text);
     // Focus textarea after state update
@@ -377,7 +414,7 @@ export function TextBlock({
   };
 
   const handleSelectionClose = () => {
-    setTextSelection(null);
+    setIsMenuVisible(false);
     window.getSelection()?.removeAllRanges();
   };
 
@@ -854,7 +891,15 @@ export function TextBlock({
                     selectionEnd,
                   );
 
-                  if (normalized.text) {
+                  // Don't show modifier menu for wildcard content
+                  if (
+                    normalized.text &&
+                    !selectionOverlapsWildcard(
+                      inlineText,
+                      normalized.start,
+                      normalized.end,
+                    )
+                  ) {
                     // Get approximate position of selected text within textarea
                     const startPos = getTextareaCaretPosition(
                       textarea,
@@ -889,6 +934,7 @@ export function TextBlock({
                       startOffset: normalized.start,
                       endOffset: normalized.end,
                     });
+                    setIsMenuVisible(true);
 
                     // Update textarea selection to match normalized
                     textarea.setSelectionRange(
@@ -898,6 +944,7 @@ export function TextBlock({
                   }
                 } else {
                   setTextSelection(null);
+                  setIsMenuVisible(false);
                 }
               }}
               className="box-content w-full text-sm leading-6 whitespace-pre-wrap bg-cyan-dark/50 border-cyan-medium rounded p-2 -m-2 focus:outline-none focus:ring-2 focus:ring-magenta-medium resize-none"
@@ -1257,6 +1304,8 @@ export function TextBlock({
         selection={textSelection}
         onApply={handleSelectionApply}
         onClose={handleSelectionClose}
+        onMouseLeave={handleSelectionClose}
+        isVisible={isMenuVisible}
       />
     </motion.div>
   );

@@ -28,7 +28,7 @@ type ParsedMatch =
       fullMatch: string;
       displayId: string;
       path: string;
-      frozen?: string;
+      frozen: boolean;
     }
   | {
       matchType: "value";

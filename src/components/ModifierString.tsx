@@ -31,31 +31,41 @@ export function ModifierString({
 }: ModifierStringProps) {
   const isActive = activeModifierId === modifierId;
   const spanRef = useRef<HTMLSpanElement>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
       }
     };
   }, []);
 
+  const cancelClose = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    // Defer to next tick to give the bridge/menu a chance to catch the mouse
+    closeTimeoutRef.current = setTimeout(() => {
+      onSetActive(null);
+    }, 0);
+  }, [cancelClose, onSetActive]);
+
   const handleMouseEnter = useCallback(() => {
-    // Small delay before showing menu to avoid accidental triggers
-    hoverTimeoutRef.current = setTimeout(() => {
-      onSetActive(modifierId);
-    }, 200);
-  }, [modifierId, onSetActive]);
+    cancelClose();
+    onSetActive(modifierId);
+  }, [modifierId, onSetActive, cancelClose]);
 
   const handleMouseLeave = useCallback(() => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    // Don't immediately hide menu - let it handle its own close
-  }, []);
+    // Schedule close - will be cancelled if mouse enters the menu
+    scheduleClose();
+  }, [scheduleClose]);
 
   // Compute the absolute indices for this modifier in the block text
   const startIndex = textOffset + match.index;
@@ -75,8 +85,10 @@ export function ModifierString({
   }, [onSetActive]);
 
   // Create selection object for the menu
+  // isActive is in deps to trigger recomputation when hovering (spanRef needs to be mounted)
+  // But we don't gate on isActive so selection stays valid during exit animation
   const selection = useMemo(() => {
-    if (!isActive || !spanRef.current) return null;
+    if (!spanRef.current) return null;
 
     const rect = spanRef.current.getBoundingClientRect();
     const fakeRange = {
@@ -89,7 +101,8 @@ export function ModifierString({
       startOffset: 0,
       endOffset: match.fullMatch.length,
     };
-  }, [isActive, match.fullMatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match.fullMatch, isActive]);
 
   // Determine styling based on modifier type
   const isEmphasis = match.type === "emphasis";
@@ -114,11 +127,14 @@ export function ModifierString({
         {match.fullMatch}
       </span>
 
-      {isActive && selection && (
+      {selection && (
         <TextSelectionMenu
           selection={selection}
           onApply={handleApply}
           onClose={handleClose}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          isVisible={isActive}
         />
       )}
     </>

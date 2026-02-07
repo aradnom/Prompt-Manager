@@ -213,6 +213,7 @@ export function WildcardString({
             <motion.div
               className={`absolute ${getTooltipPositionClasses()} z-50 w-125 max-h-100 overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4`}
               onMouseEnter={handleMouseEnter}
+              onMouseUp={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -231,6 +232,7 @@ export function WildcardString({
                     {onMarkerChange && fullMatch && (
                       <button
                         onClick={handleToggleFrozen}
+                        onMouseUp={(e) => e.stopPropagation()}
                         className={`p-2 rounded border transition-colors ${
                           frozen
                             ? "border-cyan-medium bg-cyan-dark/50 hover:bg-cyan-dark/80"
@@ -247,6 +249,7 @@ export function WildcardString({
                     )}
                     <button
                       onClick={handleRandomSelection}
+                      onMouseUp={(e) => e.stopPropagation()}
                       className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors"
                       title="Random selection"
                     >

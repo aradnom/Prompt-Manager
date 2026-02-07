@@ -13,6 +13,12 @@ interface TextSelectionMenuProps {
   } | null;
   onApply: (newText: string, startOffset: number, endOffset: number) => void;
   onClose: () => void;
+  /** Called when mouse enters the menu (for hover mode) */
+  onMouseEnter?: () => void;
+  /** Called when mouse leaves the menu (for hover mode) */
+  onMouseLeave?: () => void;
+  /** Controls visibility for exit animation (defaults to true when selection exists) */
+  isVisible?: boolean;
 }
 
 /**
@@ -101,11 +107,12 @@ function isWhitespace(char: string | undefined): boolean {
 }
 
 /**
- * Check if char is punctuation (not modifier brackets)
+ * Check if char is punctuation or special syntax chars (not modifier brackets)
+ * Includes {} and <> for wildcard and lora syntax
  */
 function isPunctuation(char: string | undefined): boolean {
   if (!char) return false;
-  return /[.,!?;:]/.test(char);
+  return /[.,!?;:{}<>]/.test(char);
 }
 
 /**
@@ -250,6 +257,9 @@ export function TextSelectionMenu({
   selection,
   onApply,
   onClose,
+  onMouseEnter,
+  onMouseLeave,
+  isVisible = true,
 }: TextSelectionMenuProps) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     null,
@@ -426,65 +436,93 @@ export function TextSelectionMenu({
   const parsed = parseModifiers(selection.text);
   const currentWeight = parsed.weight ?? 1;
 
+  // Check if menu is in hover mode (has mouse handlers)
+  const isHoverMode = onMouseEnter !== undefined;
+  const shouldShow = isVisible;
+
   return (
     <AnimatePresence>
-      <motion.div
-        data-selection-menu
-        className="fixed z-100 bg-background border border-cyan-medium rounded-lg shadow-xl p-1.5 flex gap-1.5"
-        style={{ left: position.x, top: position.y }}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ duration: 0.15 }}
-        onMouseUp={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleEmphasize}
-          className="text-xs px-2"
+      {/* Invisible bridge to prevent menu from closing when moving mouse to it */}
+      {shouldShow && isHoverMode && initialRectRef.current && (
+        <div
+          key="bridge"
+          data-selection-menu
+          className="fixed z-99"
+          style={{
+            left: position.x,
+            top: position.y + 44, // menuHeight
+            width: 280, // menuWidth
+            height: Math.max(
+              0,
+              initialRectRef.current.top - position.y - 44 + 4,
+            ),
+          }}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
+        />
+      )}
+      {shouldShow && (
+        <motion.div
+          key="menu"
+          data-selection-menu
+          className="fixed z-100 bg-background border border-cyan-medium rounded-lg shadow-xl p-1.5 flex gap-1.5"
+          style={{ left: position.x, top: position.y }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.15 }}
+          onMouseUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
         >
-          Emphasize
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleDeemphasize}
-          className="text-xs px-2"
-        >
-          Deemphasize
-        </Button>
-        <ButtonGroup>
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => handleWeightChange(-0.2)}
-            className="px-1.5"
+            onClick={handleEmphasize}
+            className="text-xs px-2"
           >
-            <Minus className="h-3 w-3" />
+            Emphasize
           </Button>
-          <div className="flex items-center px-2 text-xs font-mono bg-secondary border-y border-input">
-            {currentWeight.toFixed(1)}
-          </div>
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => handleWeightChange(0.2)}
+            onClick={handleDeemphasize}
+            className="text-xs px-2"
+          >
+            Deemphasize
+          </Button>
+          <ButtonGroup>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleWeightChange(-0.2)}
+              className="px-1.5"
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <div className="flex items-center px-2 text-xs font-mono bg-secondary border-y border-input">
+              {currentWeight.toFixed(1)}
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleWeightChange(0.2)}
+              className="px-1.5"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </ButtonGroup>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleClear}
             className="px-1.5"
           >
-            <Plus className="h-3 w-3" />
+            <X className="h-3 w-3" />
           </Button>
-        </ButtonGroup>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleClear}
-          className="px-1.5"
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }
