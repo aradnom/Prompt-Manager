@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+
+const STORAGE_KEY = "stackOutputMinimized";
 
 interface StackOutputContextType {
   isMinimized: boolean;
@@ -10,7 +18,14 @@ const StackOutputContext = createContext<StackOutputContextType | undefined>(
 );
 
 export function StackOutputProvider({ children }: { children: ReactNode }) {
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, String(isMinimized));
+  }, [isMinimized]);
 
   return (
     <StackOutputContext.Provider value={{ isMinimized, setIsMinimized }}>
