@@ -558,7 +558,7 @@ export function StackEditor({ stack }: StackEditorProps) {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="border-t border-b overflow-hidden"
+              className="border-t border-b overflow-hidden mb-4"
             >
               <div className="px-6 py-3 bg-cyan-dark/30">
                 <div className="flex gap-2">

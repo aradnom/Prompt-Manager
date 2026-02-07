@@ -614,6 +614,7 @@ export function TextBlock({
       transition={TEXT_BLOCK_ANIMATION}
     >
       <CardHeader
+        className="px-6 py-3"
         onDoubleClick={(e) => {
           if (
             (e.target as HTMLElement).closest("button") ||
