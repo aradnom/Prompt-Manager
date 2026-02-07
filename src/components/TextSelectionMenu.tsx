@@ -265,6 +265,7 @@ export function TextSelectionMenu({
     null,
   );
   const initialRectRef = useRef<DOMRect | null>(null);
+  const lastRangeRef = useRef<Range | null>(null);
 
   const updatePositionFromRect = useCallback((rect: DOMRect) => {
     const menuWidth = 280;
@@ -302,28 +303,41 @@ export function TextSelectionMenu({
     setPosition({ x, y });
   }, []);
 
-  // Calculate position only once when selection first appears
+  // Calculate position when the Range object changes (not just text/offsets)
   useEffect(() => {
     if (!selection) {
       setPosition(null);
       initialRectRef.current = null;
+      lastRangeRef.current = null;
       return;
     }
 
-    // Only calculate initial position if we don't have one
-    if (initialRectRef.current) return;
+    // Only recalculate position if the Range object itself changed
+    // This prevents recalculating when we just update text/offsets after applying changes
+    if (selection.range === lastRangeRef.current && position !== null) {
+      return;
+    }
 
     try {
       const rect = selection.range.getBoundingClientRect();
       // Check if rect is valid (not collapsed to 0,0)
-      if (rect.width === 0 && rect.height === 0) return;
+      if (rect.width === 0 && rect.height === 0) {
+        setPosition(null);
+        initialRectRef.current = null;
+        lastRangeRef.current = null;
+        return;
+      }
 
       initialRectRef.current = rect;
+      lastRangeRef.current = selection.range;
       updatePositionFromRect(rect);
     } catch {
       // Range may be invalid
+      setPosition(null);
+      initialRectRef.current = null;
+      lastRangeRef.current = null;
     }
-  }, [selection, updatePositionFromRect]);
+  }, [selection, updatePositionFromRect, position]);
 
   // Close on click outside
   useEffect(() => {

@@ -75,9 +75,8 @@ export function ModifierString({
     (newText: string) => {
       // Use the pre-computed indices
       onModify(match.fullMatch, newText, startIndex, endIndex);
-      onSetActive(null);
     },
-    [match.fullMatch, startIndex, endIndex, onModify, onSetActive],
+    [match.fullMatch, startIndex, endIndex, onModify],
   );
 
   const handleClose = useCallback(() => {
@@ -112,6 +111,7 @@ export function ModifierString({
     <>
       <span
         ref={spanRef}
+        data-interactive-text
         className={cn(
           "rounded px-0.5 -mx-0.5 transition-colors cursor-pointer",
           isEmphasis

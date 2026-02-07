@@ -277,13 +277,13 @@ export function TextBlock({
     if (selection && selection.toString().length > 0) {
       const range = selection.getRangeAt(0);
 
-      // Don't show modifier menu if selection is inside a span (wildcards, modifiers)
+      // Don't show modifier menu if selection is inside an interactive element (wildcards, modifiers, values)
       const ancestor = range.commonAncestorContainer;
       const parentElement =
         ancestor.nodeType === Node.TEXT_NODE
           ? ancestor.parentElement
           : (ancestor as Element);
-      if (parentElement?.closest("span")) {
+      if (parentElement?.closest("[data-interactive-text]")) {
         return;
       }
 
