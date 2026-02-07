@@ -199,7 +199,8 @@ export function TextWithWildcards({
       return (
         <span
           key={`val-${idx}`}
-          className="inline-block px-2 py-0.5 rounded bg-magenta-dark/20 text-foreground font-mono"
+          data-interactive-text
+          className="inline-block px-2 py-0.5 bg-magenta-medium/60 text-foreground font-mono"
         >
           {segment.content}
         </span>

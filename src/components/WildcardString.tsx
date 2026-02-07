@@ -158,6 +158,7 @@ export function WildcardString({
     return (
       <span
         ref={spanRef}
+        data-interactive-text
         className={`inline-block px-2 py-0.5 rounded bg-magenta-medium/20 text-foreground ${textSizeClass} font-mono`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -186,12 +187,15 @@ export function WildcardString({
     onMarkerChange(fullMatch, buildWildcardMarker(displayId, path, !frozen));
   };
 
-  const bgClass = frozen ? "bg-cyan-medium/30" : "bg-magenta-medium/70";
+  const highlightStyle = frozen
+    ? "border-magenta-medium/60"
+    : "border-transparent bg-magenta-medium/60";
 
   return (
     <span
       ref={spanRef}
-      className={`relative inline-block px-2 py-0.5 rounded-sm ${bgClass} text-foreground ${textSizeClass} font-mono ${enableTooltip ? "cursor-pointer" : ""}`}
+      data-interactive-text
+      className={`relative inline-block px-1.5 py-0.5 ${highlightStyle} border text-foreground ${textSizeClass} font-mono ${enableTooltip ? "cursor-pointer" : ""}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
