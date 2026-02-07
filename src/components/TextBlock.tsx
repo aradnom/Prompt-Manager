@@ -58,6 +58,61 @@ import {
 import { useTransform } from "@/hooks/useTransform";
 import type { OutputStyle } from "@/types/schema";
 
+/**
+ * Get the approximate pixel position of a text offset within a textarea
+ * Uses a mirror div technique to measure text position
+ */
+function getTextareaCaretPosition(
+  textarea: HTMLTextAreaElement,
+  offset: number,
+): { top: number; left: number } {
+  // Create a mirror div with the same styling
+  const mirror = document.createElement("div");
+  const style = window.getComputedStyle(textarea);
+
+  // Copy relevant styles - position at top-left for easy measurement
+  mirror.style.position = "fixed";
+  mirror.style.top = "0";
+  mirror.style.left = "0";
+  mirror.style.visibility = "hidden";
+  mirror.style.whiteSpace = "pre-wrap";
+  mirror.style.wordWrap = "break-word";
+  mirror.style.overflow = "hidden";
+  mirror.style.width = style.width;
+  mirror.style.fontFamily = style.fontFamily;
+  mirror.style.fontSize = style.fontSize;
+  mirror.style.fontWeight = style.fontWeight;
+  mirror.style.lineHeight = style.lineHeight;
+  mirror.style.padding = style.padding;
+  mirror.style.border = style.border;
+  mirror.style.boxSizing = style.boxSizing;
+  mirror.style.letterSpacing = style.letterSpacing;
+
+  // Create text node for content before the offset
+  const textBefore = textarea.value.substring(0, offset);
+  const textNode = document.createTextNode(textBefore);
+  mirror.appendChild(textNode);
+
+  // Add a marker span to measure position
+  const marker = document.createElement("span");
+  marker.textContent = "\u200b"; // Zero-width space
+  mirror.appendChild(marker);
+
+  document.body.appendChild(mirror);
+
+  const markerRect = marker.getBoundingClientRect();
+  const textareaRect = textarea.getBoundingClientRect();
+
+  document.body.removeChild(mirror);
+
+  // markerRect.top is the offset from viewport top (which equals offset within mirror since mirror is at top:0)
+  // Add that to the textarea's position, accounting for scroll
+  return {
+    top: textareaRect.top + markerRect.top - textarea.scrollTop,
+    left: textareaRect.left + markerRect.left - textarea.scrollLeft,
+  };
+}
+
 type Block = RouterOutput["blocks"]["list"]["items"][number];
 
 interface TextBlockProps {
@@ -800,18 +855,30 @@ export function TextBlock({
                   );
 
                   if (normalized.text) {
-                    // Create a fake range for positioning based on textarea position
-                    const rect = textarea.getBoundingClientRect();
+                    // Get approximate position of selected text within textarea
+                    const startPos = getTextareaCaretPosition(
+                      textarea,
+                      normalized.start,
+                    );
+                    const endPos = getTextareaCaretPosition(
+                      textarea,
+                      normalized.end,
+                    );
+                    const lineHeight =
+                      parseFloat(
+                        window.getComputedStyle(textarea).lineHeight,
+                      ) || 24;
+
                     const fakeRange = {
                       getBoundingClientRect: () => ({
-                        top: rect.top,
-                        bottom: rect.top + 24,
-                        left: rect.left + rect.width / 4,
-                        right: rect.left + (rect.width * 3) / 4,
-                        width: rect.width / 2,
-                        height: 24,
-                        x: rect.left + rect.width / 4,
-                        y: rect.top,
+                        top: startPos.top,
+                        bottom: startPos.top + lineHeight,
+                        left: startPos.left,
+                        right: endPos.left,
+                        width: Math.max(endPos.left - startPos.left, 50),
+                        height: lineHeight,
+                        x: startPos.left,
+                        y: startPos.top,
                         toJSON: () => ({}),
                       }),
                     } as Range;
@@ -846,8 +913,18 @@ export function TextBlock({
                 text={block.text}
                 className="text-sm whitespace-pre-wrap cursor-text"
                 enableTooltips={true}
+                enableModifierHighlighting={true}
                 onMarkerChange={(oldMarker, newMarker) => {
                   const updatedText = block.text.replace(oldMarker, newMarker);
+                  if (onTransform) {
+                    onTransform(block.id, updatedText);
+                  }
+                }}
+                onModifierChange={(_oldText, newText, startIndex, endIndex) => {
+                  const updatedText =
+                    block.text.slice(0, startIndex) +
+                    newText +
+                    block.text.slice(endIndex);
                   if (onTransform) {
                     onTransform(block.id, updatedText);
                   }

@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { parseWildcards } from "@/lib/wildcard-parser";
+import { parseModifiers, type ModifierMatch } from "@/lib/modifier-parser";
 import { WildcardString } from "@/components/WildcardString";
+import { ModifierString } from "@/components/ModifierString";
 import { Wildcard } from "@/types/schema";
 
 interface TextWithWildcardsProps {
@@ -9,100 +11,218 @@ interface TextWithWildcardsProps {
   className?: string;
   valueOnly?: boolean;
   enableTooltips?: boolean;
+  enableModifierHighlighting?: boolean;
   onMarkerChange?: (oldMarker: string, newMarker: string) => void;
+  onModifierChange?: (
+    oldText: string,
+    newText: string,
+    startIndex: number,
+    endIndex: number,
+  ) => void;
 }
+
+type ParsedMatch =
+  | {
+      matchType: "wildcard";
+      index: number;
+      fullMatch: string;
+      displayId: string;
+      path: string;
+      frozen?: string;
+    }
+  | {
+      matchType: "value";
+      index: number;
+      fullMatch: string;
+      content: string;
+    }
+  | {
+      matchType: "modifier";
+      index: number;
+      fullMatch: string;
+      modifierMatch: ModifierMatch;
+    }
+  | {
+      matchType: "text";
+      index: number;
+      content: string;
+    };
 
 export function TextWithWildcards({
   text,
   className,
   valueOnly = false,
   enableTooltips = false,
+  enableModifierHighlighting = false,
   onMarkerChange,
+  onModifierChange,
 }: TextWithWildcardsProps) {
   const { data: wildcardsData } = api.wildcards.list.useQuery();
   const wildcards = wildcardsData?.items;
+  const [activeModifierId, setActiveModifierId] = useState<string | null>(null);
 
-  const elements = useMemo(() => {
+  const handleSetActiveModifier = useCallback((id: string | null) => {
+    setActiveModifierId(id);
+  }, []);
+
+  // Memoize parsing only - returns structured data, not React elements
+  const parsedSegments = useMemo(() => {
     // 1. Parse standard wildcards
     const wildcardMatches = parseWildcards(text).map((m) => ({
       ...m,
-      type: "wildcard" as const,
+      matchType: "wildcard" as const,
     }));
 
     // 2. Parse value markers {{val:...}}
-    const valueMatches = [];
+    const valueMatches: Array<{
+      matchType: "value";
+      content: string;
+      fullMatch: string;
+      index: number;
+    }> = [];
     const valuePattern = /\{\{val:(.*?)\}\}/g;
     let match;
     while ((match = valuePattern.exec(text)) !== null) {
       valueMatches.push({
-        type: "value" as const,
+        matchType: "value" as const,
         content: match[1],
         fullMatch: match[0],
         index: match.index,
-        displayId: "", // placeholder
-        path: "", // placeholder
       });
     }
 
-    const allMatches = [...wildcardMatches, ...valueMatches].sort(
+    // 3. Parse modifiers if enabled
+    const modifierMatches: Array<{
+      matchType: "modifier";
+      index: number;
+      fullMatch: string;
+      modifierMatch: ModifierMatch;
+    }> = [];
+    if (enableModifierHighlighting && onModifierChange) {
+      const parsedModifiers = parseModifiers(text);
+      parsedModifiers.forEach((m) => {
+        modifierMatches.push({
+          matchType: "modifier" as const,
+          index: m.index,
+          fullMatch: m.fullMatch,
+          modifierMatch: m,
+        });
+      });
+    }
+
+    // Combine all matches - need to handle potential overlaps
+    // Wildcards and values should take precedence over modifiers
+    const priorityMatches = [...wildcardMatches, ...valueMatches].sort(
+      (a, b) => a.index - b.index,
+    );
+
+    // Filter modifiers that don't overlap with wildcards/values
+    const filteredModifiers = modifierMatches.filter((mod) => {
+      const modStart = mod.index;
+      const modEnd = modStart + mod.fullMatch.length;
+
+      return !priorityMatches.some((pm) => {
+        const pmEnd = pm.index + pm.fullMatch.length;
+        // Check if ranges overlap
+        return modStart < pmEnd && modEnd > pm.index;
+      });
+    });
+
+    const allMatches = [...priorityMatches, ...filteredModifiers].sort(
       (a, b) => a.index - b.index,
     );
 
     if (allMatches.length === 0) {
-      return [text];
+      return [{ matchType: "text" as const, index: 0, content: text }];
     }
 
-    const wildcardMap = new Map<string, Wildcard>();
-    wildcards?.forEach((w) => wildcardMap.set(w.displayId, w));
-
-    const result: React.ReactNode[] = [];
+    const result: ParsedMatch[] = [];
     let lastIndex = 0;
 
-    allMatches.forEach((match, idx) => {
+    allMatches.forEach((match) => {
       // Add text before match
       if (match.index > lastIndex) {
-        result.push(text.substring(lastIndex, match.index));
+        result.push({
+          matchType: "text",
+          index: lastIndex,
+          content: text.substring(lastIndex, match.index),
+        });
       }
 
-      if (match.type === "wildcard") {
-        // Add wildcard component
-        const wildcard = wildcardMap.get(match.displayId) || null;
-        result.push(
-          <WildcardString
-            key={`wildcard-${idx}-${match.displayId}-${match.path}`}
-            wildcard={wildcard}
-            displayId={match.displayId}
-            path={match.path}
-            frozen={match.frozen}
-            fullMatch={match.fullMatch}
-            valueOnly={valueOnly}
-            enableTooltip={enableTooltips}
-            onMarkerChange={onMarkerChange}
-          />,
-        );
-      } else {
-        // Render resolved value with highlighting
-        // Mimicking WildcardString style but for simple text value
-        result.push(
-          <span
-            key={`val-${idx}`}
-            className="inline-block px-2 py-0.5 rounded bg-magenta-dark/20 text-foreground font-mono"
-          >
-            {match.content}
-          </span>,
-        );
-      }
-
+      result.push(match as ParsedMatch);
       lastIndex = match.index + match.fullMatch.length;
     });
 
     // Add remaining text
     if (lastIndex < text.length) {
-      result.push(text.substring(lastIndex));
+      result.push({
+        matchType: "text",
+        index: lastIndex,
+        content: text.substring(lastIndex),
+      });
     }
 
     return result;
-  }, [text, wildcards, valueOnly, enableTooltips, onMarkerChange]);
+  }, [text, enableModifierHighlighting, onModifierChange]);
+
+  // Build wildcard map
+  const wildcardMap = useMemo(() => {
+    const map = new Map<string, Wildcard>();
+    wildcards?.forEach((w) => map.set(w.displayId, w));
+    return map;
+  }, [wildcards]);
+
+  // Render elements - not memoized so it can react to activeModifierId changes
+  const elements = parsedSegments.map((segment, idx) => {
+    if (segment.matchType === "text") {
+      return segment.content;
+    }
+
+    if (segment.matchType === "wildcard") {
+      const wildcard = wildcardMap.get(segment.displayId) || null;
+      return (
+        <WildcardString
+          key={`wildcard-${idx}-${segment.displayId}-${segment.path}`}
+          wildcard={wildcard}
+          displayId={segment.displayId}
+          path={segment.path}
+          frozen={segment.frozen}
+          fullMatch={segment.fullMatch}
+          valueOnly={valueOnly}
+          enableTooltip={enableTooltips}
+          onMarkerChange={onMarkerChange}
+        />
+      );
+    }
+
+    if (segment.matchType === "value") {
+      return (
+        <span
+          key={`val-${idx}`}
+          className="inline-block px-2 py-0.5 rounded bg-magenta-dark/20 text-foreground font-mono"
+        >
+          {segment.content}
+        </span>
+      );
+    }
+
+    if (segment.matchType === "modifier" && onModifierChange) {
+      const modifierId = `mod-${idx}-${segment.modifierMatch.index}`;
+      return (
+        <ModifierString
+          key={modifierId}
+          match={segment.modifierMatch}
+          onModify={onModifierChange}
+          textOffset={0}
+          modifierId={modifierId}
+          activeModifierId={activeModifierId}
+          onSetActive={handleSetActiveModifier}
+        />
+      );
+    }
+
+    return null;
+  });
 
   return <span className={className}>{elements}</span>;
 }
