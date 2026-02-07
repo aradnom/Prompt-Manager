@@ -104,8 +104,10 @@ export function ModifierString({
   }, [match.fullMatch, isActive]);
 
   // Determine styling based on modifier type
-  const isEmphasis = match.type === "emphasis";
-  const hasWeight = match.weight !== null;
+  const hasEmphasis = match.type === "emphasis";
+  const hasDeemphasis = match.type === "deemphasis";
+  const hasPositiveWeight = match.weight && match.weight > 1;
+  const hasNegativeWeight = match.weight && match.weight < 1;
 
   return (
     <>
@@ -113,13 +115,11 @@ export function ModifierString({
         ref={spanRef}
         data-interactive-text
         className={cn(
-          "rounded px-0.5 -mx-0.5 transition-colors cursor-pointer",
-          isEmphasis
-            ? "bg-cyan-medium/20 hover:bg-cyan-medium/40"
-            : "bg-magenta-medium/20 hover:bg-magenta-medium/40",
-          isActive &&
-            (isEmphasis ? "bg-cyan-medium/40" : "bg-magenta-medium/40"),
-          hasWeight && "font-medium",
+          "px-1 py-1 -mx-0.5 transition-colors cursor-pointer bg-cyan-medium/40",
+          hasPositiveWeight && "font-bold",
+          hasNegativeWeight && "font-light",
+          hasEmphasis && "bg-cyan-medium/60",
+          hasDeemphasis && "opacity-70",
         )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
