@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { parseWildcards } from "@/lib/wildcard-parser";
 import { parseModifiers, type ModifierMatch } from "@/lib/modifier-parser";
 import { WildcardString } from "@/components/WildcardString";
@@ -98,7 +99,7 @@ export function TextWithWildcards({
       fullMatch: string;
       modifierMatch: ModifierMatch;
     }> = [];
-    if (enableModifierHighlighting && onModifierChange) {
+    if (enableModifierHighlighting) {
       const parsedModifiers = parseModifiers(text);
       parsedModifiers.forEach((m) => {
         modifierMatches.push({
@@ -219,6 +220,30 @@ export function TextWithWildcards({
           activeModifierId={activeModifierId}
           onSetActive={handleSetActiveModifier}
         />
+      );
+    }
+
+    // Static modifier styling (no menu) when highlighting is enabled but no change handler
+    if (segment.matchType === "modifier" && enableModifierHighlighting) {
+      const m = segment.modifierMatch;
+      const hasEmphasis = m.type === "emphasis";
+      const hasDeemphasis = m.type === "deemphasis";
+      const hasPositiveWeight = m.weight && m.weight > 1;
+      const hasNegativeWeight = m.weight && m.weight < 1;
+
+      return (
+        <span
+          key={`mod-${idx}`}
+          className={cn(
+            "px-1 py-0.5 bg-cyan-medium/40",
+            hasPositiveWeight && "font-bold",
+            hasNegativeWeight && "font-light",
+            hasEmphasis && "bg-cyan-medium/60",
+            hasDeemphasis && "opacity-70",
+          )}
+        >
+          {m.fullMatch}
+        </span>
       );
     }
 

@@ -280,6 +280,7 @@ export function StackOutputBlock() {
             text={renderedContentWithMarkers}
             className="text-base whitespace-pre-wrap font-mono"
             valueOnly={true}
+            enableModifierHighlighting={true}
           />
         </CardContent>
       )}
