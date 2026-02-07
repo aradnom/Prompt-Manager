@@ -25,6 +25,7 @@ import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { resolveWildcardsInText } from "@/lib/wildcard-resolver";
 import { insertWildcard, parseWildcards } from "@/lib/wildcard-parser";
 import { WildcardBrowser } from "@/components/WildcardBrowser";
+import { DiffText } from "@/components/DiffText";
 import { CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -172,6 +173,9 @@ export function TextBlock({
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [exploreVariations, setExploreVariations] = useState<string[]>([]);
   const [showRevisions, setShowRevisions] = useState(false);
+  const [hoveredRevisionId, setHoveredRevisionId] = useState<number | null>(
+    null,
+  );
   const [isTypeSearchOpen, setIsTypeSearchOpen] = useState(false);
   const [isLabelSearchOpen, setIsLabelSearchOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
@@ -1096,6 +1100,9 @@ export function TextBlock({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
+            <p className="absolute left-4 top-2 z-30 text-xs text-cyan-medium">
+              Hover over revisions to see differences.
+            </p>
             <button
               onClick={() => setShowRevisions(false)}
               className="absolute right-2 top-2 z-30 text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
@@ -1103,7 +1110,7 @@ export function TextBlock({
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="flex gap-4 overflow-x-auto h-full p-4 ml mr-8">
+            <div className="flex gap-4 overflow-x-auto h-full p-4 pt-8 mr-8">
               {revisionsQuery.isLoading ? (
                 <div className="flex items-center justify-center w-full">
                   <p className="text-sm text-cyan-medium">
@@ -1112,7 +1119,10 @@ export function TextBlock({
                 </div>
               ) : sortedRevisions.length > 0 ? (
                 sortedRevisions.map((revision) => {
-                  const isActive = revision.id === block.activeRevisionId;
+                  const isActiveRevision =
+                    revision.id === block.activeRevisionId;
+                  const isHovered = hoveredRevisionId === revision.id;
+                  const showDiff = isHovered && !isActiveRevision;
                   return (
                     <div
                       key={revision.id}
@@ -1131,8 +1141,10 @@ export function TextBlock({
                           );
                         }
                       }}
+                      onMouseEnter={() => setHoveredRevisionId(revision.id)}
+                      onMouseLeave={() => setHoveredRevisionId(null)}
                     >
-                      {isActive && (
+                      {isActiveRevision && (
                         <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground">
                           Active
                         </div>
@@ -1141,10 +1153,18 @@ export function TextBlock({
                         {new Date(revision.createdAt).toLocaleString()}
                       </p>
                       <div className="flex-1 overflow-auto">
-                        <TextWithWildcards
-                          text={revision.text}
-                          className="text-sm whitespace-pre-wrap"
-                        />
+                        {showDiff ? (
+                          <DiffText
+                            oldText={block.text}
+                            newText={revision.text}
+                            className="text-sm"
+                          />
+                        ) : (
+                          <TextWithWildcards
+                            text={revision.text}
+                            className="text-sm whitespace-pre-wrap"
+                          />
+                        )}
                       </div>
                     </div>
                   );
