@@ -43,7 +43,7 @@ function HomeContent() {
         transition={{ duration: 0.5 }}
         className="flex mb-8"
       >
-        <RasterIcon name="logo1" size={100} className="mr-5" />
+        <RasterIcon name="logo1" width={90} height={100} className="mr-5" />
         <div>
           <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
             Prompt Manager
