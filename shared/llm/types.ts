@@ -9,4 +9,5 @@ export type LLMOperation =
   | "explore"
   | "generate"
   | "generate-wildcard"
-  | "auto-label";
+  | "auto-label"
+  | "enrich";

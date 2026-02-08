@@ -14,6 +14,7 @@ const LLM_OPERATIONS: [LLMOperation, ...LLMOperation[]] = [
   "generate",
   "generate-wildcard",
   "auto-label",
+  "enrich",
 ];
 
 const llmTargetSchema = z.enum(LLM_TARGETS);

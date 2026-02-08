@@ -119,6 +119,21 @@ Input: "emotions"
 Output: {"title": "Emotions", "code": "emotions"}`;
       break;
 
+    case "enrich":
+      basePrompt = `The user will provide a prompt or descriptive text. Your task is to enrich this prompt by adding approximately 50 words of additional content that makes it more interesting, more descriptive, and more fleshed out.
+
+Guidelines:
+- Expand on the key ideas and concepts already present in the prompt
+- Add evocative details, sensory descriptions, or nuanced elements
+- Maintain the same tone, style, and subject matter as the original
+- Do not contradict or override anything in the original prompt
+- The enrichment should feel like a natural extension, not a replacement
+- Focus on depth and texture rather than introducing entirely new subjects
+- Return ONLY the enrichment text (the new content to be added), not the original prompt
+
+Return only the enrichment text without any preamble, explanation, or the original prompt. The output should be ready to append directly to the existing prompt.`;
+      break;
+
     default:
       throw new Error(`Unknown operation: ${operation}`);
   }

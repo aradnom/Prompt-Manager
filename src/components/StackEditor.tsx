@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, Search, Sparkles, RefreshCw, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DndContext,
@@ -61,7 +61,7 @@ interface StackEditorProps {
 export function StackEditor({ stack }: StackEditorProps) {
   const navigate = useNavigate();
   const { setActiveStack, setActiveStackBlocks } = useActiveStack();
-  const { setRenderedContent, setRenderedContentWithMarkers } =
+  const { renderedContent, setRenderedContent, setRenderedContentWithMarkers } =
     useStackContent();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -75,7 +75,9 @@ export function StackEditor({ stack }: StackEditorProps) {
   const [generateResults, setGenerateResults] = useState<string[]>([]);
   const [isEditingConcept, setIsEditingConcept] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
   const generateMutation = useTransform();
+  const enrichMutation = useTransform();
 
   const {
     data: fullStack,
@@ -496,6 +498,40 @@ export function StackEditor({ stack }: StackEditorProps) {
     }
   };
 
+  const handleEnrichPrompt = async () => {
+    if (!renderedContent.trim()) return;
+
+    setIsEnriching(true);
+    try {
+      const result = await enrichMutation.mutateAsync({
+        text: renderedContent,
+        operation: "enrich",
+        style: stack.style,
+      });
+
+      if (typeof result.result === "string") {
+        // Create a new block with the enrichment
+        const newBlock = await createBlockMutation.mutateAsync({
+          uuid: generateUUID(),
+          displayId: generateDisplayId(),
+          text: result.result,
+          labels: [],
+          typeId: undefined,
+        });
+
+        // Add to stack
+        await addBlockMutation.mutateAsync({
+          stackId: stack.id,
+          blockId: newBlock.id,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to enrich prompt:", error);
+    } finally {
+      setIsEnriching(false);
+    }
+  };
+
   return (
     <>
       <Card className="h-full flex flex-col">
@@ -726,6 +762,15 @@ export function StackEditor({ stack }: StackEditorProps) {
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate New Block
+              </Button>
+              <Button
+                onClick={handleEnrichPrompt}
+                variant="tertiary"
+                className="w-full sm:w-auto"
+                disabled={!renderedContent.trim() || isEnriching}
+              >
+                <Wand2 className="mr-2 h-4 w-4" />
+                {isEnriching ? "Enriching..." : "Enrich Prompt"}
               </Button>
             </>
           )}
