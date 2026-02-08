@@ -101,7 +101,7 @@ function FolderRow({
     >
       <div
         className={cn(
-          "border border-cyan-medium/30 rounded-lg overflow-hidden",
+          "border-2 border-cyan-medium/30 rounded-lg overflow-hidden",
           index === 0 && "accent-border-gradient",
         )}
       >
@@ -595,7 +595,7 @@ export default function Blocks() {
             {foldersData.looseBlocks.map((block, index) => (
               <motion.div
                 className={cn(
-                  "border-standard-dark-cyan",
+                  "rounded",
                   index === 0 &&
                     page === 0 &&
                     foldersData.folders.length === 0 &&

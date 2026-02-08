@@ -601,6 +601,7 @@ export function TextBlock({
       ref={blockRef}
       className={cn(
         "relative rounded-lg bg-background text-foreground shadow-sm cursor-pointer",
+        alwaysActive && "border-standard-dark-cyan",
         !alwaysActive && "border",
         isDisabled && "opacity-40 grayscale contrast-75",
       )}

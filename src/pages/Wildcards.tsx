@@ -458,7 +458,7 @@ export default function Wildcards() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 className={cn(
-                  "relative border-standard-dark-cyan",
+                  "relative rounded",
                   index === 0 && "accent-border-gradient",
                 )}
               >

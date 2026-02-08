@@ -235,6 +235,7 @@ export default function Stacks() {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+    // eslint-disable-next-line
   }, [activeStackId, showRevisionsForStack]);
 
   return (
@@ -372,7 +373,7 @@ export default function Stacks() {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   data-stack-card
                   className={cn(
-                    "relative border-standard-dark-cyan",
+                    "relative rounded",
                     index === 0 && page === 0 && "accent-border-gradient",
                   )}
                 >
