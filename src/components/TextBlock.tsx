@@ -4,6 +4,7 @@ import {
   X,
   Info,
   Clock,
+  Copy,
   RefreshCw,
   Trash2,
   Eye,
@@ -791,7 +792,7 @@ export function TextBlock({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className={cn("flex items-center", isActive && "gap-2")}>
             {isSelectMode ? (
               <Checkbox
                 checked={isSelected}
@@ -865,6 +866,25 @@ export function TextBlock({
                     </TooltipProvider>
                   </ExpandingIcon>
                 )}
+                <ExpandingIcon active={isActive} origin="right">
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(block.text);
+                          }}
+                          className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                          aria-label="Copy block text"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy block text</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </ExpandingIcon>
                 <ExpandingIcon active={isActive} origin="right">
                   <button
                     onClick={onDelete}
