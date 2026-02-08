@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
 import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
-import { PREDEFINED_MODELS } from "@/lib/llm-model-names";
+import { PREDEFINED_MODELS } from "@shared/llm/model-names";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { LMStudioInput } from "@/components/LMStudioInput";
 import { storage } from "@/lib/storage";
