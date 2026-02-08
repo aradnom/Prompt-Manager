@@ -192,7 +192,13 @@ export function StackOutputBlock() {
           className={`flex items-center ${isMinimized ? "justify-end" : "justify-between"}`}
         >
           {!isMinimized && (
-            <CardTitle className="text-xl font-bold">Prompt Output</CardTitle>
+            <div>
+              <CardTitle className="text-xl font-bold">Prompt Output</CardTitle>
+              <p className="text-xs text-cyan-medium mt-1">
+                {renderedContent.length.toLocaleString()} chars &middot; ~
+                {Math.ceil(renderedContent.length / 4).toLocaleString()} tokens
+              </p>
+            </div>
           )}
           <div className="flex gap-2 items-center">
             <TooltipProvider delayDuration={0}>

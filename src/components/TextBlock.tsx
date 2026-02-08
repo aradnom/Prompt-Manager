@@ -697,6 +697,13 @@ export function TextBlock({
                           </Tooltip>
                         </TooltipProvider>
                       </ExpandingIcon>
+                      {isActive && (
+                        <span className="text-xs text-cyan-medium">
+                          {block.text.length.toLocaleString()} chars &middot; ~
+                          {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
+                          tokens
+                        </span>
+                      )}
                     </>
                   ) : (
                     <>
@@ -745,6 +752,13 @@ export function TextBlock({
                           </Tooltip>
                         </TooltipProvider>
                       </ExpandingIcon>
+                      {isActive && (
+                        <span className="text-xs text-cyan-medium">
+                          {block.text.length.toLocaleString()} chars &middot; ~
+                          {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
+                          tokens
+                        </span>
+                      )}
                     </>
                   )}
                 </div>
