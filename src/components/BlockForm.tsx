@@ -223,6 +223,31 @@ export function BlockForm({
       <CardContent>
         <div className="space-y-4">
           <div>
+            <label className="text-sm font-medium mb-2 block">Text</label>
+            <textarea
+              ref={textareaRef}
+              placeholder="Enter your prompt text..."
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background min-h-30"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                debouncedSave();
+              }}
+              disabled={isSubmitting}
+              autoFocus
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => setWildcardBrowserOpen(true)}
+              disabled={isSubmitting}
+            >
+              Insert Wildcard
+            </Button>
+          </div>
+          <div>
             <label className="text-sm font-medium mb-2 block">
               Name (optional)
             </label>
@@ -307,31 +332,6 @@ export function BlockForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Text</label>
-            <textarea
-              ref={textareaRef}
-              placeholder="Enter your prompt text..."
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background min-h-30"
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                debouncedSave();
-              }}
-              disabled={isSubmitting}
-              autoFocus
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => setWildcardBrowserOpen(true)}
-              disabled={isSubmitting}
-            >
-              Insert Wildcard
-            </Button>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">
