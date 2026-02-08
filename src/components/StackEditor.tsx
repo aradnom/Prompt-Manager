@@ -37,6 +37,7 @@ import { SortableBlock } from "@/components/SortableBlock";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DefragLoader } from "@/components/ui/defrag-loader";
 import {
   Dialog,
   DialogContent,
@@ -769,8 +770,12 @@ export function StackEditor({ stack }: StackEditorProps) {
                 className="w-full sm:w-auto"
                 disabled={!renderedContent.trim() || isEnriching}
               >
-                <Wand2 className="mr-2 h-4 w-4" />
-                {isEnriching ? "Enriching..." : "Enrich Prompt"}
+                {isEnriching ? (
+                  <DefragLoader size={16} className="mr-2" />
+                ) : (
+                  <Wand2 className="mr-2 h-4 w-4" />
+                )}
+                Enrich Prompt
               </Button>
             </>
           )}
