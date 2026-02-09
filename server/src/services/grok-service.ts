@@ -1,7 +1,10 @@
 import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
 import { processLLMResponse } from "@shared/llm/response-parser";
+import { getModelInfo, getClosestThinkingLevel } from "@shared/llm/model-info";
 import OpenAI from "openai";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
+import type { ReasoningEffort } from "openai/resources/shared";
 
 export class GrokService {
   private client: OpenAI | null = null;
@@ -54,11 +57,24 @@ export class GrokService {
 
     // Use user's model if provided, otherwise use server config model
     const modelId = userModel || this.config.grok.model;
+    const modelInfo = getModelInfo("grok", modelId);
+
+    // Determine reasoning effort based on thinking config (only if enabled and model supports it)
+    // Grok uses reasoning_effort like OpenAI: "low", "high"
+    let reasoningEffort: ReasoningEffort | undefined;
+    if (request.thinking?.enabled && modelInfo?.hasThinking) {
+      const level = request.thinking.level || "low";
+      const effectiveLevel = getClosestThinkingLevel("grok", modelId, level);
+      reasoningEffort = (effectiveLevel || "low") as ReasoningEffort;
+    }
 
     try {
-      console.debug(`Grok: Generating content with model: ${modelId}`);
+      console.debug(
+        `Grok: Generating content with model: ${modelId}, reasoning: ${reasoningEffort || "off"}`,
+      );
 
-      const response = await clientToUse.chat.completions.create({
+      // Build request params
+      const requestParams: ChatCompletionCreateParamsNonStreaming = {
         model: modelId,
         messages: [
           { role: "system", content: systemPrompt },
@@ -66,7 +82,10 @@ export class GrokService {
         ],
         max_tokens: this.config.maxTokens,
         temperature: 0.7,
-      });
+        ...(reasoningEffort && { reasoning_effort: reasoningEffort }),
+      };
+
+      const response = await clientToUse.chat.completions.create(requestParams);
 
       const text = response.choices?.[0]?.message?.content;
 

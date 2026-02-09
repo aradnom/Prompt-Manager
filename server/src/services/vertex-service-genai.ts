@@ -1,7 +1,30 @@
 import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
 import { processLLMResponse } from "@shared/llm/response-parser";
+import { getModelInfo, getClosestThinkingLevel } from "@shared/llm/model-info";
+import type { ThinkingLevel as AppThinkingLevel } from "@shared/llm/types";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+
+// Map our thinking levels to Google's ThinkingLevel for Gemini 3 Flash
+const FLASH_THINKING_LEVELS: Record<AppThinkingLevel, ThinkingLevel> = {
+  low: ThinkingLevel.MINIMAL,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
+};
+
+// Map our thinking levels to Google's ThinkingLevel for Gemini 3 Pro
+const PRO_THINKING_LEVELS: Record<AppThinkingLevel, ThinkingLevel> = {
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.LOW, // Pro doesn't have medium, fall back to low
+  high: ThinkingLevel.HIGH,
+};
+
+// Map our thinking levels to budget tokens for Gemini 2.5 models
+const THINKING_BUDGETS: Record<AppThinkingLevel, number> = {
+  low: 1024,
+  medium: 8192,
+  high: 32768,
+};
 
 export class VertexServiceGenAI {
   private client: GoogleGenAI | null = null;
@@ -62,27 +85,42 @@ export class VertexServiceGenAI {
 
     // Use user's model if provided, otherwise use server config model
     const modelId = userModel || this.config.vertex.model;
+    const modelInfo = getModelInfo("vertex", modelId);
 
-    // Args that only work with specific models
-    let modelSpecificArgs = {};
+    // Build thinking config (only if enabled and model supports it)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const thinkingConfig: any = { includeThoughts: false };
+    let thinkingDescription = "off";
 
-    // thinkingLevel only applies to Gemini 3 models currently
-    // MINIMAL and MEDIUM only apply to Flash, so in theory LOW and HIGH apply
-    // to Pro...?
-    // Also, you can't turn thinking off in Pro
-    if (modelId.includes("3-flash")) {
-      modelSpecificArgs = {
-        thinkingConfig: {
-          includeThoughts: false,
-          thinkingLevel: ThinkingLevel.MINIMAL,
-        },
-      };
+    if (request.thinking?.enabled && modelInfo?.hasThinking) {
+      const level = request.thinking.level || "low";
+      const effectiveLevel = getClosestThinkingLevel("vertex", modelId, level);
+
+      if (modelId.includes("3-flash")) {
+        // Gemini 3 Flash uses MINIMAL, MEDIUM, HIGH
+        thinkingConfig.thinkingLevel =
+          FLASH_THINKING_LEVELS[effectiveLevel || "low"];
+        thinkingDescription = `level=${effectiveLevel}`;
+      } else if (modelId.includes("3-pro")) {
+        // Gemini 3 Pro uses LOW, HIGH
+        thinkingConfig.thinkingLevel =
+          PRO_THINKING_LEVELS[effectiveLevel || "low"];
+        thinkingDescription = `level=${effectiveLevel}`;
+      } else if (modelId.includes("2.5")) {
+        // Gemini 2.5 uses budget_tokens
+        thinkingConfig.thinkingBudget =
+          THINKING_BUDGETS[effectiveLevel || "low"];
+        thinkingDescription = `budget=${thinkingConfig.thinkingBudget}`;
+      }
     }
 
     try {
-      console.debug(`GenAI SDK: Generating content with model: ${modelId}`);
+      console.debug(
+        `GenAI SDK: Generating content with model: ${modelId}, thinking: ${thinkingDescription}`,
+      );
 
-      const response = await clientToUse.models.generateContent({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const requestParams: any = {
         model: modelId,
         contents: [{ role: "user", parts: [{ text: request.text }] }],
         config: {
@@ -91,13 +129,11 @@ export class VertexServiceGenAI {
             maxOutputTokens: this.config.maxTokens,
             temperature: 0.7,
           },
-          thinkingConfig: {
-            includeThoughts: false,
-          },
-          ...modelSpecificArgs,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      });
+          thinkingConfig,
+        },
+      };
+
+      const response = await clientToUse.models.generateContent(requestParams);
 
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
 

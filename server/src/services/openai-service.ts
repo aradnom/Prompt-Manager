@@ -1,8 +1,10 @@
 import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
 import { processLLMResponse } from "@shared/llm/response-parser";
+import { getModelInfo, getClosestThinkingLevel } from "@shared/llm/model-info";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
+import type { ReasoningEffort } from "openai/resources/shared";
 
 export class OpenAIService {
   private client: OpenAI | null = null;
@@ -53,19 +55,21 @@ export class OpenAIService {
 
     // Use user's model if provided, otherwise use server config model
     const modelId = userModel || this.config.openai.model;
+    const modelInfo = getModelInfo("openai", modelId);
 
-    // Args that only work with specific models
-    let modelSpecificArgs = {};
-
-    if (modelId.startsWith("gpt-5.2")) {
-      modelSpecificArgs = {
-        temperature: 1,
-        reasoning_effort: "none",
-      };
+    // Determine reasoning effort based on thinking config (only if enabled and model supports it)
+    // OpenAI ReasoningEffort: 'low' | 'medium' | 'high'
+    let reasoningEffort: ReasoningEffort | undefined;
+    if (request.thinking?.enabled && modelInfo?.hasThinking) {
+      const level = request.thinking.level || "low";
+      const effectiveLevel = getClosestThinkingLevel("openai", modelId, level);
+      reasoningEffort = (effectiveLevel || "low") as ReasoningEffort;
     }
 
     try {
-      console.debug(`OpenAI: Generating content with model: ${modelId}`);
+      console.debug(
+        `OpenAI: Generating content with model: ${modelId}, reasoning: ${reasoningEffort || "off"}`,
+      );
 
       // Build request parameters
       const requestParams: ChatCompletionCreateParamsNonStreaming = {
@@ -75,14 +79,14 @@ export class OpenAIService {
           { role: "user", content: request.text },
         ],
         max_completion_tokens: this.config.maxTokens,
-        // reasoning_effort is not supported by GPT-4 models
-        ...(!modelId.startsWith("gpt-4") && {
-          reasoning_effort: "minimal",
-        }),
+        // Only set reasoning_effort for non-GPT-4 models
+        ...(!modelId.startsWith("gpt-4") &&
+          reasoningEffort && { reasoning_effort: reasoningEffort }),
         // GPT-5 models don't support custom temperature
         ...(!modelId.startsWith("gpt-5") && { temperature: 0.7 }),
-        ...modelSpecificArgs,
       };
+
+      console.log(requestParams);
 
       const response = await clientToUse.chat.completions.create(requestParams);
 

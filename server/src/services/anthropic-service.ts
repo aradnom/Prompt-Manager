@@ -1,7 +1,21 @@
 import { LLMConfig } from "@server/config";
 import { TransformRequest, TransformResponse } from "./llm-service";
 import { processLLMResponse } from "@shared/llm/response-parser";
+import { getModelInfo, getClosestThinkingLevel } from "@shared/llm/model-info";
+import type { ThinkingLevel } from "@shared/llm/types";
 import Anthropic from "@anthropic-ai/sdk";
+import type {
+  MessageCreateParamsNonStreaming,
+  ThinkingConfigParam,
+} from "@anthropic-ai/sdk/resources/messages";
+
+// Map our thinking levels to Anthropic budget_tokens
+// Anthropic minimum is 1024
+const THINKING_BUDGETS: Record<ThinkingLevel, number> = {
+  low: 1024,
+  medium: 8192,
+  high: 32768,
+};
 
 export class AnthropicService {
   private client: Anthropic | null = null;
@@ -52,21 +66,45 @@ export class AnthropicService {
 
     // Use user's model if provided, otherwise use server config model
     const modelId = userModel || this.config.anthropic.model;
+    const modelInfo = getModelInfo("anthropic", modelId);
+
+    // Build thinking config for Anthropic (only if enabled and model supports it)
+    // Anthropic uses: thinking: { type: "enabled", budget_tokens: number }
+    let thinkingConfig: ThinkingConfigParam | undefined;
+    if (request.thinking?.enabled && modelInfo?.hasThinking) {
+      const level = request.thinking.level || "low";
+      const effectiveLevel = getClosestThinkingLevel(
+        "anthropic",
+        modelId,
+        level,
+      );
+      thinkingConfig = {
+        type: "enabled",
+        budget_tokens: THINKING_BUDGETS[effectiveLevel || "low"],
+      };
+    }
 
     try {
-      console.debug(`Anthropic: Generating content with model: ${modelId}`);
+      console.debug(
+        `Anthropic: Generating content with model: ${modelId}, thinking: ${thinkingConfig ? `enabled (${request.thinking?.level || "low"})` : "off"}`,
+      );
 
-      const response = await clientToUse.messages.create({
+      // Build request params
+      const requestParams: MessageCreateParamsNonStreaming = {
         model: modelId,
         max_tokens: this.config.maxTokens,
         system: systemPrompt,
         messages: [{ role: "user", content: request.text }],
-      });
+        ...(thinkingConfig && { thinking: thinkingConfig }),
+      };
 
-      const text =
-        response.content[0]?.type === "text"
-          ? response.content[0].text
-          : undefined;
+      const response = await clientToUse.messages.create(requestParams);
+
+      // Filter out thinking blocks from response, only get text content
+      const textContent = response.content.find(
+        (block) => block.type === "text",
+      );
+      const text = textContent?.type === "text" ? textContent.text : undefined;
 
       if (!text) {
         throw new Error("No response from Anthropic");
