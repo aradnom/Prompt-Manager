@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Copy, Check, KeyRound, AlertTriangle } from "lucide-react";
+import { Copy, Check, KeyRound, AlertTriangle, Info } from "lucide-react";
 import { RasterIcon } from "@/components/RasterIcon";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import {
@@ -17,6 +17,15 @@ import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
 import { MODELS } from "@shared/llm/model-info";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { LMStudioInput } from "@/components/LMStudioInput";
+import { CollapsibleSection } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { storage } from "@/lib/storage";
 
 function CopyButton({ text }: { text: string }) {
@@ -81,12 +90,30 @@ export default function Account() {
   const [grokModel, setGrokModel] = useState(Object.keys(MODELS.grok)[0]);
   const [grokCustomModel, setGrokCustomModel] = useState("");
   const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>("");
+  const [thinkingEnabled, setThinkingEnabled] = useState(() => {
+    const saved = localStorage.getItem("thinking-enabled");
+    return saved === "true";
+  });
+  const [thinkingLevel, setThinkingLevel] = useState<"low" | "medium" | "high">(
+    () => {
+      const saved = localStorage.getItem("thinking-level");
+      return (saved as "low" | "medium" | "high") || "low";
+    },
+  );
 
   useEffect(() => {
     if (isAuthenticated && !accountData) {
       fetchAccountData();
     }
   }, [isAuthenticated, accountData]);
+
+  useEffect(() => {
+    localStorage.setItem("thinking-enabled", String(thinkingEnabled));
+  }, [thinkingEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("thinking-level", thinkingLevel);
+  }, [thinkingLevel]);
 
   const fetchAccountData = async (silent = false) => {
     if (!silent) setIsLoadingAccount(true);
@@ -539,177 +566,260 @@ export default function Account() {
                     <hr className="mt-6" />
                   </div>
 
-                  <LMStudioInput enabled={activeLLMPlatform === "lm-studio"} />
+                  <CollapsibleSection title="API Keys/Model Selection">
+                    <div className="space-y-6">
+                      <LMStudioInput
+                        enabled={activeLLMPlatform === "lm-studio"}
+                      />
 
-                  <ApiKeyInput
-                    displayName="Google Vertex"
-                    apiKey={vertexApiKey}
-                    onApiKeyChange={setVertexApiKey}
-                    configured={apiKeyInfo.vertex?.configured || false}
-                    onSave={() => {
-                      const modelToSave =
-                        vertexModel === "custom" ? customModel : vertexModel;
-                      handleSaveApiKey("vertex", vertexApiKey, modelToSave);
-                    }}
-                    onTest={() => handleTestApiKey("vertex")}
-                    isSaving={isSavingApiKey}
-                    isTesting={isTestingApiKey}
-                    testResult={
-                      testResult?.provider === "vertex" ? testResult : null
-                    }
-                    modelConfig={{
-                      availableModels: MODELS.vertex,
-                      selectedModel: vertexModel,
-                      onModelChange: (model) => {
-                        setVertexModel(model);
-                        if (model !== "custom") {
-                          setCustomModel("");
-                          // Save immediately for predefined models
-                          handleSaveModel("vertex", model);
+                      <ApiKeyInput
+                        displayName="Google Vertex"
+                        apiKey={vertexApiKey}
+                        onApiKeyChange={setVertexApiKey}
+                        configured={apiKeyInfo.vertex?.configured || false}
+                        onSave={() => {
+                          const modelToSave =
+                            vertexModel === "custom"
+                              ? customModel
+                              : vertexModel;
+                          handleSaveApiKey("vertex", vertexApiKey, modelToSave);
+                        }}
+                        onTest={() => handleTestApiKey("vertex")}
+                        isSaving={isSavingApiKey}
+                        isTesting={isTestingApiKey}
+                        testResult={
+                          testResult?.provider === "vertex" ? testResult : null
                         }
-                      },
-                      customModel,
-                      onCustomModelChange: setCustomModel,
-                      onCustomModelBlur: () => {
-                        // Save when custom input loses focus
-                        if (vertexModel === "custom" && customModel.trim()) {
-                          handleSaveModel("vertex", customModel);
-                        }
-                      },
-                    }}
-                    enabled={activeLLMPlatform === "vertex"}
-                  />
+                        modelConfig={{
+                          availableModels: MODELS.vertex,
+                          selectedModel: vertexModel,
+                          onModelChange: (model) => {
+                            setVertexModel(model);
+                            if (model !== "custom") {
+                              setCustomModel("");
+                              // Save immediately for predefined models
+                              handleSaveModel("vertex", model);
+                            }
+                          },
+                          customModel,
+                          onCustomModelChange: setCustomModel,
+                          onCustomModelBlur: () => {
+                            // Save when custom input loses focus
+                            if (
+                              vertexModel === "custom" &&
+                              customModel.trim()
+                            ) {
+                              handleSaveModel("vertex", customModel);
+                            }
+                          },
+                        }}
+                        enabled={activeLLMPlatform === "vertex"}
+                      />
 
-                  <ApiKeyInput
-                    displayName="OpenAI"
-                    apiKey={openaiApiKey}
-                    onApiKeyChange={setOpenaiApiKey}
-                    configured={apiKeyInfo.openai?.configured || false}
-                    onSave={() => {
-                      const modelToSave =
-                        openaiModel === "custom"
-                          ? openaiCustomModel
-                          : openaiModel;
-                      handleSaveApiKey("openai", openaiApiKey, modelToSave);
-                    }}
-                    onTest={() => handleTestApiKey("openai")}
-                    isSaving={isSavingApiKey}
-                    isTesting={isTestingApiKey}
-                    testResult={
-                      testResult?.provider === "openai" ? testResult : null
-                    }
-                    modelConfig={{
-                      availableModels: MODELS.openai,
-                      selectedModel: openaiModel,
-                      onModelChange: (model) => {
-                        setOpenaiModel(model);
-                        if (model !== "custom") {
-                          setOpenaiCustomModel("");
-                          // Save immediately for predefined models
-                          handleSaveModel("openai", model);
+                      <ApiKeyInput
+                        displayName="OpenAI"
+                        apiKey={openaiApiKey}
+                        onApiKeyChange={setOpenaiApiKey}
+                        configured={apiKeyInfo.openai?.configured || false}
+                        onSave={() => {
+                          const modelToSave =
+                            openaiModel === "custom"
+                              ? openaiCustomModel
+                              : openaiModel;
+                          handleSaveApiKey("openai", openaiApiKey, modelToSave);
+                        }}
+                        onTest={() => handleTestApiKey("openai")}
+                        isSaving={isSavingApiKey}
+                        isTesting={isTestingApiKey}
+                        testResult={
+                          testResult?.provider === "openai" ? testResult : null
                         }
-                      },
-                      customModel: openaiCustomModel,
-                      onCustomModelChange: setOpenaiCustomModel,
-                      onCustomModelBlur: () => {
-                        // Save when custom input loses focus
-                        if (
-                          openaiModel === "custom" &&
-                          openaiCustomModel.trim()
-                        ) {
-                          handleSaveModel("openai", openaiCustomModel);
-                        }
-                      },
-                    }}
-                    enabled={activeLLMPlatform === "openai"}
-                  />
+                        modelConfig={{
+                          availableModels: MODELS.openai,
+                          selectedModel: openaiModel,
+                          onModelChange: (model) => {
+                            setOpenaiModel(model);
+                            if (model !== "custom") {
+                              setOpenaiCustomModel("");
+                              // Save immediately for predefined models
+                              handleSaveModel("openai", model);
+                            }
+                          },
+                          customModel: openaiCustomModel,
+                          onCustomModelChange: setOpenaiCustomModel,
+                          onCustomModelBlur: () => {
+                            // Save when custom input loses focus
+                            if (
+                              openaiModel === "custom" &&
+                              openaiCustomModel.trim()
+                            ) {
+                              handleSaveModel("openai", openaiCustomModel);
+                            }
+                          },
+                        }}
+                        enabled={activeLLMPlatform === "openai"}
+                      />
 
-                  <ApiKeyInput
-                    displayName="Anthropic"
-                    apiKey={anthropicApiKey}
-                    onApiKeyChange={setAnthropicApiKey}
-                    configured={apiKeyInfo.anthropic?.configured || false}
-                    onSave={() => {
-                      const modelToSave =
-                        anthropicModel === "custom"
-                          ? anthropicCustomModel
-                          : anthropicModel;
-                      handleSaveApiKey(
-                        "anthropic",
-                        anthropicApiKey,
-                        modelToSave,
-                      );
-                    }}
-                    onTest={() => handleTestApiKey("anthropic")}
-                    isSaving={isSavingApiKey}
-                    isTesting={isTestingApiKey}
-                    testResult={
-                      testResult?.provider === "anthropic" ? testResult : null
-                    }
-                    modelConfig={{
-                      availableModels: MODELS.anthropic,
-                      selectedModel: anthropicModel,
-                      onModelChange: (model) => {
-                        setAnthropicModel(model);
-                        if (model !== "custom") {
-                          setAnthropicCustomModel("");
-                          // Save immediately for predefined models
-                          handleSaveModel("anthropic", model);
+                      <ApiKeyInput
+                        displayName="Anthropic"
+                        apiKey={anthropicApiKey}
+                        onApiKeyChange={setAnthropicApiKey}
+                        configured={apiKeyInfo.anthropic?.configured || false}
+                        onSave={() => {
+                          const modelToSave =
+                            anthropicModel === "custom"
+                              ? anthropicCustomModel
+                              : anthropicModel;
+                          handleSaveApiKey(
+                            "anthropic",
+                            anthropicApiKey,
+                            modelToSave,
+                          );
+                        }}
+                        onTest={() => handleTestApiKey("anthropic")}
+                        isSaving={isSavingApiKey}
+                        isTesting={isTestingApiKey}
+                        testResult={
+                          testResult?.provider === "anthropic"
+                            ? testResult
+                            : null
                         }
-                      },
-                      customModel: anthropicCustomModel,
-                      onCustomModelChange: setAnthropicCustomModel,
-                      onCustomModelBlur: () => {
-                        // Save when custom input loses focus
-                        if (
-                          anthropicModel === "custom" &&
-                          anthropicCustomModel.trim()
-                        ) {
-                          handleSaveModel("anthropic", anthropicCustomModel);
-                        }
-                      },
-                    }}
-                    enabled={activeLLMPlatform === "anthropic"}
-                  />
+                        modelConfig={{
+                          availableModels: MODELS.anthropic,
+                          selectedModel: anthropicModel,
+                          onModelChange: (model) => {
+                            setAnthropicModel(model);
+                            if (model !== "custom") {
+                              setAnthropicCustomModel("");
+                              // Save immediately for predefined models
+                              handleSaveModel("anthropic", model);
+                            }
+                          },
+                          customModel: anthropicCustomModel,
+                          onCustomModelChange: setAnthropicCustomModel,
+                          onCustomModelBlur: () => {
+                            // Save when custom input loses focus
+                            if (
+                              anthropicModel === "custom" &&
+                              anthropicCustomModel.trim()
+                            ) {
+                              handleSaveModel(
+                                "anthropic",
+                                anthropicCustomModel,
+                              );
+                            }
+                          },
+                        }}
+                        enabled={activeLLMPlatform === "anthropic"}
+                      />
 
-                  <ApiKeyInput
-                    displayName="Grok"
-                    apiKey={grokApiKey}
-                    onApiKeyChange={setGrokApiKey}
-                    configured={apiKeyInfo.grok?.configured || false}
-                    onSave={() => {
-                      const modelToSave =
-                        grokModel === "custom" ? grokCustomModel : grokModel;
-                      handleSaveApiKey("grok", grokApiKey, modelToSave);
-                    }}
-                    onTest={() => handleTestApiKey("grok")}
-                    isSaving={isSavingApiKey}
-                    isTesting={isTestingApiKey}
-                    testResult={
-                      testResult?.provider === "grok" ? testResult : null
-                    }
-                    modelConfig={{
-                      availableModels: MODELS.grok,
-                      selectedModel: grokModel,
-                      onModelChange: (model) => {
-                        setGrokModel(model);
-                        if (model !== "custom") {
-                          setGrokCustomModel("");
-                          // Save immediately for predefined models
-                          handleSaveModel("grok", model);
+                      <ApiKeyInput
+                        displayName="Grok"
+                        apiKey={grokApiKey}
+                        onApiKeyChange={setGrokApiKey}
+                        configured={apiKeyInfo.grok?.configured || false}
+                        onSave={() => {
+                          const modelToSave =
+                            grokModel === "custom"
+                              ? grokCustomModel
+                              : grokModel;
+                          handleSaveApiKey("grok", grokApiKey, modelToSave);
+                        }}
+                        onTest={() => handleTestApiKey("grok")}
+                        isSaving={isSavingApiKey}
+                        isTesting={isTestingApiKey}
+                        testResult={
+                          testResult?.provider === "grok" ? testResult : null
                         }
-                      },
-                      customModel: grokCustomModel,
-                      onCustomModelChange: setGrokCustomModel,
-                      onCustomModelBlur: () => {
-                        // Save when custom input loses focus
-                        if (grokModel === "custom" && grokCustomModel.trim()) {
-                          handleSaveModel("grok", grokCustomModel);
+                        modelConfig={{
+                          availableModels: MODELS.grok,
+                          selectedModel: grokModel,
+                          onModelChange: (model) => {
+                            setGrokModel(model);
+                            if (model !== "custom") {
+                              setGrokCustomModel("");
+                              // Save immediately for predefined models
+                              handleSaveModel("grok", model);
+                            }
+                          },
+                          customModel: grokCustomModel,
+                          onCustomModelChange: setGrokCustomModel,
+                          onCustomModelBlur: () => {
+                            // Save when custom input loses focus
+                            if (
+                              grokModel === "custom" &&
+                              grokCustomModel.trim()
+                            ) {
+                              handleSaveModel("grok", grokCustomModel);
+                            }
+                          },
+                        }}
+                        enabled={activeLLMPlatform === "grok"}
+                      />
+                    </div>
+                  </CollapsibleSection>
+
+                  <hr />
+
+                  <CollapsibleSection title="Thinking Settings">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label
+                            htmlFor="thinking-toggle"
+                            className="text-sm font-medium"
+                          >
+                            Enable Thinking
+                          </label>
+                          <p className="text-sm text-cyan-medium">
+                            Allow models to reason before responding
+                          </p>
+                        </div>
+                        <Switch
+                          id="thinking-toggle"
+                          checked={thinkingEnabled}
+                          onCheckedChange={setThinkingEnabled}
+                        />
+                      </div>
+
+                      <div
+                        className={
+                          thinkingEnabled
+                            ? ""
+                            : "opacity-50 pointer-events-none"
                         }
-                      },
-                    }}
-                    enabled={activeLLMPlatform === "grok"}
-                  />
+                      >
+                        <label className="text-sm font-medium mb-2 block">
+                          Thinking Level
+                        </label>
+                        <Select
+                          value={thinkingLevel}
+                          onValueChange={(value) =>
+                            setThinkingLevel(value as "low" | "medium" | "high")
+                          }
+                          disabled={!thinkingEnabled}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <p className="text-sm text-cyan-medium flex items-start gap-2">
+                        <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>
+                          Not all models and providers support thinking
+                          settings. The system will do its best to adapt these
+                          settings to what each model supports.
+                        </span>
+                      </p>
+                    </div>
+                  </CollapsibleSection>
                 </div>
               </CardContent>
             </Card>
