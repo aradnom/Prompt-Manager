@@ -523,9 +523,34 @@ export default function Account() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
+                  <div className="text-sm text-cyan-light mb-4">
+                    {(() => {
+                      const platform = activeLLMPlatform || activeTarget;
+                      const platformName = platform
+                        ? getTargetInfo(platform as LLMTarget)?.name
+                        : "None";
+                      const model = platform
+                        ? apiKeyInfo[platform]?.model
+                        : null;
+                      const thinkingStatus = thinkingEnabled
+                        ? `Thinking: ${thinkingLevel}`
+                        : "Thinking: off";
+                      return (
+                        <div className="gradient-heading text-lg">
+                          <span className="text-foreground">
+                            Current LLM Settings:{" "}
+                          </span>
+                          <span>{platformName}</span>
+                          {model && <span> / {model}</span>}
+                          <span> / {thinkingStatus.toLowerCase()}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   <div>
                     <label className="text-lg font-medium mb-3 block">
-                      Active Platform
+                      LLM Platforms
                     </label>
                     <RadioGroup
                       value={activeLLMPlatform || activeTarget || ""}
