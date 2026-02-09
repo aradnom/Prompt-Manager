@@ -1,9 +1,39 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
 import type { LLMTarget as ServerLLMTarget } from "@server/config";
-import type { LLMOperation, OutputStyle } from "@shared/llm/types";
+import type {
+  LLMOperation,
+  OutputStyle,
+  ThinkingConfig,
+} from "@shared/llm/types";
+
+// Read thinking settings from localStorage
+function getThinkingConfig(): ThinkingConfig | undefined {
+  const enabled = localStorage.getItem("thinking-enabled") === "true";
+  if (!enabled) return undefined;
+
+  const level = localStorage.getItem("thinking-level") as
+    | "low"
+    | "medium"
+    | "high"
+    | null;
+  return {
+    enabled: true,
+    level: level || "low",
+  };
+}
+
+// Subscribe to storage events for cross-tab sync
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
+function getStorageSnapshot() {
+  return `${localStorage.getItem("thinking-enabled")}-${localStorage.getItem("thinking-level")}`;
+}
 
 interface TransformInput {
   text: string;
@@ -31,9 +61,13 @@ export function useTransform() {
   const serverMutation = api.llm.transform.useMutation();
   const [isClientPending, setIsClientPending] = useState(false);
 
+  // Subscribe to localStorage changes for thinking settings
+  useSyncExternalStore(subscribeToStorage, getStorageSnapshot);
+
   const mutateAsync = useCallback(
     async (input: TransformInput): Promise<TransformResult> => {
       const target = activeTarget;
+      const thinking = getThinkingConfig();
 
       if (target && isClientTarget(target)) {
         // Client-side transform (Transformers.js, LM Studio)
@@ -54,6 +88,7 @@ export function useTransform() {
         return serverMutation.mutateAsync({
           ...input,
           target: target as ServerLLMTarget,
+          thinking,
         });
       }
     },
