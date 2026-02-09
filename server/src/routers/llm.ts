@@ -20,6 +20,13 @@ const LLM_OPERATIONS: [LLMOperation, ...LLMOperation[]] = [
 const llmTargetSchema = z.enum(LLM_TARGETS);
 const llmOperationSchema = z.enum(LLM_OPERATIONS);
 const outputStyleSchema = z.enum(["t5", "clip"]).nullable().optional();
+const thinkingLevelSchema = z.enum(["low", "medium", "high"]);
+const thinkingConfigSchema = z
+  .object({
+    enabled: z.boolean(),
+    level: thinkingLevelSchema.optional(),
+  })
+  .optional();
 
 export const llmRouter = router({
   transform: protectedProcedure
@@ -30,6 +37,7 @@ export const llmRouter = router({
         target: llmTargetSchema,
         style: outputStyleSchema,
         wildcards: z.array(z.string()).optional(),
+        thinking: thinkingConfigSchema,
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -89,6 +97,7 @@ export const llmRouter = router({
           target: targetToUse,
           style: input.style,
           wildcards: input.wildcards,
+          thinking: input.thinking,
         },
         userApiKey,
         userModel,

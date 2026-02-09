@@ -5,11 +5,19 @@ import { AnthropicService } from "./anthropic-service";
 import { LMStudioService } from "./lm-studio-service";
 import { GrokService } from "./grok-service";
 import { buildSystemPrompt } from "@shared/llm/prompts";
-import type { OutputStyle, LLMOperation } from "@shared/llm/types";
+import type {
+  OutputStyle,
+  LLMOperation,
+  ThinkingConfig,
+} from "@shared/llm/types";
 import { appendWildcardsToResult } from "@shared/llm/response-parser";
 
 export type { LLMTarget } from "@server/config";
-export type { OutputStyle, LLMOperation } from "@shared/llm/types";
+export type {
+  OutputStyle,
+  LLMOperation,
+  ThinkingConfig,
+} from "@shared/llm/types";
 
 export interface TransformRequest {
   text: string;
@@ -17,6 +25,7 @@ export interface TransformRequest {
   target: LLMTarget;
   style?: OutputStyle;
   wildcards?: string[];
+  thinking?: ThinkingConfig;
 }
 
 export interface TransformResponse {
