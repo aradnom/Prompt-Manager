@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WildcardBrowser } from "@/components/WildcardBrowser";
+import { CollapsibleSection } from "@/components/ui/collapsible";
 
 export interface BlockFormValues {
   name?: string;
@@ -293,79 +294,83 @@ export function BlockForm({
               </Button>
             </div>
           </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Type</label>
-            <Select
-              value={typeId?.toString() || "none"}
-              onValueChange={handleTypeChange}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {types.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Folder</label>
-            <Select
-              value={folderId?.toString() || "none"}
-              onValueChange={handleFolderChange}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {folders?.map((folder) => (
-                  <SelectItem key={folder.id} value={folder.id.toString()}>
-                    {folder.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Labels (comma-separated)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., scene, landscape, outdoor"
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
-              value={labels}
-              onChange={(e) => {
-                setLabels(e.target.value);
-                debouncedSave();
-              }}
-              disabled={isSubmitting}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Notes</label>
-            <textarea
-              placeholder="Add notes about this block..."
-              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background resize-none h-24 font-mono text-sm"
-              value={notes}
-              maxLength={4000}
-              onChange={(e) => {
-                setNotes(e.target.value);
-                debouncedSave();
-              }}
-              disabled={isSubmitting}
-            />
-            <div className="text-xs text-cyan-medium mt-1 text-right">
-              {notes.length}/4000
+          <CollapsibleSection title="Other Settings">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Type</label>
+                <Select
+                  value={typeId?.toString() || "none"}
+                  onValueChange={handleTypeChange}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {types.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Folder</label>
+                <Select
+                  value={folderId?.toString() || "none"}
+                  onValueChange={handleFolderChange}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {folders?.map((folder) => (
+                      <SelectItem key={folder.id} value={folder.id.toString()}>
+                        {folder.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Labels (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., scene, landscape, outdoor"
+                  className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+                  value={labels}
+                  onChange={(e) => {
+                    setLabels(e.target.value);
+                    debouncedSave();
+                  }}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Notes</label>
+                <textarea
+                  placeholder="Add notes about this block..."
+                  className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background resize-none h-24 font-mono text-sm"
+                  value={notes}
+                  maxLength={4000}
+                  onChange={(e) => {
+                    setNotes(e.target.value);
+                    debouncedSave();
+                  }}
+                  disabled={isSubmitting}
+                />
+                <div className="text-xs text-cyan-medium mt-1 text-right">
+                  {notes.length}/4000
+                </div>
+              </div>
             </div>
-          </div>
+          </CollapsibleSection>
           <div className="flex gap-4">
             {mode === "create" && (
               <Button
