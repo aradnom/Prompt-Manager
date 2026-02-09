@@ -8,9 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { ModelInfo } from "@shared/llm/model-info";
 
 interface ModelConfig {
-  availableModels: Record<string, string>;
+  availableModels: Record<string, ModelInfo>;
   selectedModel: string;
   onModelChange: (model: string) => void;
   customModel?: string;
@@ -105,9 +106,9 @@ export function ApiKeyInput({
             </SelectTrigger>
             <SelectContent>
               {Object.entries(modelConfig.availableModels).map(
-                ([modelId, displayName]) => (
+                ([modelId, modelInfo]) => (
                   <SelectItem key={modelId} value={modelId}>
-                    {displayName}
+                    {modelInfo.name}
                   </SelectItem>
                 ),
               )}

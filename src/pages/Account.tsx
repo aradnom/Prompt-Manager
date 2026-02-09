@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
 import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
-import { PREDEFINED_MODELS } from "@shared/llm/model-names";
+import { MODELS } from "@shared/llm/model-info";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { LMStudioInput } from "@/components/LMStudioInput";
 import { storage } from "@/lib/storage";
@@ -67,24 +67,18 @@ export default function Account() {
     message?: string;
   } | null>(null);
   const [vertexApiKey, setVertexApiKey] = useState("");
-  const [vertexModel, setVertexModel] = useState(
-    Object.keys(PREDEFINED_MODELS.vertex)[0],
-  );
+  const [vertexModel, setVertexModel] = useState(Object.keys(MODELS.vertex)[0]);
   const [customModel, setCustomModel] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
-  const [openaiModel, setOpenaiModel] = useState(
-    Object.keys(PREDEFINED_MODELS.openai)[0],
-  );
+  const [openaiModel, setOpenaiModel] = useState(Object.keys(MODELS.openai)[0]);
   const [openaiCustomModel, setOpenaiCustomModel] = useState("");
   const [anthropicApiKey, setAnthropicApiKey] = useState("");
   const [anthropicModel, setAnthropicModel] = useState(
-    Object.keys(PREDEFINED_MODELS.anthropic)[0],
+    Object.keys(MODELS.anthropic)[0],
   );
   const [anthropicCustomModel, setAnthropicCustomModel] = useState("");
   const [grokApiKey, setGrokApiKey] = useState("");
-  const [grokModel, setGrokModel] = useState(
-    Object.keys(PREDEFINED_MODELS.grok)[0],
-  );
+  const [grokModel, setGrokModel] = useState(Object.keys(MODELS.grok)[0]);
   const [grokCustomModel, setGrokCustomModel] = useState("");
   const [activeLLMPlatform, setActiveLLMPlatform] = useState<string>("");
 
@@ -115,7 +109,7 @@ export default function Account() {
       if (data.apiKeys?.vertex?.model) {
         const savedModel = data.apiKeys.vertex.model;
         // Check if it's one of our predefined models
-        if (savedModel in PREDEFINED_MODELS.vertex) {
+        if (savedModel in MODELS.vertex) {
           setVertexModel(savedModel);
         } else {
           // It's a custom model
@@ -127,7 +121,7 @@ export default function Account() {
       if (data.apiKeys?.openai?.model) {
         const savedModel = data.apiKeys.openai.model;
         // Check if it's one of our predefined models
-        if (savedModel in PREDEFINED_MODELS.openai) {
+        if (savedModel in MODELS.openai) {
           setOpenaiModel(savedModel);
         } else {
           // It's a custom model
@@ -139,7 +133,7 @@ export default function Account() {
       if (data.apiKeys?.anthropic?.model) {
         const savedModel = data.apiKeys.anthropic.model;
         // Check if it's one of our predefined models
-        if (savedModel in PREDEFINED_MODELS.anthropic) {
+        if (savedModel in MODELS.anthropic) {
           setAnthropicModel(savedModel);
         } else {
           // It's a custom model
@@ -151,7 +145,7 @@ export default function Account() {
       if (data.apiKeys?.grok?.model) {
         const savedModel = data.apiKeys.grok.model;
         // Check if it's one of our predefined models
-        if (savedModel in PREDEFINED_MODELS.grok) {
+        if (savedModel in MODELS.grok) {
           setGrokModel(savedModel);
         } else {
           // It's a custom model
@@ -564,7 +558,7 @@ export default function Account() {
                       testResult?.provider === "vertex" ? testResult : null
                     }
                     modelConfig={{
-                      availableModels: PREDEFINED_MODELS.vertex,
+                      availableModels: MODELS.vertex,
                       selectedModel: vertexModel,
                       onModelChange: (model) => {
                         setVertexModel(model);
@@ -605,7 +599,7 @@ export default function Account() {
                       testResult?.provider === "openai" ? testResult : null
                     }
                     modelConfig={{
-                      availableModels: PREDEFINED_MODELS.openai,
+                      availableModels: MODELS.openai,
                       selectedModel: openaiModel,
                       onModelChange: (model) => {
                         setOpenaiModel(model);
@@ -653,7 +647,7 @@ export default function Account() {
                       testResult?.provider === "anthropic" ? testResult : null
                     }
                     modelConfig={{
-                      availableModels: PREDEFINED_MODELS.anthropic,
+                      availableModels: MODELS.anthropic,
                       selectedModel: anthropicModel,
                       onModelChange: (model) => {
                         setAnthropicModel(model);
@@ -695,7 +689,7 @@ export default function Account() {
                       testResult?.provider === "grok" ? testResult : null
                     }
                     modelConfig={{
-                      availableModels: PREDEFINED_MODELS.grok,
+                      availableModels: MODELS.grok,
                       selectedModel: grokModel,
                       onModelChange: (model) => {
                         setGrokModel(model);
