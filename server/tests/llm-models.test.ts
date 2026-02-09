@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { config as dotenvConfig } from "dotenv";
-import { PREDEFINED_MODELS } from "../../shared/llm/model-names";
+import { MODELS } from "../../shared/llm/model-info";
 import { OpenAIService } from "../src/services/openai-service";
 import { AnthropicService } from "../src/services/anthropic-service";
 import { VertexServiceGenAI } from "../src/services/vertex-service-genai";
@@ -14,8 +14,13 @@ dotenvConfig();
 // Filter options from environment
 // TEST_PROVIDER: only test this provider (vertex, openai, anthropic, grok)
 // TEST_MODEL: only test this specific model ID
+// TEST_THINKING: set to "true" to enable thinking/reasoning
+// TEST_THINKING_LEVEL: "low", "medium", or "high" (defaults to "low")
 const TEST_PROVIDER = process.env.TEST_PROVIDER?.toLowerCase();
 const TEST_MODEL = process.env.TEST_MODEL;
+const TEST_THINKING = process.env.TEST_THINKING?.toLowerCase() === "true";
+const TEST_THINKING_LEVEL = (process.env.TEST_THINKING_LEVEL?.toLowerCase() ||
+  "low") as "low" | "medium" | "high";
 
 // Simple test prompt - just needs to return something
 const TEST_PROMPT = "Say hello in exactly 3 words.";
@@ -41,7 +46,8 @@ function createTestConfig(): LLMConfig {
   return {
     allowedTargets: new Set(["openai", "anthropic", "vertex", "grok"]),
     lmStudioUrl: "",
-    maxTokens: 100,
+    // When thinking is enabled, need more tokens (Anthropic requires max_tokens > budget_tokens)
+    maxTokens: TEST_THINKING ? 2048 : 100,
     vertex: {
       projectId: process.env.VERTEX_PROJECT_ID || "",
       location: process.env.VERTEX_LOCATION || "us-central1",
@@ -76,6 +82,11 @@ beforeAll(() => {
   anthropicService = new AnthropicService(config);
   vertexService = new VertexServiceGenAI(config);
   grokService = new GrokService(config);
+
+  // Log thinking config
+  if (TEST_THINKING) {
+    console.log(`\n  Thinking: enabled (level: ${TEST_THINKING_LEVEL})\n`);
+  }
 });
 
 // Helper to create a test request
@@ -86,6 +97,12 @@ function createTestRequest(
     text: TEST_PROMPT,
     operation: operation as TransformRequest["operation"],
     target: "openai", // This is just for the type, actual target is determined by service
+    ...(TEST_THINKING && {
+      thinking: {
+        enabled: true,
+        level: TEST_THINKING_LEVEL,
+      },
+    }),
   };
 }
 
@@ -93,7 +110,7 @@ describe("LLM Model Connectivity Tests", () => {
   describe.skipIf(!shouldTestProvider("vertex"))(
     "Vertex (Google) Models",
     () => {
-      const models = PREDEFINED_MODELS.vertex;
+      const models = MODELS.vertex;
 
       it.skipIf(!process.env.VERTEX_API_KEY)(
         "should have VERTEX_API_KEY configured",
@@ -102,9 +119,9 @@ describe("LLM Model Connectivity Tests", () => {
         },
       );
 
-      for (const [modelId, modelName] of Object.entries(models)) {
+      for (const [modelId, modelInfo] of Object.entries(models)) {
         it.skipIf(!process.env.VERTEX_API_KEY || !shouldTestModel(modelId))(
-          `${modelName} (${modelId}) - accepts request and returns output`,
+          `${modelInfo.name} (${modelId}) - accepts request and returns output`,
           { timeout: API_TIMEOUT },
           async () => {
             const request = createTestRequest();
@@ -126,7 +143,7 @@ describe("LLM Model Connectivity Tests", () => {
             }
 
             console.log(
-              `  ✓ ${modelName}: "${String(response.result).substring(0, 50)}..."`,
+              `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
             );
           },
         );
@@ -135,7 +152,7 @@ describe("LLM Model Connectivity Tests", () => {
   );
 
   describe.skipIf(!shouldTestProvider("openai"))("OpenAI Models", () => {
-    const models = PREDEFINED_MODELS.openai;
+    const models = MODELS.openai;
 
     it.skipIf(!process.env.OPENAI_API_KEY)(
       "should have OPENAI_API_KEY configured",
@@ -144,9 +161,9 @@ describe("LLM Model Connectivity Tests", () => {
       },
     );
 
-    for (const [modelId, modelName] of Object.entries(models)) {
+    for (const [modelId, modelInfo] of Object.entries(models)) {
       it.skipIf(!process.env.OPENAI_API_KEY || !shouldTestModel(modelId))(
-        `${modelName} (${modelId}) - accepts request and returns output`,
+        `${modelInfo.name} (${modelId}) - accepts request and returns output`,
         { timeout: API_TIMEOUT },
         async () => {
           const request = createTestRequest();
@@ -168,7 +185,7 @@ describe("LLM Model Connectivity Tests", () => {
           }
 
           console.log(
-            `  ✓ ${modelName}: "${String(response.result).substring(0, 50)}..."`,
+            `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
           );
         },
       );
@@ -176,7 +193,7 @@ describe("LLM Model Connectivity Tests", () => {
   });
 
   describe.skipIf(!shouldTestProvider("anthropic"))("Anthropic Models", () => {
-    const models = PREDEFINED_MODELS.anthropic;
+    const models = MODELS.anthropic;
 
     it.skipIf(!process.env.ANTHROPIC_API_KEY)(
       "should have ANTHROPIC_API_KEY configured",
@@ -185,9 +202,9 @@ describe("LLM Model Connectivity Tests", () => {
       },
     );
 
-    for (const [modelId, modelName] of Object.entries(models)) {
+    for (const [modelId, modelInfo] of Object.entries(models)) {
       it.skipIf(!process.env.ANTHROPIC_API_KEY || !shouldTestModel(modelId))(
-        `${modelName} (${modelId}) - accepts request and returns output`,
+        `${modelInfo.name} (${modelId}) - accepts request and returns output`,
         { timeout: API_TIMEOUT },
         async () => {
           const request = createTestRequest();
@@ -209,7 +226,7 @@ describe("LLM Model Connectivity Tests", () => {
           }
 
           console.log(
-            `  ✓ ${modelName}: "${String(response.result).substring(0, 50)}..."`,
+            `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
           );
         },
       );
@@ -217,7 +234,7 @@ describe("LLM Model Connectivity Tests", () => {
   });
 
   describe.skipIf(!shouldTestProvider("grok"))("Grok Models", () => {
-    const models = PREDEFINED_MODELS.grok;
+    const models = MODELS.grok;
 
     it.skipIf(!process.env.GROK_API_KEY)(
       "should have GROK_API_KEY configured",
@@ -226,9 +243,9 @@ describe("LLM Model Connectivity Tests", () => {
       },
     );
 
-    for (const [modelId, modelName] of Object.entries(models)) {
+    for (const [modelId, modelInfo] of Object.entries(models)) {
       it.skipIf(!process.env.GROK_API_KEY || !shouldTestModel(modelId))(
-        `${modelName} (${modelId}) - accepts request and returns output`,
+        `${modelInfo.name} (${modelId}) - accepts request and returns output`,
         { timeout: API_TIMEOUT },
         async () => {
           const request = createTestRequest();
@@ -250,7 +267,7 @@ describe("LLM Model Connectivity Tests", () => {
           }
 
           console.log(
-            `  ✓ ${modelName}: "${String(response.result).substring(0, 50)}..."`,
+            `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
           );
         },
       );
