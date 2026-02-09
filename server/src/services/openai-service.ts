@@ -86,8 +86,6 @@ export class OpenAIService {
         ...(!modelId.startsWith("gpt-5") && { temperature: 0.7 }),
       };
 
-      console.log(requestParams);
-
       const response = await clientToUse.chat.completions.create(requestParams);
 
       const text = response.choices?.[0]?.message?.content;

@@ -85,7 +85,7 @@ beforeAll(() => {
 
   // Log thinking config
   if (TEST_THINKING) {
-    console.log(`\n  Thinking: enabled (level: ${TEST_THINKING_LEVEL})\n`);
+    console.info(`\n  Thinking: enabled (level: ${TEST_THINKING_LEVEL})\n`);
   }
 });
 
@@ -142,7 +142,7 @@ describe("LLM Model Connectivity Tests", () => {
               expect(response.result.length).toBeGreaterThan(0);
             }
 
-            console.log(
+            console.info(
               `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
             );
           },
@@ -184,7 +184,7 @@ describe("LLM Model Connectivity Tests", () => {
             expect(response.result.length).toBeGreaterThan(0);
           }
 
-          console.log(
+          console.info(
             `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
           );
         },
@@ -225,7 +225,7 @@ describe("LLM Model Connectivity Tests", () => {
             expect(response.result.length).toBeGreaterThan(0);
           }
 
-          console.log(
+          console.info(
             `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
           );
         },
@@ -266,7 +266,7 @@ describe("LLM Model Connectivity Tests", () => {
             expect(response.result.length).toBeGreaterThan(0);
           }
 
-          console.log(
+          console.info(
             `  ✓ ${modelInfo.name}: "${String(response.result).substring(0, 50)}..."`,
           );
         },
