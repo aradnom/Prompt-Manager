@@ -17,7 +17,6 @@ import {
 export function Scratchpad() {
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState("");
-  const [hasLoaded, setHasLoaded] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, isLoading } = api.users.getScratchpad.useQuery(undefined, {
@@ -26,20 +25,12 @@ export function Scratchpad() {
 
   const saveMutation = api.users.setScratchpad.useMutation();
 
-  // Load content when data arrives
+  // Sync content when data changes (e.g. on open/refetch)
   useEffect(() => {
-    if (data && !hasLoaded) {
+    if (data !== undefined) {
       setContent(data.content ?? "");
-      setHasLoaded(true);
     }
-  }, [data, hasLoaded]);
-
-  // Reset loaded state when dialog closes
-  useEffect(() => {
-    if (!isOpen) {
-      setHasLoaded(false);
-    }
-  }, [isOpen]);
+  }, [data]);
 
   // Debounced save
   const handleChange = (newContent: string) => {
