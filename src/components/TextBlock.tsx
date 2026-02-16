@@ -469,11 +469,13 @@ export function TextBlock({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isActive, alwaysActive]);
 
-  // Update inline text when block text changes
+  // Update inline text when block text changes (but not while actively editing)
   useEffect(() => {
-    setInlineText(block.text);
-    inlineTextRef.current = block.text;
-  }, [block.text]);
+    if (!isInlineEditing) {
+      setInlineText(block.text);
+      inlineTextRef.current = block.text;
+    }
+  }, [block.text, isInlineEditing]);
 
   // Save pending inline edits on unmount
   useEffect(() => {
