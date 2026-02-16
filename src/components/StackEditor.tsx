@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Sparkles, RefreshCw, Wand2 } from "lucide-react";
+import { Plus, Search, Sparkles, RefreshCw, Wand2, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DndContext,
@@ -34,6 +34,7 @@ import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
+import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -54,6 +55,12 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface StackEditorProps {
   stack: BlockStack;
@@ -77,6 +84,7 @@ export function StackEditor({ stack }: StackEditorProps) {
   const [isEditingConcept, setIsEditingConcept] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [showRevisions, setShowRevisions] = useState(false);
   const generateMutation = useTransform();
   const enrichMutation = useTransform();
 
@@ -535,12 +543,26 @@ export function StackEditor({ stack }: StackEditorProps) {
 
   return (
     <>
-      <Card className="h-full flex flex-col">
+      <Card className="relative h-full flex flex-col">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-2xl">
                 Active Prompt: {stack.name || stack.displayId}
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowRevisions(true)}
+                        className="ml-2 text-cyan-medium hover:text-foreground transition-colors cursor-pointer relative align-top"
+                        aria-label="Show revisions"
+                      >
+                        <Clock className="inline h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>View prompt history</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {stack.negative && (
                   <span className="ml-3 align-middle text-xs px-2 py-0.5 rounded bg-magenta-dark/30 border border-magenta-medium text-magenta-light">
                     Negative
@@ -767,6 +789,17 @@ export function StackEditor({ stack }: StackEditorProps) {
             </div>
           )}
         </CardFooter>
+
+        {/* Revisions overlay */}
+        <AnimatePresence>
+          {showRevisions && (
+            <StackRevisionsOverlay
+              stackId={stack.id}
+              activeRevisionId={stack.activeRevisionId}
+              onClose={() => setShowRevisions(false)}
+            />
+          )}
+        </AnimatePresence>
       </Card>
 
       <BlockSearchDialog

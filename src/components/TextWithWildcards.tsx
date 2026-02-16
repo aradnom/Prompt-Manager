@@ -164,7 +164,7 @@ export function TextWithWildcards({
     }
 
     return result;
-  }, [text, enableModifierHighlighting, onModifierChange]);
+  }, [text, enableModifierHighlighting]);
 
   // Build wildcard map
   const wildcardMap = useMemo(() => {
