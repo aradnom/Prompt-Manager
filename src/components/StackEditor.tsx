@@ -737,37 +737,24 @@ export function StackEditor({ stack }: StackEditorProps) {
             )}
           </div>
         </CardContent>
-        <CardFooter className="border-t p-4 bg-cyan-dark/20 gap-2">
+        <CardFooter className="border-t p-4 bg-cyan-dark/20">
           {!isCreatingNew && (
-            <>
-              <Button
-                onClick={() => setIsSearchOpen(true)}
-                variant="default"
-                className="w-full sm:w-auto"
-              >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:flex gap-2 w-full">
+              <Button onClick={() => setIsSearchOpen(true)} variant="default">
                 <Search className="mr-2 h-4 w-4" />
                 Add Existing Block
               </Button>
-              <Button
-                onClick={() => setIsCreatingNew(true)}
-                variant="tertiary"
-                className="w-full sm:w-auto"
-              >
+              <Button onClick={() => setIsCreatingNew(true)} variant="tertiary">
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Block
               </Button>
-              <Button
-                onClick={handleGenerateOpen}
-                variant="tertiary"
-                className="w-full sm:w-auto"
-              >
+              <Button onClick={handleGenerateOpen} variant="tertiary">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate New Block
               </Button>
               <Button
                 onClick={handleEnrichPrompt}
                 variant="tertiary"
-                className="w-full sm:w-auto"
                 disabled={!renderedContent.trim() || isEnriching}
               >
                 {isEnriching ? (
@@ -777,7 +764,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                 )}
                 Enrich Prompt
               </Button>
-            </>
+            </div>
           )}
         </CardFooter>
       </Card>
