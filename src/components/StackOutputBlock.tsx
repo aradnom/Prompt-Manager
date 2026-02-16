@@ -31,6 +31,7 @@ export function StackOutputBlock() {
   const navigate = useNavigate();
   const utils = api.useUtils();
   const [isConverting, setIsConverting] = useState(false);
+  const [showCopied, setShowCopied] = useState(false);
 
   const commaSeparated = activeStack?.commaSeparated ?? false;
 
@@ -132,6 +133,8 @@ export function StackOutputBlock() {
         throw new Error("Clipboard API not available (requires HTTPS)");
       }
       await navigator.clipboard.writeText(renderedContent);
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 1500);
     } catch (error) {
       addError(
         error instanceof Error ? error.message : "Failed to copy to clipboard",
@@ -255,15 +258,24 @@ export function StackOutputBlock() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Button
-              variant="outline"
-              size={isMinimized ? "xs" : "sm"}
-              onClick={handleCopy}
-              disabled={!renderedContent}
-            >
-              <Copy className={isMinimized ? "h-4 w-4" : "mr-2 h-4 w-4"} />
-              {!isMinimized && "Copy"}
-            </Button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip open={showCopied}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size={isMinimized ? "xs" : "sm"}
+                    onClick={handleCopy}
+                    disabled={!renderedContent}
+                  >
+                    <Copy
+                      className={isMinimized ? "h-4 w-4" : "mr-2 h-4 w-4"}
+                    />
+                    {!isMinimized && "Copy"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copied!</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               variant={isMinimized ? "outline" : "outline-magenta"}
               size="xs"
