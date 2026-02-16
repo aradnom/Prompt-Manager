@@ -421,38 +421,42 @@ export default function Stacks() {
                           </CardDescription>
                         </div>
                         <div className="flex gap-2 items-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStackClick(stack.id, stack);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            Edit Prompt
-                          </Button>
-                          <TooltipProvider delayDuration={0}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDuplicate(stack.id);
-                                  }}
-                                  disabled={duplicateMutation.isPending}
-                                  className="cursor-pointer"
-                                >
-                                  Duplicate Prompt
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Creates a shallow copy (references same blocks)
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <ButtonGroup>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStackClick(stack.id, stack);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              Edit Prompt
+                            </Button>
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDuplicate(stack.id);
+                                    }}
+                                    disabled={duplicateMutation.isPending}
+                                    className="cursor-pointer"
+                                  >
+                                    Duplicate Prompt
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Creates a shallow copy (references same
+                                  blocks)
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </ButtonGroup>
+
                           <Button
                             variant="default"
                             size="sm"
