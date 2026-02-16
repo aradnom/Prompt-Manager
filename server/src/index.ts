@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import session from "express-session";
@@ -25,6 +26,11 @@ export const notifyStackUpdate = _notifyStackUpdate;
 async function main() {
   const config = loadConfig();
   const app = express();
+
+  // Trust proxy (GKE load balancer terminates TLS)
+  if (config.nodeEnv === "production") {
+    app.set("trust proxy", 1);
+  }
 
   // CORS configuration
   if (process.env.CORS_ORIGINS) {
@@ -104,6 +110,18 @@ async function main() {
   registerIntegrationRoutes(app, storage, config);
   registerAuthRoutes(app, storage, config, rateLimiter);
   registerSystemRoutes(app);
+
+  // Serve static frontend in production
+  if (config.nodeEnv === "production") {
+    const distPath = path.resolve(
+      new URL(".", import.meta.url).pathname,
+      "../../dist",
+    );
+    app.use(express.static(distPath));
+    app.get("*splat", (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
 
   app.listen(config.port, () => {
     console.debug(`✓ Server listening on port ${config.port}`);
