@@ -53,6 +53,11 @@ function parseAllowedTargets(envValue: string | undefined): Set<string> {
   return new Set(envValue.split(",").map((t) => t.trim()));
 }
 
+// When running inside Docker, localhost URLs need to point to the host machine
+function resolveLocalhost(url: string): string {
+  return url.replace(/localhost/g, process.env.DOCKER_HOST || "localhost");
+}
+
 export function loadConfig(): ServerConfig {
   const requiredSecrets = [
     "SESSION_SECRET",
@@ -69,16 +74,19 @@ export function loadConfig(): ServerConfig {
   return {
     port: parseInt(process.env.PORT || "3001", 10),
     nodeEnv: process.env.NODE_ENV || "development",
-    databaseUrl:
+    databaseUrl: resolveLocalhost(
       process.env.DATABASE_URL ||
-      "postgresql://promptuser:promptpass@localhost:5432/prompt_manager",
-    sessionDatabaseUrl:
+        "postgresql://promptuser:promptpass@localhost:5432/prompt_manager",
+    ),
+    sessionDatabaseUrl: resolveLocalhost(
       process.env.SESSION_DATABASE_URL || "redis://localhost:6379/0",
+    ),
     sessionSecret: process.env.SESSION_SECRET!,
     encryptionSalt: process.env.ENCRYPTION_SALT!,
     tokenSecret: process.env.TOKEN_SECRET!,
-    rateLimitDatabaseUrl:
+    rateLimitDatabaseUrl: resolveLocalhost(
       process.env.RATE_LIMIT_DATABASE_URL || "redis://localhost:6379/1",
+    ),
     rateLimitWindowMs: parseInt(
       process.env.RATE_LIMIT_WINDOW_MS || "60000",
       10,
@@ -89,7 +97,9 @@ export function loadConfig(): ServerConfig {
     ),
     llm: {
       allowedTargets: parseAllowedTargets(process.env.LLM_ALLOWED_TARGETS),
-      lmStudioUrl: process.env.LM_STUDIO_URL || "http://localhost:11434/v1",
+      lmStudioUrl: resolveLocalhost(
+        process.env.LM_STUDIO_URL || "http://localhost:11434/v1",
+      ),
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS || "8192", 10),
       vertex: {
         projectId: process.env.VERTEX_PROJECT_ID || "",
