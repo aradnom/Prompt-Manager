@@ -48,7 +48,7 @@ export function ActiveStackProvider({ children }: { children: ReactNode }) {
 
   const { data: fetchedStack } = api.stacks.get.useQuery(
     { id: storedId! },
-    { enabled: !!storedId && !activeStack },
+    { enabled: !!storedId },
   );
 
   useEffect(() => {
