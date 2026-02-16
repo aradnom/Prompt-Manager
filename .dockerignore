@@ -1,0 +1,16 @@
+node_modules
+dist
+.git
+.gitignore
+.husky
+.claude
+.vscode
+.DS_Store
+.env
+.env.example
+deploy
+design-dump
+local-dev
+notes
+scripts
+README.md
