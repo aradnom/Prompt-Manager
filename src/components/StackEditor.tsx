@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Wand2,
   Clock,
+  Camera,
   Folder,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -43,6 +44,8 @@ import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
+import { StackSnapshotsOverlay } from "@/components/StackSnapshotsOverlay";
+import { CameraFlash } from "@/components/CameraFlash";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -93,6 +96,9 @@ export function StackEditor({ stack }: StackEditorProps) {
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
+  const [showSnapshots, setShowSnapshots] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const snapshotDoneRef = useRef({ flash: false, mutation: false });
   const generateMutation = useTransform();
   const enrichMutation = useTransform();
 
@@ -112,6 +118,15 @@ export function StackEditor({ stack }: StackEditorProps) {
   const updateStackMutation = api.stacks.update.useMutation({
     onSuccess: () => {
       refetch();
+    },
+  });
+
+  const createSnapshotMutation = api.stacks.createSnapshot.useMutation({
+    onSuccess: () => {
+      snapshotDoneRef.current.mutation = true;
+      if (snapshotDoneRef.current.flash) {
+        setShowSnapshots(true);
+      }
     },
   });
 
@@ -562,13 +577,25 @@ export function StackEditor({ stack }: StackEditorProps) {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => setShowRevisions(true)}
-                        className="ml-2 text-cyan-medium hover:text-foreground transition-colors cursor-pointer relative align-top"
+                        className="ml-3 text-cyan-medium hover:text-foreground transition-colors cursor-pointer relative align-top"
                         aria-label="Show revisions"
                       >
                         <Clock className="inline h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>View prompt history</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowSnapshots(true)}
+                        className="ml-3 text-cyan-medium hover:text-foreground transition-colors cursor-pointer relative align-top"
+                        aria-label="Show snapshots"
+                      >
+                        <Camera className="inline h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>View snapshots</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
                 {stack.negative && (
@@ -791,21 +818,78 @@ export function StackEditor({ stack }: StackEditorProps) {
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate New Block
               </Button>
-              <Button
-                onClick={handleEnrichPrompt}
-                variant="tertiary"
-                disabled={!renderedContent.trim() || isEnriching}
-              >
-                {isEnriching ? (
-                  <DefragLoader size={16} className="mr-2" />
-                ) : (
-                  <Wand2 className="mr-2 h-4 w-4" />
-                )}
-                Enrich Prompt
-              </Button>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleEnrichPrompt}
+                      variant="tertiary"
+                      disabled={!renderedContent.trim() || isEnriching}
+                    >
+                      {isEnriching ? (
+                        <DefragLoader size={16} className="mr-2" />
+                      ) : (
+                        <Wand2 className="mr-2 h-4 w-4" />
+                      )}
+                      Enrich Prompt
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Automatically generate a new block that fleshes out the
+                    current prompt contents
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        snapshotDoneRef.current = {
+                          flash: false,
+                          mutation: false,
+                        };
+                        setShowFlash(true);
+                        createSnapshotMutation.mutate({
+                          stackId: stack.id,
+                          renderedContent,
+                        });
+                      }}
+                      variant="tertiary"
+                      disabled={
+                        !renderedContent.trim() ||
+                        createSnapshotMutation.isPending
+                      }
+                    >
+                      <Camera className="mr-2 h-4 w-4" />
+                      {createSnapshotMutation.isPending
+                        ? "Saving..."
+                        : "Create Snapshot"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Save the current prompt contents as static text
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </CardFooter>
+
+        {/* Camera flash */}
+        <AnimatePresence>
+          {showFlash && (
+            <CameraFlash
+              onComplete={() => {
+                setShowFlash(false);
+                snapshotDoneRef.current.flash = true;
+                if (snapshotDoneRef.current.mutation) {
+                  setShowSnapshots(true);
+                }
+              }}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Revisions overlay */}
         <AnimatePresence>
@@ -814,6 +898,16 @@ export function StackEditor({ stack }: StackEditorProps) {
               stackId={stack.id}
               activeRevisionId={stack.activeRevisionId}
               onClose={() => setShowRevisions(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Snapshots overlay */}
+        <AnimatePresence>
+          {showSnapshots && (
+            <StackSnapshotsOverlay
+              stackId={stack.id}
+              onClose={() => setShowSnapshots(false)}
             />
           )}
         </AnimatePresence>
