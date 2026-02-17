@@ -157,6 +157,10 @@ export interface IStorageAdapter {
   toggleBlockDisabledInStack(stackId: number, blockId: number): Promise<void>;
 
   createStackSnapshot(input: CreateStackSnapshotInput): Promise<StackSnapshot>;
+  updateStackSnapshot(
+    id: number,
+    updates: UpdateStackSnapshotInput,
+  ): Promise<StackSnapshot>;
   listStackSnapshots(stackId: number): Promise<StackSnapshot[]>;
   deleteStackSnapshot(id: number): Promise<void>;
 
@@ -232,4 +236,9 @@ export interface CreateStackSnapshotInput {
   disabledBlockIds: number[];
   stackId: number;
   userId?: number;
+}
+
+export interface UpdateStackSnapshotInput {
+  name?: string | null;
+  notes?: string | null;
 }

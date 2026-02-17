@@ -37,6 +37,7 @@ import type {
   BlocksWithFoldersResult,
   StacksWithFoldersResult,
   CreateStackSnapshotInput,
+  UpdateStackSnapshotInput,
   User,
   CreateUserInput,
 } from "@server/adapters/storage-adapter.interface";
@@ -1792,6 +1793,27 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         created_at: now,
         updated_at: now,
       })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapStackSnapshot(result);
+  }
+
+  async updateStackSnapshot(
+    id: number,
+    updates: UpdateStackSnapshotInput,
+  ): Promise<StackSnapshot> {
+    const updateData: Updateable<Database["stack_snapshots"]> = {
+      updated_at: new Date(),
+    };
+
+    if (updates.name !== undefined) updateData.name = updates.name ?? null;
+    if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
+
+    const result = await this.db
+      .updateTable("stack_snapshots")
+      .set(updateData)
+      .where("id", "=", id)
       .returningAll()
       .executeTakeFirstOrThrow();
 

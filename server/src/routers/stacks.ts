@@ -398,6 +398,27 @@ export const stacksRouter = router({
       return ctx.storage.listStackSnapshots(input.stackId);
     }),
 
+  updateSnapshot: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        stackId: z.number(),
+        name: z.string().max(255).nullable().optional(),
+        notes: z.string().max(4000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      const { id, stackId: _, ...updates } = input;
+      return ctx.storage.updateStackSnapshot(id, updates);
+    }),
+
   deleteSnapshot: protectedProcedure
     .input(
       z.object({
