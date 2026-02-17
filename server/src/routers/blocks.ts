@@ -159,6 +159,17 @@ export const blocksRouter = router({
       return { success: true };
     }),
 
+  getByIds: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.number()).max(100),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const blocks = await ctx.storage.getBlocksByIds(input.ids);
+      return blocks.filter((b) => b.userId === ctx.userId);
+    }),
+
   list: protectedProcedure
     .input(
       z

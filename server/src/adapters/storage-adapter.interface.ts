@@ -51,6 +51,7 @@ export interface IStorageAdapter {
 
   createBlock(input: CreateBlockInput): Promise<Block>;
   getBlock(id: number): Promise<Block | null>;
+  getBlocksByIds(ids: number[]): Promise<Block[]>;
   getBlockByUuid(uuid: string): Promise<Block | null>;
   updateBlock(id: number, updates: UpdateBlockInput): Promise<Block>;
   deleteBlock(id: number): Promise<void>;

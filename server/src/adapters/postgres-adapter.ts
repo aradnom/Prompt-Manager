@@ -291,6 +291,56 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return block;
   }
 
+  async getBlocksByIds(ids: number[]): Promise<Block[]> {
+    if (ids.length === 0) return [];
+
+    const results = await this.db
+      .selectFrom("blocks")
+      .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
+      .selectAll("blocks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("block_revisions as active_rev")
+              .select("active_rev.text")
+              .whereRef("active_rev.id", "=", "blocks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("block_revisions")
+              .select("text")
+              .whereRef("block_revisions.block_id", "=", "blocks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("text"),
+      ])
+      .select([
+        "types.id as type_id_joined",
+        "types.name as type_name",
+        "types.description as type_description",
+        "block_folders.name as folder_name",
+      ])
+      .where("blocks.id", "in", ids)
+      .execute();
+
+    return results
+      .filter((r) => r.text !== null)
+      .map((result) => {
+        const type = result.type_id_joined
+          ? {
+              id: result.type_id_joined,
+              name: result.type_name!,
+              description: result.type_description,
+            }
+          : null;
+        const block = this.mapBlock(result, type, result.folder_name ?? null);
+        block.text = result.text!;
+        return block;
+      });
+  }
+
   async getBlockByUuid(uuid: string): Promise<Block | null> {
     const result = await this.db
       .selectFrom("blocks")
