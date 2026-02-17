@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Sparkles, RefreshCw, Wand2, Clock } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Sparkles,
+  RefreshCw,
+  Wand2,
+  Clock,
+  Folder,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DndContext,
@@ -569,9 +577,18 @@ export function StackEditor({ stack }: StackEditorProps) {
                   </span>
                 )}
               </CardTitle>
-              {stack.name && (
-                <CardDescription className="font-mono text-xs mt-1">
-                  {stack.displayId}
+              {(stack.name || stack.folderName) && (
+                <CardDescription className="font-mono text-xs mt-1 flex items-center gap-1.5">
+                  {stack.name && <span>{stack.displayId}</span>}
+                  {stack.name && stack.folderName && (
+                    <span className="text-cyan-medium">&bull;</span>
+                  )}
+                  {stack.folderName && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-medium/40 text-cyan-medium">
+                      <Folder className="h-3 w-3" />
+                      {stack.folderName}
+                    </span>
+                  )}
                 </CardDescription>
               )}
             </div>
