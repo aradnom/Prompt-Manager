@@ -19,6 +19,7 @@ import {
 } from "@server/express-routes/integrations";
 import { registerSystemRoutes } from "@server/express-routes/system";
 import { createRateLimitMiddleware } from "@server/middleware/rate-limit";
+import { checkPendingMigrations } from "@server/lib/migration-check";
 
 // Re-export notifyStackUpdate for use by other modules (e.g., stacks router)
 export const notifyStackUpdate = _notifyStackUpdate;
@@ -89,6 +90,8 @@ async function main() {
 
   await storage.initialize();
   console.debug("✓ Database connection established");
+
+  await checkPendingMigrations(config.databaseUrl);
   console.debug("✓ LLM service initialized");
   console.debug(
     `  Allowed targets: ${Array.from(config.llm.allowedTargets).join(", ")}`,

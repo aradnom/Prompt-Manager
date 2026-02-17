@@ -12,7 +12,10 @@
     "server": "tsx watch --clear-screen=false server/src/index.ts .env",
     "server:build": "tsc -p server/tsconfig.json",
     "prepare": "husky",
-    "test:llm": "vitest run --config server/vitest.config.ts"
+    "test:llm": "vitest run --config server/vitest.config.ts",
+    "migrate": "tsx server/src/migrate.ts",
+    "migrate:down": "tsx server/src/migrate.ts down",
+    "migrate:check": "tsx server/src/migrate-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
