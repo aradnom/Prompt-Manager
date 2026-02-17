@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@server/trpc";
+import { generateDisplayId } from "@server/lib/generate-display-id";
 
 export const stacksRouter = router({
   create: protectedProcedure
@@ -347,6 +348,72 @@ export const stacksRouter = router({
         notifyStackUpdate(ctx.userId, stack.displayId, input.renderedContent);
       }
 
+      return { success: true };
+    }),
+
+  createSnapshot: protectedProcedure
+    .input(
+      z.object({
+        stackId: z.number(),
+        renderedContent: z.string(),
+        name: z.string().max(255).optional(),
+        notes: z.string().max(4000).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+
+      return ctx.storage.createStackSnapshot({
+        displayId: generateDisplayId(),
+        name: input.name,
+        notes: input.notes,
+        renderedContent: input.renderedContent,
+        blockIds: stack.blockIds,
+        disabledBlockIds: stack.disabledBlockIds,
+        stackId: input.stackId,
+        userId: ctx.userId,
+      });
+    }),
+
+  listSnapshots: protectedProcedure
+    .input(
+      z.object({
+        stackId: z.number(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      return ctx.storage.listStackSnapshots(input.stackId);
+    }),
+
+  deleteSnapshot: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        stackId: z.number(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      await ctx.storage.deleteStackSnapshot(input.id);
       return { success: true };
     }),
 });

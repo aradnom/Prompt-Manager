@@ -14,6 +14,7 @@ import type {
   CreateRevisionInput,
   Type,
   StackRevision,
+  StackSnapshot,
   StackFolder,
   CreateStackFolderInput,
   UpdateStackFolderInput,
@@ -155,6 +156,10 @@ export interface IStorageAdapter {
   ): Promise<void>;
   toggleBlockDisabledInStack(stackId: number, blockId: number): Promise<void>;
 
+  createStackSnapshot(input: CreateStackSnapshotInput): Promise<StackSnapshot>;
+  listStackSnapshots(stackId: number): Promise<StackSnapshot[]>;
+  deleteStackSnapshot(id: number): Promise<void>;
+
   createType(name: string, description?: string): Promise<Type>;
   getType(id: number): Promise<Type | null>;
   listTypes(): Promise<Type[]>;
@@ -216,4 +221,15 @@ export interface StacksWithFoldersResult {
   looseStacks: BlockStack[];
   totalFolders: number;
   totalLooseStacks: number;
+}
+
+export interface CreateStackSnapshotInput {
+  displayId: string;
+  name?: string;
+  notes?: string;
+  renderedContent: string;
+  blockIds: number[];
+  disabledBlockIds: number[];
+  stackId: number;
+  userId?: number;
 }

@@ -98,6 +98,20 @@ export interface StackRevision {
   userId: number | null;
 }
 
+export interface StackSnapshot {
+  id: number;
+  displayId: string;
+  name: string | null;
+  notes: string | null;
+  renderedContent: string;
+  blockIds: number[];
+  disabledBlockIds: number[];
+  stackId: number;
+  userId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface BlockWithRevisions extends Block {
   revisions: BlockRevision[];
 }

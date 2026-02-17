@@ -18,6 +18,7 @@ import type {
   CreateRevisionInput,
   Type,
   StackRevision,
+  StackSnapshot,
   StackFolder,
   CreateStackFolderInput,
   UpdateStackFolderInput,
@@ -35,6 +36,7 @@ import type {
   PaginatedResult,
   BlocksWithFoldersResult,
   StacksWithFoldersResult,
+  CreateStackSnapshotInput,
   User,
   CreateUserInput,
 } from "@server/adapters/storage-adapter.interface";
@@ -1762,10 +1764,53 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
   async deleteStack(id: number): Promise<void> {
     await this.db
+      .deleteFrom("stack_snapshots")
+      .where("stack_id", "=", id)
+      .execute();
+    await this.db
       .deleteFrom("stack_revisions")
       .where("stack_id", "=", id)
       .execute();
     await this.db.deleteFrom("stacks").where("id", "=", id).execute();
+  }
+
+  async createStackSnapshot(
+    input: CreateStackSnapshotInput,
+  ): Promise<StackSnapshot> {
+    const now = new Date();
+    const result = await this.db
+      .insertInto("stack_snapshots")
+      .values({
+        display_id: input.displayId,
+        name: input.name ?? null,
+        notes: input.notes ?? null,
+        rendered_content: input.renderedContent,
+        block_ids: input.blockIds,
+        disabled_block_ids: input.disabledBlockIds,
+        stack_id: input.stackId,
+        user_id: input.userId ?? null,
+        created_at: now,
+        updated_at: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapStackSnapshot(result);
+  }
+
+  async listStackSnapshots(stackId: number): Promise<StackSnapshot[]> {
+    const results = await this.db
+      .selectFrom("stack_snapshots")
+      .selectAll()
+      .where("stack_id", "=", stackId)
+      .orderBy("created_at", "desc")
+      .execute();
+
+    return results.map((r) => this.mapStackSnapshot(r));
+  }
+
+  async deleteStackSnapshot(id: number): Promise<void> {
+    await this.db.deleteFrom("stack_snapshots").where("id", "=", id).execute();
   }
 
   async listStacks(
@@ -2849,6 +2894,24 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       updatedAt: new Date(row.updated_at),
       userId: row.user_id,
       meta: typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta,
+    };
+  }
+
+  private mapStackSnapshot(
+    row: Selectable<Database["stack_snapshots"]>,
+  ): StackSnapshot {
+    return {
+      id: row.id,
+      displayId: row.display_id,
+      name: row.name,
+      notes: row.notes,
+      renderedContent: row.rendered_content,
+      blockIds: row.block_ids || [],
+      disabledBlockIds: row.disabled_block_ids || [],
+      stackId: row.stack_id!,
+      userId: row.user_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     };
   }
 }

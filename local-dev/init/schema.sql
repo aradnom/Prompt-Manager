@@ -103,6 +103,22 @@ CREATE TABLE stack_revisions (
     updated_at timestamp with time zone
 );
 
+-- stack_snapshots
+
+CREATE TABLE stack_snapshots (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    display_id character varying(255) NOT NULL,
+    name character varying(255),
+    notes character varying(4000),
+    rendered_content text NOT NULL,
+    block_ids integer[] DEFAULT '{}'::integer[],
+    disabled_block_ids integer[] DEFAULT '{}'::integer[],
+    stack_id integer REFERENCES stacks(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
 -- wildcards
 
 CREATE TABLE wildcards (

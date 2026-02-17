@@ -108,6 +108,24 @@ export interface StackRevisionsTable {
   user_id: number | null;
 }
 
+export interface StackSnapshotsTable {
+  id: ColumnType<number, never, never>;
+  display_id: string;
+  name: string | null;
+  notes: ColumnType<string | null, string | null, string | null>;
+  rendered_content: string;
+  block_ids: number[];
+  disabled_block_ids: ColumnType<
+    number[],
+    number[] | undefined,
+    number[] | undefined
+  >;
+  stack_id: number | null;
+  user_id: number | null;
+  created_at: ColumnType<Date, Date | undefined, Date | undefined>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
 export interface WildcardsTable {
   id: ColumnType<number, never, never>;
   uuid: string;
@@ -134,5 +152,6 @@ export interface Database {
   stack_folders: StackFoldersTable;
   stacks: BlockStacksTable;
   stack_revisions: StackRevisionsTable;
+  stack_snapshots: StackSnapshotsTable;
   wildcards: WildcardsTable;
 }
