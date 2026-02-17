@@ -14,6 +14,9 @@ import type {
   CreateRevisionInput,
   Type,
   StackRevision,
+  StackFolder,
+  CreateStackFolderInput,
+  UpdateStackFolderInput,
   Wildcard,
   CreateWildcardInput,
   UpdateWildcardInput,
@@ -79,6 +82,20 @@ export interface IStorageAdapter {
   ): Promise<BlockFolder>;
   deleteBlockFolder(id: number): Promise<void>;
   listBlockFolders(userId: number): Promise<BlockFolder[]>;
+
+  createStackFolder(input: CreateStackFolderInput): Promise<StackFolder>;
+  getStackFolder(id: number): Promise<StackFolder | null>;
+  updateStackFolder(
+    id: number,
+    updates: UpdateStackFolderInput,
+  ): Promise<StackFolder>;
+  deleteStackFolder(id: number): Promise<void>;
+  listStackFolders(userId: number): Promise<StackFolder[]>;
+  getFolderStacks(folderId: number): Promise<BlockStack[]>;
+  listStacksWithFolders(
+    userId: number,
+    pagination: PaginationOptions,
+  ): Promise<StacksWithFoldersResult>;
 
   createRevision(input: CreateRevisionInput): Promise<BlockRevision>;
   getRevisions(blockId: number): Promise<BlockRevision[]>;
@@ -192,4 +209,11 @@ export interface BlocksWithFoldersResult {
   looseBlocks: Block[];
   totalFolders: number;
   totalLooseBlocks: number;
+}
+
+export interface StacksWithFoldersResult {
+  folders: StackFolder[];
+  looseStacks: BlockStack[];
+  totalFolders: number;
+  totalLooseStacks: number;
 }

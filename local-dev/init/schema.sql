@@ -61,6 +61,17 @@ CREATE TABLE block_revisions (
     block_id integer REFERENCES blocks(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+-- stack_folders
+
+CREATE TABLE stack_folders (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name character varying(255),
+    description character varying(512),
+    user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
 -- stacks
 
 CREATE TABLE stacks (
@@ -75,6 +86,7 @@ CREATE TABLE stacks (
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    folder_id integer REFERENCES stack_folders(id) ON DELETE SET NULL ON UPDATE CASCADE,
     active_revision_id integer REFERENCES stack_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 

@@ -18,6 +18,9 @@ import type {
   CreateRevisionInput,
   Type,
   StackRevision,
+  StackFolder,
+  CreateStackFolderInput,
+  UpdateStackFolderInput,
   Wildcard,
   CreateWildcardInput,
   UpdateWildcardInput,
@@ -31,6 +34,7 @@ import type {
   PaginationOptions,
   PaginatedResult,
   BlocksWithFoldersResult,
+  StacksWithFoldersResult,
   User,
   CreateUserInput,
 } from "@server/adapters/storage-adapter.interface";
@@ -1011,6 +1015,247 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return results.map((r) => this.mapBlockFolder(r));
   }
 
+  async createStackFolder(input: CreateStackFolderInput): Promise<StackFolder> {
+    const now = new Date();
+    const result = await this.db
+      .insertInto("stack_folders")
+      .values({
+        name: input.name,
+        description: input.description ?? null,
+        user_id: input.userId ?? null,
+        created_at: now,
+        updated_at: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapStackFolder(result);
+  }
+
+  async getStackFolder(id: number): Promise<StackFolder | null> {
+    const result = await this.db
+      .selectFrom("stack_folders")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    return result ? this.mapStackFolder(result) : null;
+  }
+
+  async updateStackFolder(
+    id: number,
+    updates: UpdateStackFolderInput,
+  ): Promise<StackFolder> {
+    const updateData: Updateable<Database["stack_folders"]> = {
+      updated_at: new Date(),
+    };
+
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.description !== undefined)
+      updateData.description = updates.description ?? null;
+
+    const result = await this.db
+      .updateTable("stack_folders")
+      .set(updateData)
+      .where("id", "=", id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapStackFolder(result);
+  }
+
+  async deleteStackFolder(id: number): Promise<void> {
+    // Set folder_id to NULL for all stacks in this folder
+    await this.db
+      .updateTable("stacks")
+      .set({ folder_id: null, updated_at: new Date() })
+      .where("folder_id", "=", id)
+      .execute();
+
+    // Delete the folder
+    await this.db.deleteFrom("stack_folders").where("id", "=", id).execute();
+  }
+
+  async listStackFolders(userId: number): Promise<StackFolder[]> {
+    const results = await this.db
+      .selectFrom("stack_folders")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .orderBy("name", "asc")
+      .execute();
+
+    return results.map((r) => this.mapStackFolder(r));
+  }
+
+  async getFolderStacks(folderId: number): Promise<BlockStack[]> {
+    const results = await this.db
+      .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
+      .selectAll("stacks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
+      ])
+      .select(["stack_folders.name as folder_name"])
+      .where("stacks.folder_id", "=", folderId)
+      .orderBy("stacks.updated_at", "desc")
+      .execute();
+
+    return results.map((r) => {
+      const stack = this.mapStack(r, r.folder_name ?? null);
+      stack.blockIds = r.block_ids || [];
+      stack.disabledBlockIds = r.disabled_block_ids || [];
+      return stack;
+    });
+  }
+
+  async listStacksWithFolders(
+    userId: number,
+    pagination: PaginationOptions,
+  ): Promise<StacksWithFoldersResult> {
+    // Get total counts
+    const [folderCountResult, looseStackCountResult] = await Promise.all([
+      this.db
+        .selectFrom("stack_folders")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("user_id", "=", userId)
+        .executeTakeFirst(),
+      this.db
+        .selectFrom("stacks")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("user_id", "=", userId)
+        .where("folder_id", "is", null)
+        .executeTakeFirst(),
+    ]);
+
+    const totalFolders = Number(folderCountResult?.count ?? 0);
+    const totalLooseStacks = Number(looseStackCountResult?.count ?? 0);
+
+    const { limit, offset } = pagination;
+    let folders: StackFolder[] = [];
+    let looseStacks: BlockStack[] = [];
+
+    // Determine how many folders and loose stacks to fetch for this page
+    if (offset < totalFolders) {
+      // We need some folders
+      const foldersToFetch = Math.min(limit, totalFolders - offset);
+      const folderResults = await this.db
+        .selectFrom("stack_folders")
+        .selectAll()
+        .where("user_id", "=", userId)
+        .orderBy("name", "asc")
+        .limit(foldersToFetch)
+        .offset(offset)
+        .execute();
+
+      folders = folderResults.map((r) => this.mapStackFolder(r));
+
+      // If we didn't fill the page with folders, get loose stacks
+      const remainingSlots = limit - folders.length;
+      if (remainingSlots > 0) {
+        looseStacks = await this.fetchLooseStacks(userId, remainingSlots, 0);
+      }
+    } else {
+      // All folders are before this page, only fetch loose stacks
+      const looseStackOffset = offset - totalFolders;
+      looseStacks = await this.fetchLooseStacks(
+        userId,
+        limit,
+        looseStackOffset,
+      );
+    }
+
+    return {
+      folders,
+      looseStacks,
+      totalFolders,
+      totalLooseStacks,
+    };
+  }
+
+  private async fetchLooseStacks(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<BlockStack[]> {
+    const results = await this.db
+      .selectFrom("stacks")
+      .selectAll("stacks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
+      ])
+      .where("stacks.user_id", "=", userId)
+      .where("stacks.folder_id", "is", null)
+      .orderBy("stacks.updated_at", "desc")
+      .limit(limit)
+      .offset(offset)
+      .execute();
+
+    return results.map((r) => {
+      const stack = this.mapStack(r, null);
+      stack.blockIds = r.block_ids || [];
+      stack.disabledBlockIds = r.disabled_block_ids || [];
+      return stack;
+    });
+  }
+
   async createRevision(input: CreateRevisionInput): Promise<BlockRevision> {
     return await this.db.transaction().execute(async (trx) => {
       const now = new Date();
@@ -1124,6 +1369,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           created_at: now,
           updated_at: now,
           user_id: input.userId ?? null,
+          folder_id: input.folderId ?? null,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -1175,6 +1421,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     if (updates.negative !== undefined) updateData.negative = updates.negative;
     if (updates.style !== undefined) updateData.style = updates.style;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if (updates.folderId !== undefined)
+      updateData.folder_id = updates.folderId ?? null;
 
     const stackResult = await this.db
       .updateTable("stacks")
@@ -1182,6 +1430,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .where("id", "=", id)
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    // Fetch folder name if needed
+    let folderName: string | null = null;
+    if (stackResult.folder_id) {
+      const folderResult = await this.db
+        .selectFrom("stack_folders")
+        .select("name")
+        .where("id", "=", stackResult.folder_id)
+        .executeTakeFirst();
+      if (folderResult) {
+        folderName = folderResult.name;
+      }
+    }
 
     // Get current block_ids and disabled_block_ids using coalesce pattern
     const revQuery = await this.db
@@ -1221,7 +1482,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .where("stacks.id", "=", id)
       .executeTakeFirst();
 
-    const stack = this.mapStack(stackResult);
+    const stack = this.mapStack(stackResult, folderName);
     stack.blockIds = revQuery?.block_ids || [];
     stack.disabledBlockIds = revQuery?.disabled_block_ids || [];
     return stack;
@@ -1303,6 +1564,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           created_at: now,
           updated_at: now,
           user_id: originalStack.user_id,
+          folder_id: originalStack.folder_id,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -1388,6 +1650,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   ): Promise<BlockStack | StackWithBlocks | null> {
     const result = await this.db
       .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
       .selectAll("stacks")
       .select((eb) => [
         // First try to get block_ids from active_revision_id if set, otherwise get latest revision
@@ -1422,12 +1685,13 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           )
           .as("disabled_block_ids"),
       ])
+      .select(["stack_folders.name as folder_name"])
       .where("stacks.id", "=", id)
       .executeTakeFirst();
 
     if (!result) return null;
 
-    const stack = this.mapStack(result);
+    const stack = this.mapStack(result, result.folder_name ?? null);
     stack.blockIds = result.block_ids || [];
     stack.disabledBlockIds = result.disabled_block_ids || [];
 
@@ -1444,6 +1708,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   ): Promise<BlockStack | StackWithBlocks | null> {
     const result = await this.db
       .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
       .selectAll("stacks")
       .select((eb) => [
         // First try to get block_ids from active_revision_id if set, otherwise get latest revision
@@ -1478,12 +1743,13 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           )
           .as("disabled_block_ids"),
       ])
+      .select(["stack_folders.name as folder_name"])
       .where("stacks.uuid", "=", uuid)
       .executeTakeFirst();
 
     if (!result) return null;
 
-    const stack = this.mapStack(result);
+    const stack = this.mapStack(result, result.folder_name ?? null);
     stack.blockIds = result.block_ids || [];
     stack.disabledBlockIds = result.disabled_block_ids || [];
 
@@ -1508,6 +1774,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   ): Promise<PaginatedResult<BlockStack>> {
     let query = this.db
       .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
       .selectAll("stacks")
       .select((eb) => [
         // First try to get block_ids from active_revision_id if set, otherwise get latest revision
@@ -1541,10 +1808,11 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
-      ]);
+      ])
+      .select(["stack_folders.name as folder_name"]);
 
     if (userId !== undefined) {
-      query = query.where("user_id", "=", userId);
+      query = query.where("stacks.user_id", "=", userId);
     }
 
     query = query.orderBy("stacks.updated_at", "desc");
@@ -1567,7 +1835,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     ]);
 
     const items = results.map((r) => {
-      const stack = this.mapStack(r);
+      const stack = this.mapStack(r, r.folder_name ?? null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
       return stack;
@@ -1601,6 +1869,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         "stacks.active_revision_id",
         "stack_revisions.id",
       )
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
       .selectAll("stacks")
       .select((eb) => [
         // First try to get block_ids from active_revision_id if set, otherwise get latest revision
@@ -1634,7 +1903,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
-      ]);
+      ])
+      .select(["stack_folders.name as folder_name"]);
 
     // Build a parallel count query with the same filters
     let countQuery = this.db
@@ -1685,7 +1955,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     ]);
 
     const items = results.map((r) => {
-      const stack = this.mapStack(r);
+      const stack = this.mapStack(r, r.folder_name ?? null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
       return stack;
@@ -2493,6 +2763,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     };
   }
 
+  private mapStackFolder(
+    row: Selectable<Database["stack_folders"]>,
+  ): StackFolder {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      userId: row.user_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+  }
+
   private mapRevision(
     row: Selectable<Database["block_revisions"]>,
   ): BlockRevision {
@@ -2507,7 +2790,10 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     };
   }
 
-  private mapStack(row: Selectable<Database["stacks"]>): BlockStack {
+  private mapStack(
+    row: Selectable<Database["stacks"]>,
+    folderName: string | null = null,
+  ): BlockStack {
     return {
       id: row.id,
       uuid: row.uuid,
@@ -2520,6 +2806,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       userId: row.user_id,
+      folderId: row.folder_id,
+      folderName: folderName,
       activeRevisionId: row.active_revision_id,
       blockIds: [], // To be filled by subquery
       disabledBlockIds: [], // To be filled by subquery

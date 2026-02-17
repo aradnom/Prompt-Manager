@@ -75,6 +75,7 @@ export const stacksRouter = router({
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
         notes: z.string().max(4000).nullable().optional(),
+        folderId: z.number().nullish(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -181,6 +182,20 @@ export const stacksRouter = router({
         ctx.userId,
         input ? { limit: input.limit, offset: input.offset } : undefined,
       );
+    }),
+
+  listWithFolders: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listStacksWithFolders(ctx.userId, {
+        limit: input.limit,
+        offset: input.offset,
+      });
     }),
 
   count: protectedProcedure.query(async ({ ctx }) => {
