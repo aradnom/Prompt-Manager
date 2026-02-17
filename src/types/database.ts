@@ -64,6 +64,15 @@ export interface BlockRevisionsTable {
   block_id: number | null;
 }
 
+export interface StackFoldersTable {
+  id: ColumnType<number, never, never>;
+  name: string;
+  description: string | null;
+  user_id: number | null;
+  created_at: ColumnType<Date, Date | undefined, Date | undefined>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
 export interface BlockStacksTable {
   id: ColumnType<number, never, never>;
   uuid: string;
@@ -80,6 +89,7 @@ export interface BlockStacksTable {
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
   user_id: number | null;
+  folder_id: number | null;
   active_revision_id: number | null;
 }
 
@@ -121,6 +131,7 @@ export interface Database {
   block_folders: BlockFoldersTable;
   blocks: BlocksTable;
   block_revisions: BlockRevisionsTable;
+  stack_folders: StackFoldersTable;
   stacks: BlockStacksTable;
   stack_revisions: StackRevisionsTable;
   wildcards: WildcardsTable;

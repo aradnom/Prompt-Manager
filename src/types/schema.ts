@@ -46,6 +46,26 @@ export interface BlockRevision {
   blockId: number | null;
 }
 
+export interface StackFolder {
+  id: number;
+  name: string;
+  description: string | null;
+  userId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateStackFolderInput {
+  name: string;
+  description?: string;
+  userId?: number;
+}
+
+export interface UpdateStackFolderInput {
+  name?: string;
+  description?: string;
+}
+
 export type OutputStyle = "t5" | "clip" | null;
 
 export interface BlockStack {
@@ -60,6 +80,8 @@ export interface BlockStack {
   createdAt: Date;
   updatedAt: Date;
   userId: number | null;
+  folderId: number | null;
+  folderName: string | null;
   activeRevisionId: number | null;
   blockIds: number[];
   disabledBlockIds: number[];
@@ -129,6 +151,7 @@ export interface CreateStackInput {
   style?: OutputStyle;
   userId?: number;
   blockIds?: number[];
+  folderId?: number | null;
 }
 
 export interface UpdateStackInput {
@@ -138,6 +161,7 @@ export interface UpdateStackInput {
   negative?: boolean;
   style?: OutputStyle;
   notes?: string | null;
+  folderId?: number | null;
 }
 
 export interface CreateRevisionInput {

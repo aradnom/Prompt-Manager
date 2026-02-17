@@ -13,7 +13,16 @@ import { StackEditForm } from "@/components/StackEditForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { SearchInput } from "@/components/ui/search-input";
 import { DotDivider } from "@/components/ui/dot-divider";
-import { Clock, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Clock,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  FolderPlus,
+  Folder,
+  Pencil,
+} from "lucide-react";
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
 import { Button } from "@/components/ui/button";
@@ -34,8 +43,369 @@ import {
 import { ButtonGroup } from "@/components/ui/button-group";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const PAGE_SIZE = 20;
+
+interface StackCardProps {
+  stack: Stack;
+  isActive: boolean;
+  activeStackDetails: RouterOutput["stacks"]["get"] | undefined;
+  showRevisionsForStack: number | null;
+  onStackClick: (stackId: number, stack: Stack) => void;
+  onMakeActive: (stack: Stack) => void;
+  onDuplicate: (id: number) => void;
+  onDelete: (id: number) => void;
+  onShowRevisions: (stackId: number) => void;
+  onCloseRevisions: () => void;
+  duplicateIsPending: boolean;
+  index: number;
+  isFirst: boolean;
+}
+
+function StackCard({
+  stack,
+  isActive,
+  activeStackDetails,
+  showRevisionsForStack,
+  onStackClick,
+  onMakeActive,
+  onDuplicate,
+  onDelete,
+  onShowRevisions,
+  onCloseRevisions,
+  duplicateIsPending,
+  index,
+  isFirst,
+}: StackCardProps) {
+  return (
+    <motion.div
+      key={stack.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      data-stack-card
+      className={cn("relative rounded", isFirst && "accent-border-gradient")}
+    >
+      <Card
+        className={`transition-all ${isActive ? "ring-2 ring-magenta-dark" : ""}`}
+      >
+        <CardHeader
+          className="cursor-pointer"
+          onClick={(e) => {
+            if (!(e.target as HTMLElement).closest("button")) {
+              onStackClick(stack.id, stack);
+            }
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-xl">
+                  {stack.name || stack.displayId}
+                </CardTitle>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShowRevisions(stack.id);
+                        }}
+                        className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                        aria-label="Show revisions"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>View prompt history</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <CardDescription className="text-xs mt-2">
+                {stack.blockIds.length} block
+                {stack.blockIds.length !== 1 ? "s" : ""}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2 items-center">
+              <ButtonGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStackClick(stack.id, stack);
+                  }}
+                  className="cursor-pointer"
+                >
+                  Edit Prompt
+                </Button>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDuplicate(stack.id);
+                        }}
+                        disabled={duplicateIsPending}
+                        className="cursor-pointer"
+                      >
+                        Duplicate Prompt
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Creates a shallow copy (references same blocks)
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ButtonGroup>
+
+              <Button
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMakeActive(stack);
+                }}
+                className="cursor-pointer"
+              >
+                Make Active
+              </Button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(stack.id);
+                }}
+                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                aria-label="Delete stack"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <AnimatePresence>
+          {isActive && activeStackDetails && (
+            <StackEditForm
+              stack={stack}
+              stackDetails={activeStackDetails}
+              onClose={() => onStackClick(stack.id, stack)}
+            />
+          )}
+        </AnimatePresence>
+      </Card>
+
+      {/* Revisions overlay */}
+      <AnimatePresence>
+        {showRevisionsForStack === stack.id && (
+          <StackRevisionsOverlay
+            stackId={stack.id}
+            activeRevisionId={stack.activeRevisionId}
+            onClose={onCloseRevisions}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+interface StackFolderRowProps {
+  folder: { id: number; name: string; description: string | null };
+  index: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+  activeStackId: number | null;
+  activeStackDetails: RouterOutput["stacks"]["get"] | undefined;
+  showRevisionsForStack: number | null;
+  onStackClick: (stackId: number, stack: Stack) => void;
+  onMakeActive: (stack: Stack) => void;
+  onDuplicate: (id: number) => void;
+  onDeleteStack: (id: number) => void;
+  onShowRevisions: (stackId: number) => void;
+  onCloseRevisions: () => void;
+  duplicateIsPending: boolean;
+  refetch: () => void;
+}
+
+function StackFolderRow({
+  folder,
+  index,
+  isExpanded,
+  onToggle,
+  onDelete,
+  activeStackId,
+  activeStackDetails,
+  showRevisionsForStack,
+  onStackClick,
+  onMakeActive,
+  onDuplicate,
+  onDeleteStack,
+  onShowRevisions,
+  onCloseRevisions,
+  duplicateIsPending,
+  refetch,
+}: StackFolderRowProps) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [folderName, setFolderName] = useState(folder.name);
+
+  const updateFolderMutation = api.stackFolders.update.useMutation({
+    onSuccess: () => {
+      refetch();
+      setIsEditingName(false);
+    },
+  });
+
+  const handleSaveFolderName = () => {
+    if (folderName.trim() && folderName !== folder.name) {
+      updateFolderMutation.mutate({ id: folder.id, name: folderName.trim() });
+    } else {
+      setFolderName(folder.name);
+      setIsEditingName(false);
+    }
+  };
+
+  // Lazy load folder contents when expanded
+  const { data: folderStacks, isLoading: isLoadingStacks } =
+    api.stackFolders.getStacks.useQuery(
+      { folderId: folder.id },
+      { enabled: isExpanded },
+    );
+
+  return (
+    <motion.div
+      key={folder.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+    >
+      <div
+        className={cn(
+          "border-2 border-cyan-medium/30 rounded-lg overflow-hidden",
+          index === 0 && "accent-border-gradient",
+        )}
+      >
+        {/* Folder header */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 bg-cyan-dark/50 cursor-pointer hover:bg-cyan-dark/70 transition-colors"
+          onClick={onToggle}
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-cyan-medium transition-transform",
+              !isExpanded && "-rotate-90",
+            )}
+          />
+          <Folder className="h-5 w-5 text-cyan-medium" />
+          {isEditingName ? (
+            <input
+              type="text"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              onBlur={handleSaveFolderName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSaveFolderName();
+                } else if (e.key === "Escape") {
+                  setFolderName(folder.name);
+                  setIsEditingName(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 font-medium bg-background border border-cyan-medium rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-magenta-medium"
+              autoFocus
+            />
+          ) : (
+            <span className="font-medium flex-1">{folder.name}</span>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditingName(true);
+            }}
+            className="text-cyan-medium hover:text-foreground transition-colors p-1"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="text-cyan-medium hover:text-destructive transition-colors p-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Delete folder. Will not delete prompts in the folder.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {/* Folder contents */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="p-4 space-y-4 bg-background/50">
+                {isLoadingStacks ? (
+                  <div className="text-center py-4 text-cyan-medium">
+                    Loading prompts...
+                  </div>
+                ) : folderStacks && folderStacks.length > 0 ? (
+                  folderStacks.map((stack, stackIndex) => (
+                    <StackCard
+                      key={stack.id}
+                      stack={stack}
+                      isActive={activeStackId === stack.id}
+                      activeStackDetails={
+                        activeStackId === stack.id
+                          ? activeStackDetails
+                          : undefined
+                      }
+                      showRevisionsForStack={showRevisionsForStack}
+                      onStackClick={onStackClick}
+                      onMakeActive={onMakeActive}
+                      onDuplicate={onDuplicate}
+                      onDelete={onDeleteStack}
+                      onShowRevisions={onShowRevisions}
+                      onCloseRevisions={onCloseRevisions}
+                      duplicateIsPending={duplicateIsPending}
+                      index={stackIndex}
+                      isFirst={false}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-cyan-medium">
+                    No prompts in this folder
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function Stacks() {
   const [isCreating, setIsCreating] = useState(false);
@@ -50,21 +420,34 @@ export default function Stacks() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(
+    new Set(),
+  );
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
   const navigate = useNavigate();
   const { displayId: urlDisplayId } = useParams<{ displayId: string }>();
   const { setActiveStack } = useActiveStack();
+  const utils = api.useUtils();
 
   const offset = page * PAGE_SIZE;
 
+  const isSearchMode = debouncedSearch.length > 0;
+
+  // Use listWithFolders when not searching
   const {
-    data: stacksData,
+    data: foldersData,
     isLoading,
     refetch,
-  } = api.stacks.list.useQuery({
-    limit: PAGE_SIZE,
-    offset,
-  });
-  const stacks = stacksData?.items;
+  } = api.stacks.listWithFolders.useQuery(
+    {
+      limit: PAGE_SIZE,
+      offset,
+    },
+    { enabled: !isSearchMode },
+  );
 
   // Debounce search input
   useEffect(() => {
@@ -84,15 +467,16 @@ export default function Stacks() {
         limit: PAGE_SIZE,
         offset,
       },
-      { enabled: debouncedSearch.length > 0 },
+      { enabled: isSearchMode },
     );
 
-  // Use search results if searching, otherwise use all stacks
-  const currentData = debouncedSearch.length > 0 ? searchData : stacksData;
-  const displayStacks = currentData?.items;
-  const total = currentData?.total ?? 0;
+  // Calculate totals for pagination
+  const total = isSearchMode
+    ? (searchData?.total ?? 0)
+    : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseStacks ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
+  const showLoading = isSearchMode ? isSearching : isLoading;
+
   const { data: activeStackDetails } = api.stacks.get.useQuery(
     { id: activeStackId!, includeBlocks: true, includeRevisions: false },
     { enabled: activeStackId !== null },
@@ -108,6 +492,7 @@ export default function Stacks() {
   const deleteMutation = api.stacks.delete.useMutation({
     onSuccess: () => {
       refetch();
+      utils.stackFolders.getStacks.invalidate();
       setActiveStackId(null);
       navigate("/prompts");
     },
@@ -115,8 +500,36 @@ export default function Stacks() {
   const duplicateMutation = api.stacks.duplicate.useMutation({
     onSuccess: () => {
       refetch();
+      utils.stackFolders.getStacks.invalidate();
     },
   });
+
+  const createFolderMutation = api.stackFolders.create.useMutation({
+    onSuccess: () => {
+      refetch();
+      setNewFolderDialogOpen(false);
+      setNewFolderName("");
+    },
+  });
+
+  const deleteFolderMutation = api.stackFolders.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const toggleFolder = (folderId: number) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  };
+
   const handleCreate = () => {
     if (!displayId.trim()) return;
 
@@ -139,6 +552,18 @@ export default function Stacks() {
     }
   };
 
+  const handleDeleteFolder = (folderId: number) => {
+    setFolderToDelete(folderId);
+    setDeleteFolderDialogOpen(true);
+  };
+
+  const confirmDeleteFolder = () => {
+    if (folderToDelete !== null) {
+      deleteFolderMutation.mutate({ id: folderToDelete });
+      setFolderToDelete(null);
+    }
+  };
+
   const handleMakeActive = (stack: Stack) => {
     setActiveStack(stack);
     navigate("/");
@@ -158,17 +583,29 @@ export default function Stacks() {
     }
   };
 
-  // Open stack from URL parameter
+  // Open stack from URL parameter — search across folders data and search data
   useEffect(() => {
-    if (urlDisplayId && stacks) {
-      const matchingStack = stacks.find((s) => s.displayId === urlDisplayId);
-      if (matchingStack) {
-        setActiveStackId(matchingStack.id);
+    if (urlDisplayId) {
+      // Check loose stacks in folder data
+      const looseMatch = foldersData?.looseStacks?.find(
+        (s) => s.displayId === urlDisplayId,
+      );
+      if (looseMatch) {
+        setActiveStackId(looseMatch.id);
+        return;
       }
-    } else if (!urlDisplayId) {
+      // Check search data
+      const searchMatch = searchData?.items?.find(
+        (s) => s.displayId === urlDisplayId,
+      );
+      if (searchMatch) {
+        setActiveStackId(searchMatch.id);
+        return;
+      }
+    } else {
       setActiveStackId(null);
     }
-  }, [urlDisplayId, stacks]);
+  }, [urlDisplayId, foldersData, searchData]);
 
   // Close active state and revisions when clicking outside
   useEffect(() => {
@@ -184,7 +621,6 @@ export default function Stacks() {
       if (target.closest('[role="menu"]')) return;
 
       // Don't close if there's an open dropdown (let the dropdown handle the click first)
-      // Check for Radix UI dropdown portal
       const hasOpenDropdown = document.querySelector(
         "[data-radix-popper-content-wrapper]",
       );
@@ -295,7 +731,14 @@ export default function Stacks() {
           </CardContent>
         </Card>
       ) : (
-        <div className="mb-8 flex justify-end">
+        <div className="mb-8 flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setNewFolderDialogOpen(true)}
+          >
+            <FolderPlus className="h-4 w-4 mr-2" />
+            New Folder
+          </Button>
           <Button
             onClick={() => {
               setIsCreating(true);
@@ -320,153 +763,151 @@ export default function Stacks() {
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          {debouncedSearch.length > 0 ? "Searching..." : "Loading prompts..."}
+          {isSearchMode ? "Searching..." : "Loading prompts..."}
         </div>
-      ) : displayStacks && displayStacks.length > 0 ? (
+      ) : isSearchMode ? (
+        // Search mode: flat list of stacks
+        searchData && searchData.items.length > 0 ? (
+          <>
+            <div className="space-y-4">
+              {searchData.items.map((stack, index) => (
+                <StackCard
+                  key={stack.id}
+                  stack={stack}
+                  isActive={activeStackId === stack.id}
+                  activeStackDetails={
+                    activeStackId === stack.id ? activeStackDetails : undefined
+                  }
+                  showRevisionsForStack={showRevisionsForStack}
+                  onStackClick={handleStackClick}
+                  onMakeActive={handleMakeActive}
+                  onDuplicate={handleDuplicate}
+                  onDelete={handleDelete}
+                  onShowRevisions={setShowRevisionsForStack}
+                  onCloseRevisions={() => setShowRevisionsForStack(null)}
+                  duplicateIsPending={duplicateMutation.isPending}
+                  index={index}
+                  isFirst={index === 0 && page === 0}
+                />
+              ))}
+            </div>
+
+            {searchData.total > PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-6">
+                <span className="text-sm text-cyan-medium">
+                  Showing {offset + 1}&ndash;
+                  {Math.min(offset + PAGE_SIZE, searchData.total)} of{" "}
+                  {searchData.total}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage(0)}
+                  >
+                    First
+                  </Button>
+                  <ButtonGroup>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page >= lastPage}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage(lastPage)}
+                  >
+                    Last
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card>
+            <CardContent className="py-12 border-standard-dark-cyan">
+              <div className="text-center text-cyan-medium">
+                <p className="mb-4">
+                  No prompts found matching "{debouncedSearch}"
+                </p>
+                <Button onClick={() => setSearch("")} variant="outline">
+                  Clear Search
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      ) : foldersData &&
+        (foldersData.folders.length > 0 ||
+          foldersData.looseStacks.length > 0) ? (
+        // Folder mode: folders first, then loose stacks
         <>
           <div className="space-y-4">
-            {displayStacks.map((stack, index) => {
-              const isActive = activeStackId === stack.id;
-              return (
-                <motion.div
-                  key={stack.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  data-stack-card
-                  className={cn(
-                    "relative rounded",
-                    index === 0 && page === 0 && "accent-border-gradient",
-                  )}
-                >
-                  <Card
-                    className={`transition-all ${isActive ? "ring-2 ring-magenta-dark" : ""}`}
-                  >
-                    <CardHeader
-                      className="cursor-pointer"
-                      onClick={(e) => {
-                        // Don't toggle if clicking on buttons
-                        if (!(e.target as HTMLElement).closest("button")) {
-                          handleStackClick(stack.id, stack);
-                        }
-                      }}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-xl">
-                              {stack.name || stack.displayId}
-                            </CardTitle>
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShowRevisionsForStack(stack.id);
-                                    }}
-                                    className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                                    aria-label="Show revisions"
-                                  >
-                                    <Clock className="h-4 w-4" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  View prompt history
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <CardDescription className="text-xs mt-2">
-                            {stack.blockIds.length} block
-                            {stack.blockIds.length !== 1 ? "s" : ""}
-                          </CardDescription>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          <ButtonGroup>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStackClick(stack.id, stack);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              Edit Prompt
-                            </Button>
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDuplicate(stack.id);
-                                    }}
-                                    disabled={duplicateMutation.isPending}
-                                    className="cursor-pointer"
-                                  >
-                                    Duplicate Prompt
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Creates a shallow copy (references same
-                                  blocks)
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </ButtonGroup>
+            {/* Folders */}
+            {foldersData.folders.map((folder, index) => (
+              <StackFolderRow
+                key={folder.id}
+                folder={folder}
+                index={index}
+                isExpanded={expandedFolders.has(folder.id)}
+                onToggle={() => toggleFolder(folder.id)}
+                onDelete={() => handleDeleteFolder(folder.id)}
+                activeStackId={activeStackId}
+                activeStackDetails={activeStackDetails}
+                showRevisionsForStack={showRevisionsForStack}
+                onStackClick={handleStackClick}
+                onMakeActive={handleMakeActive}
+                onDuplicate={handleDuplicate}
+                onDeleteStack={handleDelete}
+                onShowRevisions={setShowRevisionsForStack}
+                onCloseRevisions={() => setShowRevisionsForStack(null)}
+                duplicateIsPending={duplicateMutation.isPending}
+                refetch={refetch}
+              />
+            ))}
 
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMakeActive(stack);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            Make Active
-                          </Button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(stack.id);
-                            }}
-                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                            aria-label="Delete stack"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <AnimatePresence>
-                      {isActive && activeStackDetails && (
-                        <StackEditForm
-                          stack={stack}
-                          stackDetails={activeStackDetails}
-                          onClose={() => setActiveStackId(null)}
-                        />
-                      )}
-                    </AnimatePresence>
-                  </Card>
-
-                  {/* Revisions overlay */}
-                  <AnimatePresence>
-                    {showRevisionsForStack === stack.id && (
-                      <StackRevisionsOverlay
-                        stackId={stack.id}
-                        activeRevisionId={stack.activeRevisionId}
-                        onClose={() => setShowRevisionsForStack(null)}
-                      />
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              );
-            })}
+            {/* Loose stacks */}
+            {foldersData.looseStacks.map((stack, index) => (
+              <StackCard
+                key={stack.id}
+                stack={stack}
+                isActive={activeStackId === stack.id}
+                activeStackDetails={
+                  activeStackId === stack.id ? activeStackDetails : undefined
+                }
+                showRevisionsForStack={showRevisionsForStack}
+                onStackClick={handleStackClick}
+                onMakeActive={handleMakeActive}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+                onShowRevisions={setShowRevisionsForStack}
+                onCloseRevisions={() => setShowRevisionsForStack(null)}
+                duplicateIsPending={duplicateMutation.isPending}
+                index={foldersData.folders.length + index}
+                isFirst={
+                  index === 0 && page === 0 && foldersData.folders.length === 0
+                }
+              />
+            ))}
           </div>
 
           {total > PAGE_SIZE && (
@@ -518,19 +959,6 @@ export default function Stacks() {
             </div>
           )}
         </>
-      ) : debouncedSearch.length > 0 ? (
-        <Card>
-          <CardContent className="py-12 border-standard-dark-cyan">
-            <div className="text-center text-cyan-medium">
-              <p className="mb-4">
-                No prompts found matching "{debouncedSearch}"
-              </p>
-              <Button onClick={() => setSearch("")} variant="outline">
-                Clear Search
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       ) : (
         <Card>
           <CardContent className="py-12">
@@ -558,6 +986,65 @@ export default function Stacks() {
         confirmText="Delete"
         variant="destructive"
       />
+
+      <ConfirmDialog
+        open={deleteFolderDialogOpen}
+        onOpenChange={setDeleteFolderDialogOpen}
+        onConfirm={confirmDeleteFolder}
+        title="Delete Folder"
+        description="Are you sure you want to delete this folder? Prompts in the folder will not be deleted."
+        confirmText="Delete"
+        variant="destructive"
+      />
+
+      <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Folder Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Portrait Prompts"
+                className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newFolderName.trim()) {
+                    createFolderMutation.mutate({ name: newFolderName.trim() });
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setNewFolderDialogOpen(false);
+                  setNewFolderName("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  createFolderMutation.mutate({ name: newFolderName.trim() })
+                }
+                disabled={
+                  !newFolderName.trim() || createFolderMutation.isPending
+                }
+              >
+                {createFolderMutation.isPending ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

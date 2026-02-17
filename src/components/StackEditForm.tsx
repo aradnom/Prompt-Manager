@@ -61,10 +61,14 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     notes,
   };
 
+  const { data: stackFolders } = api.stackFolders.list.useQuery();
+
   const updateMutation = api.stacks.update.useMutation({
     onSuccess: () => {
       utils.stacks.list.invalidate();
       utils.stacks.get.invalidate();
+      utils.stacks.listWithFolders.invalidate();
+      utils.stackFolders.getStacks.invalidate();
     },
   });
 
@@ -336,6 +340,64 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
                         </div>
                       </div>
                     </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex-1" onClick={(e) => e.stopPropagation()}>
+              <label className="text-sm mb-2 block">Folder</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-cyan-medium bg-background hover:bg-cyan-dark/20 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="text-sm">
+                    {stack.folderId
+                      ? (stackFolders?.find((f) => f.id === stack.folderId)
+                          ?.name ??
+                        stack.folderName ??
+                        "Unknown Folder")
+                      : "None"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-cyan-medium" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-75"
+                  align="start"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenuRadioGroup
+                    value={String(stack.folderId ?? "none")}
+                    onValueChange={(value) => {
+                      const newFolderId =
+                        value === "none" ? null : Number(value);
+                      if (saveTimeoutRef.current) {
+                        clearTimeout(saveTimeoutRef.current);
+                      }
+                      setTimeout(() => {
+                        updateMutation.mutate({
+                          id: stack.id,
+                          folderId: newFolderId,
+                        });
+                      }, 0);
+                    }}
+                  >
+                    <DropdownMenuRadioItem
+                      value="none"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      None
+                    </DropdownMenuRadioItem>
+                    {stackFolders?.map((folder) => (
+                      <DropdownMenuRadioItem
+                        key={folder.id}
+                        value={String(folder.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {folder.name}
+                      </DropdownMenuRadioItem>
+                    ))}
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
