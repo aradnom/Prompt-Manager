@@ -162,6 +162,15 @@ export interface IStorageAdapter {
     updates: UpdateStackSnapshotInput,
   ): Promise<StackSnapshot>;
   listStackSnapshots(stackId: number): Promise<StackSnapshot[]>;
+  listAllSnapshots(
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackSnapshot>>;
+  searchSnapshots(
+    options: SearchSnapshotsOptions,
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackSnapshot>>;
   deleteStackSnapshot(id: number): Promise<void>;
 
   createType(name: string, description?: string): Promise<Type>;
@@ -200,6 +209,10 @@ export interface SearchStacksOptions {
 }
 
 export interface SearchWildcardsOptions {
+  query?: string;
+}
+
+export interface SearchSnapshotsOptions {
   query?: string;
 }
 

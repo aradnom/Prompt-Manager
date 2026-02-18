@@ -437,4 +437,33 @@ export const stacksRouter = router({
       await ctx.storage.deleteStackSnapshot(input.id);
       return { success: true };
     }),
+
+  listAllSnapshots: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listAllSnapshots(ctx.userId, {
+        limit: input.limit,
+        offset: input.offset,
+      });
+    }),
+
+  searchSnapshots: protectedProcedure
+    .input(
+      z.object({
+        query: z.string().optional(),
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.searchSnapshots({ query: input.query }, ctx.userId, {
+        limit: input.limit,
+        offset: input.offset,
+      });
+    }),
 });

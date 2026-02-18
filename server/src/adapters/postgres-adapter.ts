@@ -32,6 +32,7 @@ import type {
   SearchBlocksOptions,
   SearchStacksOptions,
   SearchWildcardsOptions,
+  SearchSnapshotsOptions,
   PaginationOptions,
   PaginatedResult,
   BlocksWithFoldersResult,
@@ -1833,6 +1834,97 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
   async deleteStackSnapshot(id: number): Promise<void> {
     await this.db.deleteFrom("stack_snapshots").where("id", "=", id).execute();
+  }
+
+  async listAllSnapshots(
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackSnapshot>> {
+    let query = this.db
+      .selectFrom("stack_snapshots")
+      .leftJoin("stacks", "stack_snapshots.stack_id", "stacks.id")
+      .selectAll("stack_snapshots")
+      .select([
+        "stacks.display_id as stack_display_id",
+        "stacks.name as stack_name",
+      ])
+      .where("stack_snapshots.user_id", "=", userId);
+
+    const countResult = await this.db
+      .selectFrom("stack_snapshots")
+      .select(this.db.fn.countAll<number>().as("count"))
+      .where("user_id", "=", userId)
+      .executeTakeFirstOrThrow();
+
+    query = query.orderBy("stack_snapshots.created_at", "desc");
+
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const results = await query.execute();
+    return {
+      items: results.map((r) => ({
+        ...this.mapStackSnapshot(r),
+        stackDisplayId: r.stack_display_id ?? undefined,
+        stackName: r.stack_name ?? undefined,
+      })),
+      total: Number(countResult.count),
+    };
+  }
+
+  async searchSnapshots(
+    options: SearchSnapshotsOptions,
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackSnapshot>> {
+    let query = this.db
+      .selectFrom("stack_snapshots")
+      .leftJoin("stacks", "stack_snapshots.stack_id", "stacks.id")
+      .selectAll("stack_snapshots")
+      .select([
+        "stacks.display_id as stack_display_id",
+        "stacks.name as stack_name",
+      ])
+      .where("stack_snapshots.user_id", "=", userId);
+
+    let countQuery = this.db
+      .selectFrom("stack_snapshots")
+      .leftJoin("stacks", "stack_snapshots.stack_id", "stacks.id")
+      .select(this.db.fn.countAll<number>().as("count"))
+      .where("stack_snapshots.user_id", "=", userId);
+
+    if (options.query) {
+      const searchTerm = `%${options.query}%`;
+      const condition = (eb: any) =>
+        eb.or([
+          eb("stack_snapshots.name", "ilike", searchTerm),
+          eb("stack_snapshots.display_id", "ilike", searchTerm),
+          eb("stack_snapshots.rendered_content", "ilike", searchTerm),
+          eb("stacks.name", "ilike", searchTerm),
+          eb("stacks.display_id", "ilike", searchTerm),
+        ]);
+      query = query.where(condition);
+      countQuery = countQuery.where(condition);
+    }
+
+    const countResult = await countQuery.executeTakeFirstOrThrow();
+
+    query = query.orderBy("stack_snapshots.created_at", "desc");
+
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const results = await query.execute();
+    return {
+      items: results.map((r) => ({
+        ...this.mapStackSnapshot(r),
+        stackDisplayId: r.stack_display_id ?? undefined,
+        stackName: r.stack_name ?? undefined,
+      })),
+      total: Number(countResult.count),
+    };
   }
 
   async listStacks(
