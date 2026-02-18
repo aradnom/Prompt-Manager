@@ -16,6 +16,7 @@ import WhatIsThis from "./pages/WhatIsThis";
 import Account from "./pages/Account";
 import DeveloperSettings from "./pages/DeveloperSettings";
 import LMStudioCors from "./pages/LMStudioCors";
+import Snapshots from "./pages/Snapshots";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
                             path="/prompts/:displayId"
                             element={<Stacks />}
                           />
+                          <Route path="/snapshots" element={<Snapshots />} />
                           <Route path="/blocks" element={<Blocks />} />
                           <Route path="/wildcards" element={<Wildcards />} />
                           <Route

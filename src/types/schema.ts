@@ -107,6 +107,8 @@ export interface StackSnapshot {
   blockIds: number[];
   disabledBlockIds: number[];
   stackId: number;
+  stackDisplayId?: string;
+  stackName?: string | null;
   userId: number | null;
   createdAt: Date;
   updatedAt: Date;
