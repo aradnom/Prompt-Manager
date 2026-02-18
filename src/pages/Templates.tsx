@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
 import { RasterIcon } from "@/components/RasterIcon";
@@ -10,7 +10,6 @@ import { DotDivider } from "@/components/ui/dot-divider";
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Trash2,
   StickyNote,
   ArrowLeft,
@@ -44,7 +43,7 @@ function TemplateCard({
   isFirst,
   onUpdate,
 }: TemplateCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(template.name ?? "");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -86,14 +85,8 @@ function TemplateCard({
       <Card>
         <div
           className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-cyan-dark/30 transition-colors"
-          onClick={() => setIsExpanded((prev) => !prev)}
+          onClick={() => navigate(`/templates/${template.id}`)}
         >
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-cyan-medium transition-transform shrink-0",
-              !isExpanded && "-rotate-90",
-            )}
-          />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               {isEditing ? (
@@ -179,22 +172,6 @@ function TemplateCard({
             </button>
           </div>
         </div>
-
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <CardContent className="p-4">
-                <TemplateEditor template={template} onUpdate={onUpdate} />
-              </CardContent>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </Card>
 
       <NotesDialog
