@@ -114,6 +114,43 @@ export interface StackSnapshot {
   updatedAt: Date;
 }
 
+export interface StackTemplate {
+  id: number;
+  displayId: string;
+  name: string | null;
+  blockIds: number[];
+  disabledBlockIds: number[];
+  commaSeparated: boolean;
+  negative: boolean;
+  style: OutputStyle;
+  notes: string | null;
+  userId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateStackTemplateInput {
+  displayId: string;
+  name?: string;
+  blockIds?: number[];
+  disabledBlockIds?: number[];
+  commaSeparated?: boolean;
+  negative?: boolean;
+  style?: OutputStyle;
+  notes?: string;
+  userId?: number;
+}
+
+export interface UpdateStackTemplateInput {
+  name?: string | null;
+  blockIds?: number[];
+  disabledBlockIds?: number[];
+  commaSeparated?: boolean;
+  negative?: boolean;
+  style?: OutputStyle;
+  notes?: string | null;
+}
+
 export interface BlockWithRevisions extends Block {
   revisions: BlockRevision[];
 }
