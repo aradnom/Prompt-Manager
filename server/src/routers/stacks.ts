@@ -66,6 +66,29 @@ export const stacksRouter = router({
       return stack;
     }),
 
+  getByDisplayId: protectedProcedure
+    .input(
+      z.object({
+        displayId: z.string(),
+        includeBlocks: z.boolean().optional().default(false),
+        includeRevisions: z.boolean().optional().default(false),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStackByDisplayId(
+        input.displayId,
+        ctx.userId,
+        {
+          includeBlocks: input.includeBlocks,
+          includeRevisions: input.includeRevisions,
+        },
+      );
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      return stack;
+    }),
+
   update: protectedProcedure
     .input(
       z.object({

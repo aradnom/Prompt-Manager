@@ -116,6 +116,11 @@ export interface IStorageAdapter {
     uuid: string,
     options?: GetStackOptions,
   ): Promise<BlockStack | StackWithBlocks | null>;
+  getStackByDisplayId(
+    displayId: string,
+    userId: number,
+    options?: GetStackOptions,
+  ): Promise<BlockStack | StackWithBlocks | null>;
   updateStack(id: number, updates: UpdateStackInput): Promise<BlockStack>;
   duplicateStack(id: number): Promise<BlockStack>;
   setActiveStackRevision(

@@ -1768,6 +1768,65 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return stack;
   }
 
+  async getStackByDisplayId(
+    displayId: string,
+    userId: number,
+    options?: GetStackOptions,
+  ): Promise<BlockStack | StackWithBlocks | null> {
+    const result = await this.db
+      .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
+      .selectAll("stacks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
+      ])
+      .select(["stack_folders.name as folder_name"])
+      .where("stacks.display_id", "=", displayId)
+      .where("stacks.user_id", "=", userId)
+      .executeTakeFirst();
+
+    if (!result) return null;
+
+    const stack = this.mapStack(result, result.folder_name ?? null);
+    stack.blockIds = result.block_ids || [];
+    stack.disabledBlockIds = result.disabled_block_ids || [];
+
+    if (options?.includeBlocks) {
+      return this.expandStack(stack, options.includeRevisions ?? false);
+    }
+
+    return stack;
+  }
+
   async deleteStack(id: number): Promise<void> {
     await this.db
       .deleteFrom("stack_snapshots")
