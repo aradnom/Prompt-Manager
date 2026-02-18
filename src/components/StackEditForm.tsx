@@ -67,6 +67,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     onSuccess: () => {
       utils.stacks.list.invalidate();
       utils.stacks.get.invalidate();
+      utils.stacks.getByDisplayId.invalidate();
       utils.stacks.listWithFolders.invalidate();
       utils.stackFolders.getStacks.invalidate();
     },

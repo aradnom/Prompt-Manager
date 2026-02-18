@@ -15,8 +15,11 @@ import { FolderRow } from "@/components/FolderRow";
 import { SearchInput } from "@/components/ui/search-input";
 import { DotDivider } from "@/components/ui/dot-divider";
 import {
+  ArrowLeft,
   Clock,
+  Folder,
   Trash2,
+  StickyNote,
   ChevronLeft,
   ChevronRight,
   FolderPlus,
@@ -42,6 +45,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { NotesDialog } from "@/components/NotesDialog";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
 import {
   Dialog,
@@ -54,8 +58,6 @@ const PAGE_SIZE = 20;
 
 interface StackCardProps {
   stack: Stack;
-  isActive: boolean;
-  activeStackDetails: RouterOutput["stacks"]["get"] | undefined;
   showRevisionsForStack: number | null;
   onStackClick: (stackId: number, stack: Stack) => void;
   onMakeActive: (stack: Stack) => void;
@@ -70,8 +72,6 @@ interface StackCardProps {
 
 function StackCard({
   stack,
-  isActive,
-  activeStackDetails,
   showRevisionsForStack,
   onStackClick,
   onMakeActive,
@@ -113,9 +113,7 @@ function StackCard({
       data-stack-card
       className={cn("relative rounded", isFirst && "accent-border-gradient")}
     >
-      <Card
-        className={`transition-all ${isActive ? "ring-2 ring-magenta-dark" : ""}`}
-      >
+      <Card>
         <CardHeader
           className="cursor-pointer"
           onClick={(e) => {
@@ -248,15 +246,6 @@ function StackCard({
             </div>
           </div>
         </CardHeader>
-        <AnimatePresence>
-          {isActive && activeStackDetails && (
-            <StackEditForm
-              stack={stack}
-              stackDetails={activeStackDetails}
-              onClose={() => onStackClick(stack.id, stack)}
-            />
-          )}
-        </AnimatePresence>
       </Card>
 
       {/* Revisions overlay */}
@@ -275,8 +264,6 @@ function StackCard({
 
 function StackFolderContent({
   folderId,
-  activeStackId,
-  activeStackDetails,
   showRevisionsForStack,
   onStackClick,
   onMakeActive,
@@ -287,8 +274,6 @@ function StackFolderContent({
   duplicateIsPending,
 }: {
   folderId: number;
-  activeStackId: number | null;
-  activeStackDetails: RouterOutput["stacks"]["get"] | undefined;
   showRevisionsForStack: number | null;
   onStackClick: (stackId: number, stack: Stack) => void;
   onMakeActive: (stack: Stack) => void;
@@ -324,10 +309,6 @@ function StackFolderContent({
         <StackCard
           key={stack.id}
           stack={stack}
-          isActive={activeStackId === stack.id}
-          activeStackDetails={
-            activeStackId === stack.id ? activeStackDetails : undefined
-          }
           showRevisionsForStack={showRevisionsForStack}
           onStackClick={onStackClick}
           onMakeActive={onMakeActive}
@@ -344,13 +325,12 @@ function StackFolderContent({
   );
 }
 
-export default function Stacks() {
+function StackList() {
   const [isCreating, setIsCreating] = useState(false);
   const [displayId, setDisplayId] = useState("");
   const [name, setName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [stackToDelete, setStackToDelete] = useState<number | null>(null);
-  const [activeStackId, setActiveStackId] = useState<number | null>(null);
   const [showRevisionsForStack, setShowRevisionsForStack] = useState<
     number | null
   >(null);
@@ -365,7 +345,6 @@ export default function Stacks() {
   const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
   const navigate = useNavigate();
-  const { displayId: urlDisplayId } = useParams<{ displayId: string }>();
   const { setActiveStack } = useActiveStack();
   const utils = api.useUtils();
 
@@ -414,10 +393,6 @@ export default function Stacks() {
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   const showLoading = isSearchMode ? isSearching : isLoading;
 
-  const { data: activeStackDetails } = api.stacks.get.useQuery(
-    { id: activeStackId!, includeBlocks: true, includeRevisions: false },
-    { enabled: activeStackId !== null },
-  );
   const createMutation = api.stacks.create.useMutation({
     onSuccess: () => {
       refetch();
@@ -430,7 +405,6 @@ export default function Stacks() {
     onSuccess: () => {
       refetch();
       utils.stackFolders.getStacks.invalidate();
-      setActiveStackId(null);
       navigate("/prompts");
     },
   });
@@ -516,68 +490,9 @@ export default function Stacks() {
     duplicateMutation.mutate({ id });
   };
 
-  const handleStackClick = (stackId: number, stack: Stack) => {
-    if (activeStackId === stackId) {
-      setActiveStackId(null);
-      navigate("/prompts");
-    } else {
-      setActiveStackId(stackId);
-      navigate(`/prompts/${stack.displayId}`);
-    }
+  const handleStackClick = (_stackId: number, stack: Stack) => {
+    navigate(`/prompts/${stack.displayId}`);
   };
-
-  // Open stack from URL parameter — search across folders data and search data
-  useEffect(() => {
-    if (urlDisplayId) {
-      // Check loose stacks in folder data
-      const looseMatch = foldersData?.looseStacks?.find(
-        (s) => s.displayId === urlDisplayId,
-      );
-      if (looseMatch) {
-        setActiveStackId(looseMatch.id);
-        return;
-      }
-      // Check search data
-      const searchMatch = searchData?.items?.find(
-        (s) => s.displayId === urlDisplayId,
-      );
-      if (searchMatch) {
-        setActiveStackId(searchMatch.id);
-        return;
-      }
-    } else {
-      setActiveStackId(null);
-    }
-  }, [urlDisplayId, foldersData, searchData]);
-
-  // Close active state and revisions when clicking outside
-  useEffect(() => {
-    if (!activeStackId && !showRevisionsForStack) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-
-      // Don't close if clicking inside the stack card
-      if (target.closest("[data-stack-card]")) return;
-
-      // Don't close if clicking inside a dropdown menu
-      if (target.closest('[role="menu"]')) return;
-
-      // Don't close if there's an open dropdown (let the dropdown handle the click first)
-      const hasOpenDropdown = document.querySelector(
-        "[data-radix-popper-content-wrapper]",
-      );
-      if (hasOpenDropdown) return;
-
-      setActiveStackId(null);
-      setShowRevisionsForStack(null);
-      navigate("/prompts");
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-    // eslint-disable-next-line
-  }, [activeStackId, showRevisionsForStack]);
 
   return (
     <main className="standard-page-container">
@@ -729,10 +644,6 @@ export default function Stacks() {
                 <StackCard
                   key={stack.id}
                   stack={stack}
-                  isActive={activeStackId === stack.id}
-                  activeStackDetails={
-                    activeStackId === stack.id ? activeStackDetails : undefined
-                  }
                   showRevisionsForStack={showRevisionsForStack}
                   onStackClick={handleStackClick}
                   onMakeActive={handleMakeActive}
@@ -833,8 +744,6 @@ export default function Stacks() {
               >
                 <StackFolderContent
                   folderId={folder.id}
-                  activeStackId={activeStackId}
-                  activeStackDetails={activeStackDetails}
                   showRevisionsForStack={showRevisionsForStack}
                   onStackClick={handleStackClick}
                   onMakeActive={handleMakeActive}
@@ -852,10 +761,6 @@ export default function Stacks() {
               <StackCard
                 key={stack.id}
                 stack={stack}
-                isActive={activeStackId === stack.id}
-                activeStackDetails={
-                  activeStackId === stack.id ? activeStackDetails : undefined
-                }
                 showRevisionsForStack={showRevisionsForStack}
                 onStackClick={handleStackClick}
                 onMakeActive={handleMakeActive}
@@ -1009,4 +914,164 @@ export default function Stacks() {
       </Dialog>
     </main>
   );
+}
+
+function SinglePromptView({ displayId }: { displayId: string }) {
+  const navigate = useNavigate();
+  const utils = api.useUtils();
+
+  const {
+    data: stack,
+    isLoading,
+    refetch,
+  } = api.stacks.getByDisplayId.useQuery({
+    displayId,
+    includeBlocks: true,
+  });
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+
+  const updateMutation = api.stacks.update.useMutation({
+    onSuccess: () => {
+      utils.stacks.list.invalidate();
+      utils.stacks.listWithFolders.invalidate();
+      utils.stacks.getByDisplayId.invalidate();
+      refetch();
+    },
+  });
+
+  const deleteMutation = api.stacks.delete.useMutation({
+    onSuccess: () => {
+      utils.stacks.list.invalidate();
+      utils.stacks.listWithFolders.invalidate();
+      navigate("/prompts");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <main className="standard-page-container">
+        <div className="text-center py-12 text-cyan-medium">
+          Loading prompt...
+        </div>
+      </main>
+    );
+  }
+
+  if (!stack) {
+    return (
+      <main className="standard-page-container">
+        <div className="text-center py-12 text-cyan-medium">
+          <p className="mb-4">Prompt not found</p>
+          <Link to="/prompts">
+            <Button variant="outline">Back to Prompts</Button>
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="standard-page-container">
+      <div className="mb-8">
+        <Link
+          to="/prompts"
+          className="inline-flex items-center gap-1.5 text-sm text-cyan-medium hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Prompts
+        </Link>
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold flex items-center gap-3">
+            <RasterIcon name="chat" size={36} />
+            {stack.name || stack.displayId}
+          </h1>
+          <div className="flex items-center gap-2">
+            {stack.folderName && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-dark rounded text-xs text-cyan-medium">
+                <Folder className="h-3 w-3" />
+                {stack.folderName}
+              </span>
+            )}
+            {stack.negative && (
+              <span className="px-2 py-1 bg-red-900/30 border border-red-700/50 rounded text-xs text-red-400">
+                Negative
+              </span>
+            )}
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setNotesDialogOpen(true)}
+                    className={`text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${stack.notes ? "text-foreground" : ""}`}
+                    aria-label="Edit notes"
+                  >
+                    <StickyNote className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {stack.notes ? "Edit notes" : "Add notes"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
+              aria-label="Delete prompt"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {stack.name && (
+          <p className="text-cyan-medium font-mono text-sm mt-2 bg-background/60 inline-block px-2 py-1">
+            {stack.displayId}
+          </p>
+        )}
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <StackEditForm
+            stack={stack}
+            stackDetails={stack}
+            onClose={() => navigate("/prompts")}
+          />
+        </CardContent>
+      </Card>
+
+      <NotesDialog
+        title="Prompt Notes"
+        placeholder="Add notes about this prompt..."
+        initialNotes={stack.notes}
+        open={notesDialogOpen}
+        onOpenChange={setNotesDialogOpen}
+        onSave={(notes) => {
+          updateMutation.mutate({ id: stack.id, notes });
+        }}
+      />
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => {
+          deleteMutation.mutate({ id: stack.id });
+        }}
+        title="Delete Prompt"
+        description="Are you sure you want to delete this prompt? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+      />
+    </main>
+  );
+}
+
+export default function Stacks() {
+  const { displayId } = useParams<{ displayId: string }>();
+
+  if (displayId) {
+    return <SinglePromptView displayId={displayId} />;
+  }
+
+  return <StackList />;
 }
