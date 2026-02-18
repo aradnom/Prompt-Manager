@@ -2,4 +2,8 @@
   .border-standard-dark-cyan {
     @apply border-2 border-cyan-dark rounded;
   }
+
+  .border-inline-input {
+    @apply bg-background rounded-md focus:outline-none focus:border-2 focus:border-magenta-medium;
+  }
 }

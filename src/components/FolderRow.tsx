@@ -83,7 +83,7 @@ export function FolderRow({
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="font-medium bg-background rounded-md px-2 py-0.5 focus:outline-none focus:border-2 focus:border-magenta-medium"
+                className="font-medium px-2 py-0.5 border-inline-input"
                 autoFocus
               />
             ) : (

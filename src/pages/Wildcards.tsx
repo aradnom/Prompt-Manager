@@ -527,7 +527,7 @@ export default function Wildcards() {
                               }}
                               onClick={(e) => e.stopPropagation()}
                               placeholder="Enter wildcard name..."
-                              className="text-lg font-semibold px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                              className="text-lg font-semibold px-2 py-0.5 border-inline-input"
                               maxLength={255}
                               autoFocus
                             />
@@ -693,7 +693,7 @@ export default function Wildcards() {
                     }
                   }}
                   placeholder="Enter a category (e.g., 'emotions', 'fantasy locations')"
-                  className="w-full px-4 py-2 border border-cyan-medium rounded-md focus:outline-none focus:ring-2 focus:ring-magenta-medium bg-background"
+                  className="w-full px-4 py-2 border-2 border-inline-input"
                   maxLength={140}
                   autoFocus
                 />

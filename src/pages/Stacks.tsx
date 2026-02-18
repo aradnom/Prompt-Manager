@@ -142,7 +142,7 @@ function StackCard({
                     }}
                     onClick={(e) => e.stopPropagation()}
                     placeholder="Enter prompt name..."
-                    className="text-lg font-semibold px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                    className="text-lg font-semibold px-2 py-0.5 border-inline-input"
                     maxLength={255}
                     autoFocus
                   />

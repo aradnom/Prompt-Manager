@@ -111,7 +111,7 @@ function TemplateCard({
                   }}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Enter template name..."
-                  className="text-sm font-medium font-mono px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                  className="text-sm font-medium font-mono px-2 py-0.5 border-inline-input"
                   maxLength={255}
                   autoFocus
                 />

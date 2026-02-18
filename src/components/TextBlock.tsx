@@ -685,7 +685,7 @@ export function TextBlock({
                       }}
                       onClick={(e) => e.stopPropagation()}
                       placeholder="Enter block name..."
-                      className="font-semibold px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                      className="font-semibold px-2 py-0.5 border-inline-input"
                       maxLength={255}
                       autoFocus
                     />
@@ -981,7 +981,7 @@ export function TextBlock({
                   setIsMenuVisible(false);
                 }
               }}
-              className="box-content w-full text-sm leading-6 whitespace-pre-wrap bg-cyan-dark/50 border-cyan-medium rounded p-2 -m-2 focus:outline-none focus:ring-2 focus:ring-magenta-medium resize-none"
+              className="box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -m-2 resize-none border-inline-input"
               minRows={1}
             />
           ) : (

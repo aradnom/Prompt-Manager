@@ -975,7 +975,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                     }
                   }}
                   placeholder="Enter a concept (e.g., 'landscape', 'action scenes')"
-                  className="w-full px-4 py-2 border border-cyan-medium rounded-md focus:outline-none focus:ring-2 focus:ring-magenta-medium bg-background"
+                  className="w-full px-4 py-2 border-2 border-inline-input"
                   maxLength={140}
                   autoFocus
                 />

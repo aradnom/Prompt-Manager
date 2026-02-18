@@ -113,7 +113,7 @@ function SnapshotCard({ snapshot, stackId }: SnapshotCardProps) {
               }
             }}
             placeholder="Enter snapshot name..."
-            className="w-full text-sm font-medium font-mono px-2 py-1 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+            className="w-full text-sm font-medium font-mono px-2 py-1 border-inline-input relative focus:z-10"
             maxLength={255}
             autoFocus
           />
