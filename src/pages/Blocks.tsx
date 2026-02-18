@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
@@ -7,14 +7,8 @@ import { generateUUID } from "@/lib/uuid";
 import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  FolderPlus,
-  Folder,
-  Trash2,
-} from "lucide-react";
+import { FolderRow } from "@/components/FolderRow";
+import { ChevronLeft, ChevronRight, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,37 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { DotDivider } from "@/components/ui/dot-divider";
 
 const PAGE_SIZE = 50;
 
-interface FolderRowProps {
-  folder: { id: number; name: string; description: string | null };
-  index: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onDelete: () => void;
-  editingId: number | null;
-  setEditingId: (id: number | null) => void;
-  handleUpdate: (id: number, values: BlockFormValues) => void;
-  handleDelete: (id: number) => void;
-  updateMutation: { isPending: boolean };
-  deleteMutation: { isPending: boolean };
-  refetch: () => void;
-}
-
-function FolderRow({
-  folder,
-  index,
-  isExpanded,
-  onToggle,
-  onDelete,
+function BlockFolderContent({
+  folderId,
   editingId,
   setEditingId,
   handleUpdate,
@@ -64,186 +33,81 @@ function FolderRow({
   updateMutation,
   deleteMutation,
   refetch,
-}: FolderRowProps) {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [folderName, setFolderName] = useState(folder.name);
+}: {
+  folderId: number;
+  editingId: number | null;
+  setEditingId: (id: number | null) => void;
+  handleUpdate: (id: number, values: BlockFormValues) => void;
+  handleDelete: (id: number) => void;
+  updateMutation: { isPending: boolean };
+  deleteMutation: { isPending: boolean };
+  refetch: () => void;
+}) {
+  const { data: folderBlocks, isLoading } = api.blockFolders.getBlocks.useQuery(
+    { folderId },
+  );
 
-  const updateFolderMutation = api.blockFolders.update.useMutation({
-    onSuccess: () => {
-      refetch();
-      setIsEditingName(false);
-    },
-  });
-
-  const handleSaveFolderName = () => {
-    if (folderName.trim() && folderName !== folder.name) {
-      updateFolderMutation.mutate({ id: folder.id, name: folderName.trim() });
-    } else {
-      setFolderName(folder.name);
-      setIsEditingName(false);
-    }
-  };
-
-  // Lazy load folder contents when expanded
-  const { data: folderBlocks, isLoading: isLoadingBlocks } =
-    api.blockFolders.getBlocks.useQuery(
-      { folderId: folder.id },
-      { enabled: isExpanded },
+  if (isLoading) {
+    return (
+      <div className="text-center py-4 text-cyan-medium">Loading blocks...</div>
     );
+  }
+
+  if (!folderBlocks || folderBlocks.length === 0) {
+    return (
+      <div className="text-center py-4 text-cyan-medium">
+        No blocks in this folder
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      key={folder.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-    >
-      <div
-        className={cn(
-          "border-2 border-cyan-medium/30 rounded-lg overflow-hidden",
-          index === 0 && "accent-border-gradient",
-        )}
-      >
-        {/* Folder header */}
-        <div
-          className="flex items-center gap-3 px-4 py-3 bg-cyan-dark/50 cursor-pointer hover:bg-cyan-dark/70 transition-colors"
-          onClick={onToggle}
-        >
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-cyan-medium transition-transform",
-              !isExpanded && "-rotate-90",
-            )}
-          />
-          <Folder className="h-5 w-5 text-cyan-medium" />
-          {isEditingName ? (
-            <input
-              type="text"
-              value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
-              onBlur={handleSaveFolderName}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSaveFolderName();
-                } else if (e.key === "Escape") {
-                  setFolderName(folder.name);
-                  setIsEditingName(false);
-                }
+    <>
+      {folderBlocks.map((block) => (
+        <div key={block.id} className="border-standard-dark-cyan">
+          {editingId === block.id ? (
+            <BlockForm
+              mode="edit"
+              initialValues={{
+                name: block.name ?? undefined,
+                displayId: block.displayId,
+                text: block.text,
+                labels: block.labels,
+                typeId: block.typeId ?? undefined,
+                folderId: block.folderId ?? undefined,
+                notes: block.notes ?? undefined,
               }}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 font-medium bg-background border border-cyan-medium rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-magenta-medium"
-              autoFocus
+              onSubmit={(values) => {
+                handleUpdate(block.id, values);
+                refetch();
+              }}
+              onCancel={() => setEditingId(null)}
+              onDelete={() => handleDelete(block.id)}
+              isSubmitting={updateMutation.isPending}
             />
           ) : (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    className="font-medium flex-1 cursor-pointer hover:text-magenta-light transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolderName(folder.name);
-                      setIsEditingName(true);
-                    }}
-                  >
-                    {folder.name}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Click to rename</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <TextBlock
+              block={block}
+              onEdit={() => setEditingId(block.id)}
+              onDelete={() => handleDelete(block.id)}
+              onTransform={(blockId, transformedText) => {
+                handleUpdate(blockId, {
+                  name: block.name ?? undefined,
+                  displayId: block.displayId,
+                  text: transformedText,
+                  labels: block.labels,
+                  typeId: block.typeId ?? undefined,
+                  folderId: block.folderId ?? undefined,
+                  notes: block.notes ?? undefined,
+                });
+                refetch();
+              }}
+              isDeleting={deleteMutation.isPending}
+            />
           )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                  }}
-                  className="text-cyan-medium hover:text-destructive transition-colors p-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Delete folder. Will not delete blocks in the folder.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
-
-        {/* Folder contents */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="p-4 space-y-4 bg-background/50">
-                {isLoadingBlocks ? (
-                  <div className="text-center py-4 text-cyan-medium">
-                    Loading blocks...
-                  </div>
-                ) : folderBlocks && folderBlocks.length > 0 ? (
-                  folderBlocks.map((block) => (
-                    <div key={block.id} className="border-standard-dark-cyan">
-                      {editingId === block.id ? (
-                        <BlockForm
-                          mode="edit"
-                          initialValues={{
-                            name: block.name ?? undefined,
-                            displayId: block.displayId,
-                            text: block.text,
-                            labels: block.labels,
-                            typeId: block.typeId ?? undefined,
-                            folderId: block.folderId ?? undefined,
-                            notes: block.notes ?? undefined,
-                          }}
-                          onSubmit={(values) => {
-                            handleUpdate(block.id, values);
-                            refetch();
-                          }}
-                          onCancel={() => setEditingId(null)}
-                          onDelete={() => handleDelete(block.id)}
-                          isSubmitting={updateMutation.isPending}
-                        />
-                      ) : (
-                        <TextBlock
-                          block={block}
-                          onEdit={() => setEditingId(block.id)}
-                          onDelete={() => handleDelete(block.id)}
-                          onTransform={(blockId, transformedText) => {
-                            handleUpdate(blockId, {
-                              name: block.name ?? undefined,
-                              displayId: block.displayId,
-                              text: transformedText,
-                              labels: block.labels,
-                              typeId: block.typeId ?? undefined,
-                              folderId: block.folderId ?? undefined,
-                              notes: block.notes ?? undefined,
-                            });
-                            refetch();
-                          }}
-                          isDeleting={deleteMutation.isPending}
-                        />
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-cyan-medium">
-                    No blocks in this folder
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+      ))}
+    </>
   );
 }
 
@@ -351,6 +215,12 @@ export default function Blocks() {
   });
 
   const deleteFolderMutation = api.blockFolders.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const renameFolderMutation = api.blockFolders.update.useMutation({
     onSuccess: () => {
       refetch();
     },
@@ -587,14 +457,22 @@ export default function Blocks() {
                 isExpanded={expandedFolders.has(folder.id)}
                 onToggle={() => toggleFolder(folder.id)}
                 onDelete={() => handleDeleteFolder(folder.id)}
-                editingId={editingId}
-                setEditingId={setEditingId}
-                handleUpdate={handleUpdate}
-                handleDelete={handleDelete}
-                updateMutation={updateMutation}
-                deleteMutation={deleteMutation}
-                refetch={refetch}
-              />
+                onRename={(id, name) =>
+                  renameFolderMutation.mutate({ id, name })
+                }
+                deleteTooltip="Delete folder. Will not delete blocks in the folder."
+              >
+                <BlockFolderContent
+                  folderId={folder.id}
+                  editingId={editingId}
+                  setEditingId={setEditingId}
+                  handleUpdate={handleUpdate}
+                  handleDelete={handleDelete}
+                  updateMutation={updateMutation}
+                  deleteMutation={deleteMutation}
+                  refetch={refetch}
+                />
+              </FolderRow>
             ))}
 
             {/* Loose blocks */}

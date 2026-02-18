@@ -11,6 +11,7 @@ import { generateUUID } from "@/lib/uuid";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
 import { RasterIcon } from "@/components/RasterIcon";
+import { FolderRow } from "@/components/FolderRow";
 import { SearchInput } from "@/components/ui/search-input";
 import { DotDivider } from "@/components/ui/dot-divider";
 import {
@@ -18,9 +19,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   FolderPlus,
-  Folder,
   Camera,
   LayoutTemplate,
 } from "lucide-react";
@@ -274,31 +273,8 @@ function StackCard({
   );
 }
 
-interface StackFolderRowProps {
-  folder: { id: number; name: string; description: string | null };
-  index: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onDelete: () => void;
-  activeStackId: number | null;
-  activeStackDetails: RouterOutput["stacks"]["get"] | undefined;
-  showRevisionsForStack: number | null;
-  onStackClick: (stackId: number, stack: Stack) => void;
-  onMakeActive: (stack: Stack) => void;
-  onDuplicate: (id: number) => void;
-  onDeleteStack: (id: number) => void;
-  onShowRevisions: (stackId: number) => void;
-  onCloseRevisions: () => void;
-  duplicateIsPending: boolean;
-  refetch: () => void;
-}
-
-function StackFolderRow({
-  folder,
-  index,
-  isExpanded,
-  onToggle,
-  onDelete,
+function StackFolderContent({
+  folderId,
   activeStackId,
   activeStackDetails,
   showRevisionsForStack,
@@ -309,165 +285,62 @@ function StackFolderRow({
   onShowRevisions,
   onCloseRevisions,
   duplicateIsPending,
-  refetch,
-}: StackFolderRowProps) {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [folderName, setFolderName] = useState(folder.name);
+}: {
+  folderId: number;
+  activeStackId: number | null;
+  activeStackDetails: RouterOutput["stacks"]["get"] | undefined;
+  showRevisionsForStack: number | null;
+  onStackClick: (stackId: number, stack: Stack) => void;
+  onMakeActive: (stack: Stack) => void;
+  onDuplicate: (id: number) => void;
+  onDeleteStack: (id: number) => void;
+  onShowRevisions: (stackId: number) => void;
+  onCloseRevisions: () => void;
+  duplicateIsPending: boolean;
+}) {
+  const { data: folderStacks, isLoading } = api.stackFolders.getStacks.useQuery(
+    { folderId },
+  );
 
-  const updateFolderMutation = api.stackFolders.update.useMutation({
-    onSuccess: () => {
-      refetch();
-      setIsEditingName(false);
-    },
-  });
-
-  const handleSaveFolderName = () => {
-    if (folderName.trim() && folderName !== folder.name) {
-      updateFolderMutation.mutate({ id: folder.id, name: folderName.trim() });
-    } else {
-      setFolderName(folder.name);
-      setIsEditingName(false);
-    }
-  };
-
-  // Lazy load folder contents when expanded
-  const { data: folderStacks, isLoading: isLoadingStacks } =
-    api.stackFolders.getStacks.useQuery(
-      { folderId: folder.id },
-      { enabled: isExpanded },
+  if (isLoading) {
+    return (
+      <div className="text-center py-4 text-cyan-medium">
+        Loading prompts...
+      </div>
     );
+  }
+
+  if (!folderStacks || folderStacks.length === 0) {
+    return (
+      <div className="text-center py-4 text-cyan-medium">
+        No prompts in this folder
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      key={folder.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-    >
-      <div
-        className={cn(
-          "border-2 border-cyan-medium/30 rounded-lg overflow-hidden",
-          index === 0 && "accent-border-gradient",
-        )}
-      >
-        {/* Folder header */}
-        <div
-          className="flex items-center gap-3 px-4 py-3 bg-cyan-dark/50 cursor-pointer hover:bg-cyan-dark/70 transition-colors"
-          onClick={onToggle}
-        >
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 text-cyan-medium transition-transform",
-              !isExpanded && "-rotate-90",
-            )}
-          />
-          <Folder className="h-5 w-5 text-cyan-medium" />
-          {isEditingName ? (
-            <input
-              type="text"
-              value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
-              onBlur={handleSaveFolderName}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSaveFolderName();
-                } else if (e.key === "Escape") {
-                  setFolderName(folder.name);
-                  setIsEditingName(false);
-                }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 font-medium bg-background border border-cyan-medium rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-magenta-medium"
-              autoFocus
-            />
-          ) : (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    className="font-medium flex-1 cursor-pointer hover:text-magenta-light transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolderName(folder.name);
-                      setIsEditingName(true);
-                    }}
-                  >
-                    {folder.name}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Click to rename</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                  }}
-                  className="text-cyan-medium hover:text-destructive transition-colors p-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Delete folder. Will not delete prompts in the folder.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* Folder contents */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="p-4 space-y-4 bg-background/50">
-                {isLoadingStacks ? (
-                  <div className="text-center py-4 text-cyan-medium">
-                    Loading prompts...
-                  </div>
-                ) : folderStacks && folderStacks.length > 0 ? (
-                  folderStacks.map((stack, stackIndex) => (
-                    <StackCard
-                      key={stack.id}
-                      stack={stack}
-                      isActive={activeStackId === stack.id}
-                      activeStackDetails={
-                        activeStackId === stack.id
-                          ? activeStackDetails
-                          : undefined
-                      }
-                      showRevisionsForStack={showRevisionsForStack}
-                      onStackClick={onStackClick}
-                      onMakeActive={onMakeActive}
-                      onDuplicate={onDuplicate}
-                      onDelete={onDeleteStack}
-                      onShowRevisions={onShowRevisions}
-                      onCloseRevisions={onCloseRevisions}
-                      duplicateIsPending={duplicateIsPending}
-                      index={stackIndex}
-                      isFirst={false}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-cyan-medium">
-                    No prompts in this folder
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+    <>
+      {folderStacks.map((stack, stackIndex) => (
+        <StackCard
+          key={stack.id}
+          stack={stack}
+          isActive={activeStackId === stack.id}
+          activeStackDetails={
+            activeStackId === stack.id ? activeStackDetails : undefined
+          }
+          showRevisionsForStack={showRevisionsForStack}
+          onStackClick={onStackClick}
+          onMakeActive={onMakeActive}
+          onDuplicate={onDuplicate}
+          onDelete={onDeleteStack}
+          onShowRevisions={onShowRevisions}
+          onCloseRevisions={onCloseRevisions}
+          duplicateIsPending={duplicateIsPending}
+          index={stackIndex}
+          isFirst={false}
+        />
+      ))}
+    </>
   );
 }
 
@@ -577,6 +450,12 @@ export default function Stacks() {
   });
 
   const deleteFolderMutation = api.stackFolders.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const renameFolderMutation = api.stackFolders.update.useMutation({
     onSuccess: () => {
       refetch();
     },
@@ -940,25 +819,32 @@ export default function Stacks() {
           <div className="space-y-4">
             {/* Folders */}
             {foldersData.folders.map((folder, index) => (
-              <StackFolderRow
+              <FolderRow
                 key={folder.id}
                 folder={folder}
                 index={index}
                 isExpanded={expandedFolders.has(folder.id)}
                 onToggle={() => toggleFolder(folder.id)}
                 onDelete={() => handleDeleteFolder(folder.id)}
-                activeStackId={activeStackId}
-                activeStackDetails={activeStackDetails}
-                showRevisionsForStack={showRevisionsForStack}
-                onStackClick={handleStackClick}
-                onMakeActive={handleMakeActive}
-                onDuplicate={handleDuplicate}
-                onDeleteStack={handleDelete}
-                onShowRevisions={setShowRevisionsForStack}
-                onCloseRevisions={() => setShowRevisionsForStack(null)}
-                duplicateIsPending={duplicateMutation.isPending}
-                refetch={refetch}
-              />
+                onRename={(id, name) =>
+                  renameFolderMutation.mutate({ id, name })
+                }
+                deleteTooltip="Delete folder. Will not delete prompts in the folder."
+              >
+                <StackFolderContent
+                  folderId={folder.id}
+                  activeStackId={activeStackId}
+                  activeStackDetails={activeStackDetails}
+                  showRevisionsForStack={showRevisionsForStack}
+                  onStackClick={handleStackClick}
+                  onMakeActive={handleMakeActive}
+                  onDuplicate={handleDuplicate}
+                  onDeleteStack={handleDelete}
+                  onShowRevisions={setShowRevisionsForStack}
+                  onCloseRevisions={() => setShowRevisionsForStack(null)}
+                  duplicateIsPending={duplicateMutation.isPending}
+                />
+              </FolderRow>
             ))}
 
             {/* Loose stacks */}
