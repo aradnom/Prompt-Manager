@@ -315,7 +315,7 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
           </div>
         </div>
         {template.name && (
-          <p className="text-cyan-medium font-mono text-sm mt-2">
+          <p className="text-cyan-medium font-mono text-sm mt-2 bg-background/60 inline-block px-2 py-1">
             {template.displayId}
           </p>
         )}
