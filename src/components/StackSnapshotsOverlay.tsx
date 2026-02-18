@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { X, Trash2, StickyNote } from "lucide-react";
+import { X, Trash2, StickyNote, Copy } from "lucide-react";
 import { api, RouterOutput } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotesDialog } from "@/components/NotesDialog";
@@ -23,6 +23,7 @@ function SnapshotCard({ snapshot, stackId }: SnapshotCardProps) {
   const [editValue, setEditValue] = useState(snapshot.name ?? "");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [showCopied, setShowCopied] = useState(false);
   const utils = api.useUtils();
 
   const updateMutation = api.stacks.updateSnapshot.useMutation({
@@ -53,6 +54,26 @@ function SnapshotCard({ snapshot, stackId }: SnapshotCardProps) {
   return (
     <div className="shrink-0 w-100 h-full border rounded-md p-4 bg-cyan-dark flex flex-col relative">
       <div className="absolute top-2 right-2 flex items-center gap-2">
+        <TooltipProvider delayDuration={0}>
+          <Tooltip open={showCopied || undefined}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(snapshot.renderedContent);
+                  setShowCopied(true);
+                  setTimeout(() => setShowCopied(false), 1500);
+                }}
+                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                aria-label="Copy contents"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showCopied ? "Copied!" : "Copy contents"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
