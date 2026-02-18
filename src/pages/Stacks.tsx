@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
@@ -22,6 +22,7 @@ import {
   FolderPlus,
   Folder,
   Pencil,
+  Camera,
 } from "lucide-react";
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
@@ -732,6 +733,12 @@ export default function Stacks() {
         </Card>
       ) : (
         <div className="mb-8 flex justify-end gap-2">
+          <Link to="/snapshots">
+            <Button variant="outline">
+              <Camera className="h-4 w-4 mr-2" />
+              Prompt Snapshots
+            </Button>
+          </Link>
           <Button
             variant="outline"
             onClick={() => setNewFolderDialogOpen(true)}

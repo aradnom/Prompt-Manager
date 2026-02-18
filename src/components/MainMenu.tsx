@@ -30,6 +30,7 @@ export function MainMenu() {
     "divider",
     [
       { path: "/prompts", label: "Prompts", icon: "chat" },
+      { path: "/snapshots", label: "Prompt Snapshots", icon: "chat" },
       { path: "/blocks", label: "Blocks", icon: "blocks" },
       { path: "/wildcards", label: "Wildcards", icon: "dice" },
     ],
