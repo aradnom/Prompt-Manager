@@ -17,6 +17,7 @@ import Account from "./pages/Account";
 import DeveloperSettings from "./pages/DeveloperSettings";
 import LMStudioCors from "./pages/LMStudioCors";
 import Snapshots from "./pages/Snapshots";
+import Templates from "./pages/Templates";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -39,6 +40,11 @@ function App() {
                             element={<Stacks />}
                           />
                           <Route path="/snapshots" element={<Snapshots />} />
+                          <Route path="/templates" element={<Templates />} />
+                          <Route
+                            path="/templates/:id"
+                            element={<Templates />}
+                          />
                           <Route path="/blocks" element={<Blocks />} />
                           <Route path="/wildcards" element={<Wildcards />} />
                           <Route

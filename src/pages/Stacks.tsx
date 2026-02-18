@@ -23,6 +23,7 @@ import {
   Folder,
   Pencil,
   Camera,
+  LayoutTemplate,
 } from "lucide-react";
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
@@ -737,6 +738,12 @@ export default function Stacks() {
             <Button variant="outline">
               <Camera className="h-4 w-4 mr-2" />
               Prompt Snapshots
+            </Button>
+          </Link>
+          <Link to="/templates">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Prompt Templates
             </Button>
           </Link>
           <Button
