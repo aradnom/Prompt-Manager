@@ -21,7 +21,6 @@ import {
   ChevronDown,
   FolderPlus,
   Folder,
-  Pencil,
   Camera,
   LayoutTemplate,
 } from "lucide-react";
@@ -85,6 +84,27 @@ function StackCard({
   index,
   isFirst,
 }: StackCardProps) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState(stack.name ?? "");
+  const utils = api.useUtils();
+
+  const renameMutation = api.stacks.update.useMutation({
+    onSuccess: () => {
+      utils.stacks.list.invalidate();
+      utils.stacks.listWithFolders.invalidate();
+      utils.stacks.search.invalidate();
+    },
+  });
+
+  const saveName = () => {
+    const trimmed = editNameValue.trim();
+    const newName = trimmed || undefined;
+    if ((newName ?? null) !== (stack.name ?? null)) {
+      renameMutation.mutate({ id: stack.id, name: newName });
+    }
+    setIsEditingName(false);
+  };
+
   return (
     <motion.div
       key={stack.id}
@@ -108,9 +128,44 @@ function StackCard({
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-xl">
-                  {stack.name || stack.displayId}
-                </CardTitle>
+                {isEditingName ? (
+                  <input
+                    type="text"
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    onBlur={saveName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveName();
+                      if (e.key === "Escape") {
+                        setEditNameValue(stack.name ?? "");
+                        setIsEditingName(false);
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Enter prompt name..."
+                    className="text-lg font-semibold px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                    maxLength={255}
+                    autoFocus
+                  />
+                ) : (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <CardTitle
+                          className="text-xl cursor-pointer hover:text-magenta-light transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditNameValue(stack.name ?? "");
+                            setIsEditingName(true);
+                          }}
+                        >
+                          {stack.name || stack.displayId}
+                        </CardTitle>
+                      </TooltipTrigger>
+                      <TooltipContent>Click to rename</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -326,17 +381,24 @@ function StackFolderRow({
               autoFocus
             />
           ) : (
-            <span className="font-medium flex-1">{folder.name}</span>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className="font-medium flex-1 cursor-pointer hover:text-magenta-light transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFolderName(folder.name);
+                      setIsEditingName(true);
+                    }}
+                  >
+                    {folder.name}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Click to rename</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditingName(true);
-            }}
-            className="text-cyan-medium hover:text-foreground transition-colors p-1"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

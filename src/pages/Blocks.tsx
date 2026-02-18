@@ -13,7 +13,6 @@ import {
   ChevronDown,
   FolderPlus,
   Folder,
-  Pencil,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -136,17 +135,24 @@ function FolderRow({
               autoFocus
             />
           ) : (
-            <span className="font-medium flex-1">{folder.name}</span>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className="font-medium flex-1 cursor-pointer hover:text-magenta-light transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFolderName(folder.name);
+                      setIsEditingName(true);
+                    }}
+                  >
+                    {folder.name}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Click to rename</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditingName(true);
-            }}
-            className="text-cyan-medium hover:text-foreground transition-colors p-1"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

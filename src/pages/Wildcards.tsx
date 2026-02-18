@@ -27,6 +27,12 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -227,6 +233,8 @@ export default function Wildcards() {
   const [generatedDisplayId, setGeneratedDisplayId] = useState("");
   const [generatedContent, setGeneratedContent] = useState("");
   const [showGenerateForm, setShowGenerateForm] = useState(false);
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -286,6 +294,12 @@ export default function Wildcards() {
     },
     onError: (error) => {
       addError(`Failed to update wildcard: ${error.message}`);
+    },
+  });
+
+  const renameMutation = api.wildcards.update.useMutation({
+    onSuccess: () => {
+      refetch();
     },
   });
 
@@ -488,9 +502,54 @@ export default function Wildcards() {
                         }}
                       >
                         <div>
-                          <CardTitle className="text-xl">
-                            {wildcard.name}
-                          </CardTitle>
+                          {renamingId === wildcard.id ? (
+                            <input
+                              type="text"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onBlur={() => {
+                                const trimmed = renameValue.trim();
+                                if (trimmed && trimmed !== wildcard.name) {
+                                  renameMutation.mutate({
+                                    id: wildcard.id,
+                                    name: trimmed,
+                                  });
+                                }
+                                setRenamingId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                                if (e.key === "Escape") {
+                                  setRenamingId(null);
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="Enter wildcard name..."
+                              className="text-lg font-semibold px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                              maxLength={255}
+                              autoFocus
+                            />
+                          ) : (
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <CardTitle
+                                    className="text-xl cursor-pointer hover:text-magenta-light transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setRenameValue(wildcard.name);
+                                      setRenamingId(wildcard.id);
+                                    }}
+                                  >
+                                    {wildcard.name}
+                                  </CardTitle>
+                                </TooltipTrigger>
+                                <TooltipContent>Click to rename</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <div className="flex gap-2 mt-2 text-sm text-cyan-medium">
                             <span className="font-mono">
                               {wildcard.displayId}

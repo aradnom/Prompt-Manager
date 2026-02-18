@@ -169,6 +169,8 @@ export function TextBlock({
   style,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
+  const [isRenamingBlock, setIsRenamingBlock] = useState(false);
+  const [renameValue, setRenameValue] = useState(block.name ?? "");
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineText, setInlineText] = useState(block.text);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
@@ -215,6 +217,21 @@ export function TextBlock({
       utils.stacks.invalidate();
     },
   });
+  const renameMutation = api.blocks.update.useMutation({
+    onSuccess: () => {
+      utils.blocks.list.invalidate();
+      utils.stacks.invalidate();
+    },
+  });
+
+  const saveBlockName = () => {
+    const trimmed = renameValue.trim();
+    const newName = trimmed || undefined;
+    if ((newName ?? null) !== (block.name ?? null)) {
+      renameMutation.mutate({ id: block.id, name: newName });
+    }
+    setIsRenamingBlock(false);
+  };
   const revisionsQuery = api.blocks.getRevisions.useQuery(
     { id: block.id },
     { enabled: showRevisions },
@@ -653,116 +670,91 @@ export function TextBlock({
             {isActive && (
               <div className="mb-2">
                 <div className="flex items-center gap-2">
-                  {block.name ? (
-                    <>
-                      <span className="font-semibold text-foreground">
-                        {block.name}
-                      </span>
-                      <ExpandingIcon active={isActive} origin="left">
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="text-cyan-medium hover:text-foreground transition-colors">
-                                <Info className="h-4 w-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="space-y-1 text-xs">
-                                <div>
-                                  <span className="font-medium">ID:</span>{" "}
-                                  {block.displayId}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Created:</span>{" "}
-                                  {new Date(block.createdAt).toLocaleString()}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Updated:</span>{" "}
-                                  {new Date(block.updatedAt).toLocaleString()}
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ExpandingIcon>
-                      <ExpandingIcon active={isActive} origin="left">
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild className="cursor-pointer">
-                              <button
-                                onClick={() => setShowRevisions(!showRevisions)}
-                                className="text-cyan-medium hover:text-foreground transition-colors"
-                              >
-                                <Clock className="h-4 w-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>View block history</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ExpandingIcon>
-                      {isActive && (
-                        <span className="text-xs text-cyan-medium">
-                          {block.text.length.toLocaleString()} chars &middot; ~
-                          {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
-                          tokens
-                        </span>
-                      )}
-                    </>
+                  {isRenamingBlock ? (
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={saveBlockName}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveBlockName();
+                        if (e.key === "Escape") {
+                          setRenameValue(block.name ?? "");
+                          setIsRenamingBlock(false);
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="Enter block name..."
+                      className="font-semibold px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                      maxLength={255}
+                      autoFocus
+                    />
                   ) : (
-                    <>
-                      <span className="font-semibold text-foreground">
-                        {block.displayId}
-                      </span>
-                      <ExpandingIcon active={isActive} origin="left">
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="text-cyan-medium hover:text-foreground transition-colors">
-                                <Info className="h-4 w-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="space-y-1 text-xs">
-                                <div>
-                                  <span className="font-medium">ID:</span>{" "}
-                                  {block.displayId}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Created:</span>{" "}
-                                  {new Date(block.createdAt).toLocaleString()}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Updated:</span>{" "}
-                                  {new Date(block.updatedAt).toLocaleString()}
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ExpandingIcon>
-                      <ExpandingIcon active={isActive} origin="left">
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild className="cursor-pointer">
-                              <button
-                                onClick={() => setShowRevisions(!showRevisions)}
-                                className="text-cyan-medium hover:text-foreground transition-colors"
-                              >
-                                <Clock className="h-4 w-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>View block history</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ExpandingIcon>
-                      {isActive && (
-                        <span className="text-xs text-cyan-medium">
-                          {block.text.length.toLocaleString()} chars &middot; ~
-                          {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
-                          tokens
-                        </span>
-                      )}
-                    </>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className="font-semibold text-foreground cursor-pointer hover:text-magenta-light transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenameValue(block.name ?? "");
+                              setIsRenamingBlock(true);
+                            }}
+                          >
+                            {block.name || block.displayId}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>Click to rename</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  <ExpandingIcon active={isActive} origin="left">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="text-cyan-medium hover:text-foreground transition-colors">
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1 text-xs">
+                            <div>
+                              <span className="font-medium">ID:</span>{" "}
+                              {block.displayId}
+                            </div>
+                            <div>
+                              <span className="font-medium">Created:</span>{" "}
+                              {new Date(block.createdAt).toLocaleString()}
+                            </div>
+                            <div>
+                              <span className="font-medium">Updated:</span>{" "}
+                              {new Date(block.updatedAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </ExpandingIcon>
+                  <ExpandingIcon active={isActive} origin="left">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild className="cursor-pointer">
+                          <button
+                            onClick={() => setShowRevisions(!showRevisions)}
+                            className="text-cyan-medium hover:text-foreground transition-colors"
+                          >
+                            <Clock className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>View block history</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </ExpandingIcon>
+                  {isActive && (
+                    <span className="text-xs text-cyan-medium">
+                      {block.text.length.toLocaleString()} chars &middot; ~
+                      {Math.ceil(block.text.length / 4).toLocaleString()} tokens
+                    </span>
                   )}
                 </div>
                 {block.name && (
