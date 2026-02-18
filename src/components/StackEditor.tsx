@@ -9,6 +9,7 @@ import {
   Clock,
   Camera,
   Folder,
+  LayoutTemplate,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -120,6 +121,14 @@ export function StackEditor({ stack }: StackEditorProps) {
       refetch();
     },
   });
+
+  const createTemplateMutation = api.stackTemplates.createFromStack.useMutation(
+    {
+      onSuccess: (template) => {
+        navigate(`/templates/${template.id}`);
+      },
+    },
+  );
 
   const createSnapshotMutation = api.stacks.createSnapshot.useMutation({
     onSuccess: () => {
@@ -869,6 +878,28 @@ export function StackEditor({ stack }: StackEditorProps) {
                   </TooltipTrigger>
                   <TooltipContent>
                     Save the current prompt contents as static text
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        createTemplateMutation.mutate({ stackId: stack.id });
+                      }}
+                      variant="tertiary"
+                      disabled={createTemplateMutation.isPending}
+                    >
+                      <LayoutTemplate className="mr-2 h-4 w-4" />
+                      {createTemplateMutation.isPending
+                        ? "Creating..."
+                        : "Create Template"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Create reusable template from current contents of this
+                    prompt
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
