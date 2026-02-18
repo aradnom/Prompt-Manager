@@ -1,8 +1,30 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { keepPreviousData } from "@tanstack/react-query";
 import { api, RouterOutput } from "@/lib/api";
+import { useActiveStack } from "@/contexts/ActiveStackContext";
+import { generateDisplayId } from "@/lib/generate-display-id";
+import { generateUUID } from "@/lib/uuid";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NotesDialog } from "@/components/NotesDialog";
-import { ChevronDown, StickyNote } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BlockSearchDialog } from "@/components/BlockSearchDialog";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableBlock } from "@/components/SortableBlock";
+import { ChevronDown, Search, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +32,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { OutputStyle } from "@/types/schema";
 
 type Template = RouterOutput["stackTemplates"]["get"];
@@ -25,10 +41,25 @@ interface TemplateEditorProps {
   onUpdate?: () => void;
 }
 
-function TemplateBlocks({ blockIds }: { blockIds: number[] }) {
+function TemplateBlocks({
+  blockIds,
+  onRemoveBlock,
+  onReorder,
+}: {
+  blockIds: number[];
+  onRemoveBlock?: (index: number) => void;
+  onReorder?: (newBlockIds: number[]) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
   const { data: blocks, isLoading } = api.blocks.getByIds.useQuery(
     { ids: blockIds },
-    { enabled: blockIds.length > 0 },
+    { enabled: blockIds.length > 0, placeholderData: keepPreviousData },
   );
 
   if (blockIds.length === 0) {
@@ -50,42 +81,89 @@ function TemplateBlocks({ blockIds }: { blockIds: number[] }) {
   }
 
   const blockMap = new Map(blocks.map((b) => [b.id, b]));
+  // Build ordered list with index-based unique keys for duplicate support
   const ordered = blockIds
-    .map((id) => blockMap.get(id))
-    .filter((b): b is NonNullable<typeof b> => b != null);
+    .map((id, index) => {
+      const block = blockMap.get(id);
+      return block ? { block, sortId: index } : null;
+    })
+    .filter((item): item is NonNullable<typeof item> => item != null);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onReorder) return;
+
+    const oldIndex = active.id as number;
+    const newIndex = over.id as number;
+
+    onReorder(arrayMove(blockIds, oldIndex, newIndex));
+  };
 
   return (
-    <div className="space-y-2">
-      {ordered.map((block) => (
-        <div
-          key={block.id}
-          className="border border-cyan-medium/30 rounded p-3 bg-cyan-dark/30"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-cyan-medium">
-              {block.name || block.displayId}
-            </span>
-            {block.name && (
-              <span className="text-xs font-mono text-cyan-medium/60">
-                {block.displayId}
-              </span>
-            )}
-          </div>
-          <p className="text-sm whitespace-pre-wrap font-mono text-foreground/80">
-            {block.text}
-          </p>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={ordered.map((item) => item.sortId)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-2">
+          {ordered.map(({ block, sortId }) => (
+            <SortableBlock key={sortId} id={sortId}>
+              <div className="relative border border-cyan-medium/30 rounded p-3 bg-cyan-dark/30 group">
+                {onRemoveBlock && (
+                  <button
+                    onClick={() => onRemoveBlock(sortId)}
+                    className="absolute top-2 right-2 text-cyan-medium hover:text-destructive transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                    aria-label="Remove block from template"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-mono text-cyan-medium">
+                    {block.name || block.displayId}
+                  </span>
+                  {block.name && (
+                    <span className="text-xs font-mono text-cyan-medium/60">
+                      {block.displayId}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm whitespace-pre-wrap font-mono text-foreground/80">
+                  {block.text}
+                </p>
+              </div>
+            </SortableBlock>
+          ))}
         </div>
-      ))}
-    </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
 export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
+  const navigate = useNavigate();
+  const { setActiveStack } = useActiveStack();
   const [editName, setEditName] = useState(template.name ?? "");
   const [commaSeparated, setCommaSeparated] = useState(template.commaSeparated);
   const [negative, setNegative] = useState(template.negative);
   const [style, setStyle] = useState<OutputStyle>(template.style);
-  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [blockIds, setBlockIds] = useState(template.blockIds);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Reset local state when switching to a different template
+  const prevTemplateId = useRef(template.id);
+  if (prevTemplateId.current !== template.id) {
+    prevTemplateId.current = template.id;
+    setEditName(template.name ?? "");
+    setCommaSeparated(template.commaSeparated);
+    setNegative(template.negative);
+    setStyle(template.style);
+    setBlockIds(template.blockIds);
+  }
 
   const utils = api.useUtils();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -105,6 +183,14 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
       utils.stackTemplates.search.invalidate();
       utils.stackTemplates.get.invalidate();
       onUpdate?.();
+    },
+  });
+
+  const createStackMutation = api.stacks.create.useMutation({
+    onSuccess: (newStack) => {
+      utils.stacks.list.invalidate();
+      setActiveStack(newStack);
+      navigate("/");
     },
   });
 
@@ -173,25 +259,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
     <div className="space-y-4">
       {/* Name */}
       <div>
-        <label className="text-sm font-medium mb-2 block">
-          Name
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setNotesDialogOpen(true)}
-                  className={`ml-2 align-middle text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${template.notes ? "text-foreground" : ""}`}
-                  aria-label="Edit notes"
-                >
-                  <StickyNote className="inline h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {template.notes ? "Edit notes" : "Add notes"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </label>
+        <label className="text-sm font-medium mb-2 block">Name</label>
         <input
           type="text"
           placeholder="e.g., Portrait Base Template"
@@ -295,19 +363,64 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
       {/* Blocks */}
       <div>
         <label className="text-sm font-medium mb-2 block">
-          Blocks ({template.blockIds.length})
+          Blocks ({blockIds.length})
         </label>
-        <TemplateBlocks blockIds={template.blockIds} />
+        <TemplateBlocks
+          blockIds={blockIds}
+          onRemoveBlock={(index) => {
+            const newIds = blockIds.filter((_, i) => i !== index);
+            setBlockIds(newIds);
+            updateMutation.mutate({
+              id: template.id,
+              blockIds: newIds,
+            });
+          }}
+          onReorder={(newBlockIds) => {
+            setBlockIds(newBlockIds);
+            updateMutation.mutate({
+              id: template.id,
+              blockIds: newBlockIds,
+            });
+          }}
+        />
       </div>
 
-      <NotesDialog
-        title="Template Notes"
-        placeholder="Add notes about this template..."
-        initialNotes={template.notes}
-        open={notesDialogOpen}
-        onOpenChange={setNotesDialogOpen}
-        onSave={(notes) => {
-          updateMutation.mutate({ id: template.id, notes });
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-4 border-t">
+        <Button variant="outline" onClick={() => setIsSearchOpen(true)}>
+          <Search className="mr-2 h-4 w-4" />
+          Add Existing Block
+        </Button>
+        <Button
+          onClick={() => {
+            const name = template.name?.replace(/ Template$/, "") || undefined;
+            createStackMutation.mutate({
+              uuid: generateUUID(),
+              displayId: generateDisplayId(),
+              name,
+              commaSeparated,
+              negative,
+              style,
+              blockIds,
+            });
+          }}
+          disabled={createStackMutation.isPending}
+        >
+          {createStackMutation.isPending ? "Creating..." : "Use Template"}
+        </Button>
+      </div>
+
+      <BlockSearchDialog
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        onSelect={(blockId) => {
+          const newIds = [...blockIds, blockId];
+          setBlockIds(newIds);
+          updateMutation.mutate({
+            id: template.id,
+            blockIds: newIds,
+          });
+          setIsSearchOpen(false);
         }}
       />
     </div>
