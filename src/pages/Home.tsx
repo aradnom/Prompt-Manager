@@ -16,6 +16,7 @@ import { HorizontalRule } from "@/components/ui/horizontal-rule";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import { AccountTokenModal } from "@/components/AccountTokenModal";
 import { PromptSwitcher } from "@/components/PromptSwitcher";
+import { DotDivider } from "@/components/ui/dot-divider";
 
 function HomeContent() {
   const { activeStack } = useActiveStack();
@@ -91,6 +92,7 @@ function HomeContent() {
       ) : activeStack ? (
         <StackContentProvider>
           <PromptSwitcher />
+          <DotDivider className="mb-3" />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
