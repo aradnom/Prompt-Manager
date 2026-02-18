@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
+import { generateDisplayId } from "@/lib/generate-display-id";
+import { generateUUID } from "@/lib/uuid";
+import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { RasterIcon } from "@/components/RasterIcon";
 import { TemplateEditor } from "@/components/TemplateEditor";
 import { SearchInput } from "@/components/ui/search-input";
@@ -44,6 +47,7 @@ function TemplateCard({
   onUpdate,
 }: TemplateCardProps) {
   const navigate = useNavigate();
+  const { setActiveStack } = useActiveStack();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(template.name ?? "");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -65,6 +69,27 @@ function TemplateCard({
       onUpdate();
     },
   });
+
+  const createStackMutation = api.stacks.create.useMutation({
+    onSuccess: (newStack) => {
+      utils.stacks.list.invalidate();
+      setActiveStack(newStack);
+      navigate("/");
+    },
+  });
+
+  const handleUseTemplate = () => {
+    const name = template.name?.replace(/ Template$/, "") || undefined;
+    createStackMutation.mutate({
+      uuid: generateUUID(),
+      displayId: generateDisplayId(),
+      name,
+      commaSeparated: template.commaSeparated,
+      negative: template.negative,
+      style: template.style,
+      blockIds: template.blockIds,
+    });
+  };
 
   const saveName = () => {
     const trimmed = editValue.trim();
@@ -147,6 +172,23 @@ function TemplateCard({
             className="flex items-center gap-2 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/templates/${template.id}`)}
+              className="cursor-pointer"
+            >
+              Edit Template
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleUseTemplate}
+              disabled={createStackMutation.isPending}
+              className="cursor-pointer"
+            >
+              {createStackMutation.isPending ? "Creating..." : "Use Template"}
+            </Button>
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
