@@ -233,6 +233,15 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
   } = api.stackTemplates.get.useQuery({ id: templateId });
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+
+  const updateMutation = api.stackTemplates.update.useMutation({
+    onSuccess: () => {
+      utils.stackTemplates.list.invalidate();
+      utils.stackTemplates.get.invalidate();
+      refetch();
+    },
+  });
 
   const deleteMutation = api.stackTemplates.delete.useMutation({
     onSuccess: () => {
@@ -274,12 +283,39 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
           <ArrowLeft className="h-4 w-4" />
           Back to Templates
         </Link>
-        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-          <RasterIcon name="chat" size={36} />
-          {template.name || template.displayId}
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold flex items-center gap-3">
+            <RasterIcon name="chat" size={36} />
+            {template.name || template.displayId}
+          </h1>
+          <div className="flex items-center gap-2">
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setNotesDialogOpen(true)}
+                    className={`text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${template.notes ? "text-foreground" : ""}`}
+                    aria-label="Edit notes"
+                  >
+                    <StickyNote className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {template.notes ? "Edit notes" : "Add notes"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
+              aria-label="Delete template"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
         {template.name && (
-          <p className="text-cyan-medium font-mono text-sm">
+          <p className="text-cyan-medium font-mono text-sm mt-2">
             {template.displayId}
           </p>
         )}
@@ -291,12 +327,16 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
         </CardContent>
       </Card>
 
-      <div className="mt-6 flex justify-end">
-        <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-          Delete Template
-        </Button>
-      </div>
-
+      <NotesDialog
+        title="Template Notes"
+        placeholder="Add notes about this template..."
+        initialNotes={template.notes}
+        open={notesDialogOpen}
+        onOpenChange={setNotesDialogOpen}
+        onSave={(notes) => {
+          updateMutation.mutate({ id: template.id, notes });
+        }}
+      />
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
