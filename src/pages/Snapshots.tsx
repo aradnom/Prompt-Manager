@@ -119,7 +119,7 @@ function SnapshotCard({
                   }}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Enter snapshot name..."
-                  className="text-sm font-medium font-mono px-2 py-0.5 rounded border border-cyan-medium bg-background focus:outline-none focus:ring-1 focus:ring-magenta-medium"
+                  className="text-sm font-medium font-mono px-2 py-0.5 "
                   maxLength={255}
                   autoFocus
                 />
@@ -303,7 +303,7 @@ export default function Snapshots() {
     <main className="standard-page-container">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-          <RasterIcon name="chat" size={36} />
+          <RasterIcon name="camera" size={36} />
           Snapshots
         </h1>
         <p className="text-cyan-medium">

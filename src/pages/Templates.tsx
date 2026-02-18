@@ -285,7 +285,7 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
         </Link>
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-bold flex items-center gap-3">
-            <RasterIcon name="chat" size={36} />
+            <RasterIcon name="templates" size={36} />
             {template.name || template.displayId}
           </h1>
           <div className="flex items-center gap-2">
@@ -400,7 +400,7 @@ function TemplateList() {
     <main className="standard-page-container">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-          <RasterIcon name="chat" size={36} />
+          <RasterIcon name="templates" size={36} />
           Templates
         </h1>
         <p className="text-cyan-medium">
