@@ -269,14 +269,8 @@ export function StackEditor({ stack }: StackEditorProps) {
       return;
     }
 
-    const oldIndex = stackWithBlocks.blocks.findIndex(
-      (block) => block.id === active.id,
-    );
-    const newIndex = stackWithBlocks.blocks.findIndex(
-      (block) => block.id === over.id,
-    );
-
-    if (oldIndex === -1 || newIndex === -1) return;
+    const oldIndex = active.id as number;
+    const newIndex = over.id as number;
 
     const reorderedBlocks = arrayMove(
       stackWithBlocks.blocks,
@@ -711,11 +705,11 @@ export function StackEditor({ stack }: StackEditorProps) {
                   {stackWithBlocks?.blocks &&
                   stackWithBlocks.blocks.length > 0 ? (
                     <SortableContext
-                      items={stackWithBlocks.blocks.map((block) => block.id)}
+                      items={stackWithBlocks.blocks.map((_, i) => i)}
                       strategy={verticalListSortingStrategy}
                     >
                       {stackWithBlocks.blocks.map((block, index) => (
-                        <SortableBlock key={block.id} id={block.id}>
+                        <SortableBlock key={index} id={index}>
                           {editingBlockId === block.id ? (
                             <motion.div
                               initial={{ opacity: 0, y: 16 }}
