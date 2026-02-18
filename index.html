@@ -2,12 +2,67 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/webp" href="/favicon.webp">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prompt Manager</title>
+    <title>Prompt Manager — Organize and Build Prompts for Diffusion Models</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/webp" href="/favicon.webp">
+
+    <!-- SEO -->
+    <meta name="description" content="A structured prompt builder for diffusion models. Organize reusable text blocks, combine them into prompts, add wildcards for randomization, and use LLM-powered tools to refine your output." />
+    <meta name="keywords" content="prompt manager, diffusion model prompts, stable diffusion, image generation, prompt builder, prompt organizer, text blocks, wildcards" />
+    <meta name="author" content="Prompt Manager" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.prompts.rodeo/" />
+
+    <!-- Open Graph (Facebook, Discord, Slack, etc.) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Prompt Manager" />
+    <meta property="og:description" content="Organize reusable text blocks, combine them into prompts, and use LLM-powered tools to refine your output for diffusion models." />
+    <meta property="og:image" content="https://www.prompts.rodeo/favicon.webp" />
+    <meta property="og:url" content="https://www.prompts.rodeo/" />
+    <meta property="og:site_name" content="Prompt Manager" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Prompt Manager" />
+    <meta name="twitter:description" content="A structured prompt builder for diffusion models. Organize reusable blocks, build prompts, and refine output with LLM tools." />
+    <meta name="twitter:image" content="https://www.prompts.rodeo/favicon.webp" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Prompt Manager",
+        "url": "https://www.prompts.rodeo",
+        "description": "A structured prompt builder for diffusion models. Organize reusable text blocks, combine them into prompts with wildcards and revision history, and use LLM-powered tools to refine your output.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Reusable text blocks with revision history",
+          "Prompt composition from blocks",
+          "Wildcard randomization",
+          "LLM-powered prompt refinement",
+          "Prompt snapshots and templates",
+          "CLIP and T5 output formatting"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>Prompt Manager</h1>
+      <p>Prompt Manager is a structured prompt builder for diffusion models. Organize reusable text blocks, combine them into prompts, add wildcards for randomization, and use LLM-powered tools to refine your output.</p>
+      <p>This application requires JavaScript to run.</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
