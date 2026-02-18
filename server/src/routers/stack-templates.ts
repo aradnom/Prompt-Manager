@@ -122,7 +122,7 @@ export const stackTemplatesRouter = router({
       }
       return ctx.storage.createStackTemplate({
         displayId: generateDisplayId(),
-        name: input.name ?? stack.name ?? undefined,
+        name: input.name ?? (stack.name ? `${stack.name} Template` : undefined),
         blockIds: stack.blockIds,
         disabledBlockIds: stack.disabledBlockIds,
         commaSeparated: stack.commaSeparated,
