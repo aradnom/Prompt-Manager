@@ -19,6 +19,9 @@ import type {
   Type,
   StackRevision,
   StackSnapshot,
+  StackTemplate,
+  CreateStackTemplateInput,
+  UpdateStackTemplateInput,
   StackFolder,
   CreateStackFolderInput,
   UpdateStackFolderInput,
@@ -33,6 +36,7 @@ import type {
   SearchStacksOptions,
   SearchWildcardsOptions,
   SearchSnapshotsOptions,
+  SearchStackTemplatesOptions,
   PaginationOptions,
   PaginatedResult,
   BlocksWithFoldersResult,
@@ -2621,6 +2625,142 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     });
   }
 
+  async createStackTemplate(
+    input: CreateStackTemplateInput,
+  ): Promise<StackTemplate> {
+    const now = new Date();
+    const result = await this.db
+      .insertInto("stack_templates")
+      .values({
+        display_id: input.displayId,
+        name: input.name ?? null,
+        block_ids: input.blockIds ?? [],
+        disabled_block_ids: input.disabledBlockIds ?? [],
+        comma_separated: input.commaSeparated ?? true,
+        negative: input.negative ?? false,
+        style: input.style ?? null,
+        notes: input.notes ?? null,
+        user_id: input.userId ?? null,
+        created_at: now,
+        updated_at: now,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapStackTemplate(result);
+  }
+
+  async getStackTemplate(id: number): Promise<StackTemplate | null> {
+    const result = await this.db
+      .selectFrom("stack_templates")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+
+    return result ? this.mapStackTemplate(result) : null;
+  }
+
+  async updateStackTemplate(
+    id: number,
+    updates: UpdateStackTemplateInput,
+  ): Promise<StackTemplate> {
+    const updateData: Updateable<Database["stack_templates"]> = {
+      updated_at: new Date(),
+    };
+
+    if (updates.name !== undefined) updateData.name = updates.name ?? null;
+    if (updates.blockIds !== undefined) updateData.block_ids = updates.blockIds;
+    if (updates.disabledBlockIds !== undefined)
+      updateData.disabled_block_ids = updates.disabledBlockIds;
+    if (updates.commaSeparated !== undefined)
+      updateData.comma_separated = updates.commaSeparated;
+    if (updates.negative !== undefined) updateData.negative = updates.negative;
+    if (updates.style !== undefined) updateData.style = updates.style ?? null;
+    if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
+
+    const result = await this.db
+      .updateTable("stack_templates")
+      .set(updateData)
+      .where("id", "=", id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return this.mapStackTemplate(result);
+  }
+
+  async deleteStackTemplate(id: number): Promise<void> {
+    await this.db.deleteFrom("stack_templates").where("id", "=", id).execute();
+  }
+
+  async listStackTemplates(
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackTemplate>> {
+    const countResult = await this.db
+      .selectFrom("stack_templates")
+      .select(this.db.fn.countAll<number>().as("count"))
+      .where("user_id", "=", userId)
+      .executeTakeFirstOrThrow();
+
+    let query = this.db
+      .selectFrom("stack_templates")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .orderBy("updated_at", "desc");
+
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const results = await query.execute();
+    return {
+      items: results.map((r) => this.mapStackTemplate(r)),
+      total: Number(countResult.count),
+    };
+  }
+
+  async searchStackTemplates(
+    options: SearchStackTemplatesOptions,
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackTemplate>> {
+    let query = this.db
+      .selectFrom("stack_templates")
+      .selectAll()
+      .where("user_id", "=", userId);
+
+    let countQuery = this.db
+      .selectFrom("stack_templates")
+      .select(this.db.fn.countAll<number>().as("count"))
+      .where("user_id", "=", userId);
+
+    if (options.query) {
+      const searchTerm = `%${options.query}%`;
+      const condition = (eb: any) =>
+        eb.or([
+          eb("name", "ilike", searchTerm),
+          eb("display_id", "ilike", searchTerm),
+          eb("notes", "ilike", searchTerm),
+        ]);
+      query = query.where(condition);
+      countQuery = countQuery.where(condition);
+    }
+
+    const countResult = await countQuery.executeTakeFirstOrThrow();
+
+    query = query.orderBy("updated_at", "desc");
+
+    if (pagination) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const results = await query.execute();
+    return {
+      items: results.map((r) => this.mapStackTemplate(r)),
+      total: Number(countResult.count),
+    };
+  }
+
   async createType(name: string, description?: string): Promise<Type> {
     const result = await this.db
       .insertInto("types")
@@ -3023,6 +3163,25 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       blockIds: row.block_ids || [],
       disabledBlockIds: row.disabled_block_ids || [],
       stackId: row.stack_id!,
+      userId: row.user_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+  }
+
+  private mapStackTemplate(
+    row: Selectable<Database["stack_templates"]>,
+  ): StackTemplate {
+    return {
+      id: row.id,
+      displayId: row.display_id,
+      name: row.name,
+      blockIds: row.block_ids || [],
+      disabledBlockIds: row.disabled_block_ids || [],
+      commaSeparated: row.comma_separated,
+      negative: row.negative,
+      style: row.style ?? null,
+      notes: row.notes,
       userId: row.user_id,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),

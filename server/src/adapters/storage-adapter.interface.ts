@@ -15,6 +15,9 @@ import type {
   Type,
   StackRevision,
   StackSnapshot,
+  StackTemplate,
+  CreateStackTemplateInput,
+  UpdateStackTemplateInput,
   StackFolder,
   CreateStackFolderInput,
   UpdateStackFolderInput,
@@ -173,6 +176,23 @@ export interface IStorageAdapter {
   ): Promise<PaginatedResult<StackSnapshot>>;
   deleteStackSnapshot(id: number): Promise<void>;
 
+  createStackTemplate(input: CreateStackTemplateInput): Promise<StackTemplate>;
+  getStackTemplate(id: number): Promise<StackTemplate | null>;
+  updateStackTemplate(
+    id: number,
+    updates: UpdateStackTemplateInput,
+  ): Promise<StackTemplate>;
+  deleteStackTemplate(id: number): Promise<void>;
+  listStackTemplates(
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackTemplate>>;
+  searchStackTemplates(
+    options: SearchStackTemplatesOptions,
+    userId: number,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<StackTemplate>>;
+
   createType(name: string, description?: string): Promise<Type>;
   getType(id: number): Promise<Type | null>;
   listTypes(): Promise<Type[]>;
@@ -213,6 +233,10 @@ export interface SearchWildcardsOptions {
 }
 
 export interface SearchSnapshotsOptions {
+  query?: string;
+}
+
+export interface SearchStackTemplatesOptions {
   query?: string;
 }
 

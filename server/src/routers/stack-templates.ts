@@ -1,0 +1,134 @@
+import { z } from "zod";
+import { router, protectedProcedure } from "@server/trpc";
+import { generateDisplayId } from "@server/lib/generate-display-id";
+
+export const stackTemplatesRouter = router({
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().max(255).optional(),
+        blockIds: z.array(z.number()).optional(),
+        disabledBlockIds: z.array(z.number()).optional(),
+        commaSeparated: z.boolean().optional(),
+        negative: z.boolean().optional(),
+        style: z.enum(["t5", "clip"]).nullable().optional(),
+        notes: z.string().max(4000).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      return ctx.storage.createStackTemplate({
+        displayId: generateDisplayId(),
+        ...input,
+        userId: ctx.userId,
+      });
+    }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const template = await ctx.storage.getStackTemplate(input.id);
+      if (!template) {
+        throw new Error("Template not found");
+      }
+      if (template.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      return template;
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().max(255).nullable().optional(),
+        blockIds: z.array(z.number()).optional(),
+        disabledBlockIds: z.array(z.number()).optional(),
+        commaSeparated: z.boolean().optional(),
+        negative: z.boolean().optional(),
+        style: z.enum(["t5", "clip"]).nullable().optional(),
+        notes: z.string().max(4000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const template = await ctx.storage.getStackTemplate(input.id);
+      if (!template) {
+        throw new Error("Template not found");
+      }
+      if (template.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      const { id, ...updates } = input;
+      return ctx.storage.updateStackTemplate(id, updates);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const template = await ctx.storage.getStackTemplate(input.id);
+      if (!template) {
+        throw new Error("Template not found");
+      }
+      if (template.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      await ctx.storage.deleteStackTemplate(input.id);
+      return { success: true };
+    }),
+
+  list: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.listStackTemplates(ctx.userId, {
+        limit: input.limit,
+        offset: input.offset,
+      });
+    }),
+
+  search: protectedProcedure
+    .input(
+      z.object({
+        query: z.string().optional(),
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return ctx.storage.searchStackTemplates(
+        { query: input.query },
+        ctx.userId,
+        { limit: input.limit, offset: input.offset },
+      );
+    }),
+
+  createFromStack: protectedProcedure
+    .input(
+      z.object({
+        stackId: z.number(),
+        name: z.string().max(255).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+      return ctx.storage.createStackTemplate({
+        displayId: generateDisplayId(),
+        name: input.name ?? stack.name ?? undefined,
+        blockIds: stack.blockIds,
+        disabledBlockIds: stack.disabledBlockIds,
+        commaSeparated: stack.commaSeparated,
+        negative: stack.negative,
+        style: stack.style,
+        userId: ctx.userId,
+      });
+    }),
+});

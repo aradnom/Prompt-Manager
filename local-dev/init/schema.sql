@@ -119,6 +119,23 @@ CREATE TABLE stack_snapshots (
     updated_at timestamp with time zone
 );
 
+-- stack_templates
+
+CREATE TABLE stack_templates (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    display_id character varying(255) NOT NULL,
+    name character varying(255),
+    block_ids integer[] DEFAULT '{}'::integer[],
+    disabled_block_ids integer[] DEFAULT '{}'::integer[],
+    comma_separated boolean DEFAULT true,
+    negative boolean DEFAULT false,
+    style character varying(32),
+    notes character varying(4000),
+    user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
 -- wildcards
 
 CREATE TABLE wildcards (
