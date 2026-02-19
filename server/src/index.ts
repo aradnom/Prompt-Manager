@@ -118,6 +118,34 @@ async function main() {
       new URL(".", import.meta.url).pathname,
       "../../dist",
     );
+
+    // Content Security Policy
+    const connectSrcDomains = [
+      "http://localhost:*", // LM Studio (user-configurable local LLM)
+      "http://127.0.0.1:*", // LM Studio (alternate)
+      "https://huggingface.co", // Transformers.js ONNX model downloads
+      "https://cdn-lfs.huggingface.co", // Transformers.js large model files
+    ];
+
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' blob: 'wasm-unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      `connect-src 'self' ${connectSrcDomains.join(" ")}`,
+      "img-src 'self' data: blob:",
+      "font-src 'self'",
+      "worker-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; ");
+
+    app.use((_req, res, next) => {
+      res.setHeader("Content-Security-Policy", csp);
+      next();
+    });
+
     app.use(express.static(distPath));
     app.get("*splat", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
