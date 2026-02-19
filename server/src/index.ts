@@ -125,11 +125,12 @@ async function main() {
       "http://127.0.0.1:*", // LM Studio (alternate)
       "https://huggingface.co", // Transformers.js ONNX model downloads
       "https://cdn-lfs.huggingface.co", // Transformers.js large model files
+      "https://cloudflareinsights.com",
     ];
 
     const csp = [
       "default-src 'self'",
-      "script-src 'self' blob: 'wasm-unsafe-eval'",
+      "script-src 'self' blob: 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline'",
       `connect-src 'self' ${connectSrcDomains.join(" ")}`,
       "img-src 'self' data: blob:",
