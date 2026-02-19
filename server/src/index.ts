@@ -39,8 +39,6 @@ async function main() {
     app.use(cors({ origin: origins, credentials: true }));
   } else if (config.nodeEnv === "development") {
     app.use(cors({ origin: true, credentials: true }));
-  } else {
-    app.use(cors());
   }
   app.use(express.json());
   app.use(cookieParser());
