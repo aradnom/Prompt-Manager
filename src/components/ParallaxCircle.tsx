@@ -1,7 +1,9 @@
+import { useState, useEffect } from "react";
 import { useScroll } from "@/contexts/ScrollContext";
 
 interface ParallaxCircleProps {
   size?: number;
+  sizePercentage?: number;
   minScale?: number;
   maxScale?: number;
   minLineWidth?: number;
@@ -12,7 +14,8 @@ interface ParallaxCircleProps {
 }
 
 export function ParallaxCircle({
-  size = 800,
+  size,
+  sizePercentage,
   minScale = 0.3,
   maxScale = 1,
   minLineWidth = 2,
@@ -20,25 +23,37 @@ export function ParallaxCircle({
   transitionDuration = 0.1,
   scrollMultiplier = 1,
 }: ParallaxCircleProps) {
-  const { scrollY } = useScroll();
+  const { scrollY, maxScrollY } = useScroll();
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Double the percentage-based size since the circle is centered at the
+  // top-left corner and only half the diameter is visible on each axis.
+  const resolvedSize =
+    size ?? (sizePercentage ? (sizePercentage / 100) * windowWidth * 2 : 800);
 
   // Apply scroll multiplier
   const effectiveScrollY = scrollY * scrollMultiplier;
 
-  // Calculate scale based on scroll
-  const scaleRange = maxScale - minScale;
-  const scale = Math.max(
-    minScale,
-    maxScale - (effectiveScrollY / 2000) * scaleRange,
-  );
+  // Scroll progress from 0 (top) to 1 (bottom), based on actual content height
+  const scrollProgress = maxScrollY > 0 ? effectiveScrollY / maxScrollY : 0;
+  const clampedProgress = Math.min(1, Math.max(0, scrollProgress));
 
-  // Animate line width based on scroll (starts at max, shrinks to min)
+  // Calculate scale based on scroll progress
+  const scaleRange = maxScale - minScale;
+  const scale = maxScale - clampedProgress * scaleRange;
+
+  // Animate line width based on scroll progress (starts at max, shrinks to min)
   const lineWidthRange = maxLineWidth - minLineWidth;
-  const lineWidth = maxLineWidth - (effectiveScrollY / 500) * lineWidthRange;
-  const clampedWidth = Math.max(minLineWidth, lineWidth);
+  const clampedWidth = maxLineWidth - clampedProgress * lineWidthRange;
 
   // Position to center at (0, 0)
-  const offset = -size / 2;
+  const offset = -resolvedSize / 2;
 
   return (
     <div
@@ -48,7 +63,7 @@ export function ParallaxCircle({
         left: `${offset}px`,
         transform: `scale(${scale})`,
         transformOrigin: "center center",
-        transition: `transform ${transitionDuration}s ease-out`,
+        transition: `transform ${transitionDuration}s ease-in-out`,
         willChange: "transform",
         zIndex: 0,
       }}
@@ -56,23 +71,23 @@ export function ParallaxCircle({
       <div
         className="rounded-full relative"
         style={{
-          width: `${size}px`,
-          height: `${size}px`,
+          width: `${resolvedSize}px`,
+          height: `${resolvedSize}px`,
           background: `linear-gradient(
             135deg,
             color-mix(in srgb, black 80%, transparent) 0%,
-            color-mix(in srgb, var(--color-background) 20%, transparent) 50%,
-            color-mix(in srgb, var(--color-magenta-light) 50%, transparent) 100%
+            color-mix(in srgb, var(--color-background) 10%, transparent) 50%,
+            color-mix(in srgb, var(--color-magenta-light) 60%, transparent) 100%
           )`,
           padding: `${clampedWidth}px`,
-          transition: `padding ${transitionDuration}s ease-out`,
+          transition: `padding ${transitionDuration}s ease-in-out`,
           willChange: "padding",
         }}
       >
         <div
           className="rounded-full w-full h-full"
           style={{
-            background: "rgb(from var(--color-background) r g b / 50%)",
+            background: "rgb(from var(--color-background) r g b / 35%)",
           }}
         />
       </div>
