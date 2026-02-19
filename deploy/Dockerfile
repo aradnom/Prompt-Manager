@@ -16,7 +16,8 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM node:24.13-alpine3.23
 
-RUN apk add --no-cache vim git
+# Useful for debugging inside the container, uncomment if needed
+# RUN apk add --no-cache vim git
 
 RUN addgroup -S app && adduser -S app -G app
 
