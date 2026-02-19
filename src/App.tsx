@@ -8,6 +8,7 @@ import { ActiveStackProvider } from "./contexts/ActiveStackContext";
 import { TypesProvider } from "./contexts/TypesContext";
 import { ErrorProvider } from "./contexts/ErrorContext";
 import { Layout } from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Stacks from "./pages/Stacks";
 import Blocks from "./pages/Blocks";
@@ -34,31 +35,85 @@ function App() {
                       <Layout>
                         <Routes>
                           <Route path="/" element={<Home />} />
-                          <Route path="/prompts" element={<Stacks />} />
+                          <Route
+                            path="/prompts"
+                            element={
+                              <ProtectedRoute>
+                                <Stacks />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route
                             path="/prompts/:displayId"
-                            element={<Stacks />}
+                            element={
+                              <ProtectedRoute>
+                                <Stacks />
+                              </ProtectedRoute>
+                            }
                           />
-                          <Route path="/snapshots" element={<Snapshots />} />
-                          <Route path="/templates" element={<Templates />} />
+                          <Route
+                            path="/snapshots"
+                            element={
+                              <ProtectedRoute>
+                                <Snapshots />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/templates"
+                            element={
+                              <ProtectedRoute>
+                                <Templates />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route
                             path="/templates/:id"
-                            element={<Templates />}
+                            element={
+                              <ProtectedRoute>
+                                <Templates />
+                              </ProtectedRoute>
+                            }
                           />
-                          <Route path="/blocks" element={<Blocks />} />
-                          <Route path="/wildcards" element={<Wildcards />} />
+                          <Route
+                            path="/blocks"
+                            element={
+                              <ProtectedRoute>
+                                <Blocks />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/wildcards"
+                            element={
+                              <ProtectedRoute>
+                                <Wildcards />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route
                             path="/what-is-this"
                             element={<WhatIsThis />}
                           />
-                          <Route path="/account" element={<Account />} />
+                          <Route
+                            path="/account"
+                            element={
+                              <ProtectedRoute>
+                                <Account />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route
                             path="/lm-studio-cors"
                             element={<LMStudioCors />}
                           />
                           <Route
                             path="/developer-settings"
-                            element={<DeveloperSettings />}
+                            element={
+                              <ProtectedRoute>
+                                <DeveloperSettings />
+                              </ProtectedRoute>
+                            }
                           />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
