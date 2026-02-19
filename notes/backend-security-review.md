@@ -7,7 +7,7 @@ Reviewed 2026-02-18. Prior auth-specific review in `auth-security-review.md`.
 
 ## Critical Findings
 
-### 1. CORS Falls Back to Fully Open in Production
+### 1. CORS Falls Back to Fully Open in Production - FIXED
 
 **Files:** `server/src/index.ts:37-44`
 
@@ -130,7 +130,7 @@ The ComfyUI integration endpoints accept the API key as a query parameter for SS
 
 ---
 
-### 7. Unnecessary Packages in Production Docker Image
+### 7. Unnecessary Packages in Production Docker Image - FIXED
 
 **Files:** `deploy/Dockerfile:19`
 

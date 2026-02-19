@@ -37,7 +37,7 @@ async function run() {
     const { error, results } = await migrator.migrateDown();
     results?.forEach((r) => {
       if (r.status === "Success") {
-        console.log(`Rolled back: ${r.migrationName}`);
+        console.info(`Rolled back: ${r.migrationName}`);
       } else if (r.status === "Error") {
         console.error(`Failed to roll back: ${r.migrationName}`);
       }
@@ -50,7 +50,7 @@ async function run() {
     const { error, results } = await migrator.migrateToLatest();
     results?.forEach((r) => {
       if (r.status === "Success") {
-        console.log(`Migrated: ${r.migrationName}`);
+        console.info(`Migrated: ${r.migrationName}`);
       } else if (r.status === "Error") {
         console.error(`Failed: ${r.migrationName}`);
       }
@@ -60,7 +60,7 @@ async function run() {
       process.exit(1);
     }
     if (!results?.length) {
-      console.log("Already up to date.");
+      console.info("Already up to date.");
     }
   }
 

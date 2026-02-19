@@ -29,7 +29,7 @@ Since this runs in the user's browser (not the server), the attacker and victim 
 
 ---
 
-### 2. No Content Security Policy
+### 2. No Content Security Policy - FIXED
 
 **Files:** `index.html`, server response headers (not configured)
 
@@ -60,7 +60,7 @@ The `connect-src` allowlist for localhost is needed for LM Studio. The `worker-s
 
 ---
 
-### 3. No Client-Side Route Guards
+### 3. No Client-Side Route Guards - FIXED
 
 **Files:** `src/App.tsx`, all page components in `src/pages/`
 
