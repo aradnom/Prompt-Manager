@@ -1,0 +1,50 @@
+import { ParallaxCircle } from "./ParallaxCircle";
+
+export function ParallaxCircleMenuAligned() {
+  return (
+    <>
+      <ParallaxCircle
+        minScale={0.0}
+        size={420}
+        transitionDuration={0.4}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.0}
+        size={350}
+        transitionDuration={0.8}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.0}
+        size={280}
+        maxLineWidth={2}
+        minLineWidth={0}
+      />
+      <ParallaxCircle
+        minScale={0.0}
+        size={215}
+        transitionDuration={0.4}
+        minLineWidth={0}
+        maxLineWidth={2}
+        scrollMultiplier={1}
+      />
+      <ParallaxCircle
+        minScale={0.0}
+        size={150}
+        transitionDuration={0.4}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.0}
+        size={80}
+        transitionDuration={0.4}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+    </>
+  );
+}

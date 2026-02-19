@@ -1,0 +1,50 @@
+import { ParallaxCircle } from "./ParallaxCircle";
+
+export function ParallaxCircleMenuRandom() {
+  return (
+    <>
+      <ParallaxCircle
+        minScale={0.1}
+        sizePercentage={5}
+        transitionDuration={0.4}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.2}
+        sizePercentage={15}
+        transitionDuration={0.8}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.4}
+        sizePercentage={25}
+        transitionDuration={0.3}
+        maxLineWidth={2}
+        minLineWidth={0}
+      />
+      <ParallaxCircle
+        minScale={0.2}
+        sizePercentage={30}
+        transitionDuration={1.2}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.35}
+        sizePercentage={40}
+        transitionDuration={2}
+        minLineWidth={0}
+        maxLineWidth={2}
+      />
+      <ParallaxCircle
+        minScale={0.32}
+        sizePercentage={36}
+        transitionDuration={2.5}
+        minLineWidth={0}
+        maxLineWidth={1.5}
+      />
+    </>
+  );
+}

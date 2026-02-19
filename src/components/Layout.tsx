@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { MainMenu } from "./MainMenu";
 import { ErrorBanner } from "./ErrorBanner";
 import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
-import { ParallaxCircle } from "./ParallaxCircle";
 import { Scratchpad } from "./Scratchpad";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
@@ -17,6 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+// import { ParallaxCircleMenuAligned } from "./ParallaxCircleMenuAligned";
+import { ParallaxCircleMenuRandom } from "./ParallaxCircleMenuRandom";
 
 const TRANSFORMERS_PROGRESS_ID = "transformers-js-load";
 
@@ -55,29 +56,7 @@ function LayoutContent({ children }: LayoutProps) {
       }`}
     >
       <div className="fixed w-250 h-250 radial-gradient-magenta" />
-      <ParallaxCircle
-        minScale={0.2}
-        size={900}
-        transitionDuration={0.8}
-        minLineWidth={0}
-        maxLineWidth={3}
-      />
-      <ParallaxCircle size={600} maxLineWidth={4} minLineWidth={0} />
-      <ParallaxCircle
-        minScale={0.2}
-        size={400}
-        transitionDuration={0.5}
-        minLineWidth={0}
-        maxLineWidth={3}
-        scrollMultiplier={1.4}
-      />
-      <ParallaxCircle
-        minScale={0.2}
-        size={300}
-        transitionDuration={0.4}
-        minLineWidth={0}
-        maxLineWidth={3}
-      />
+      <ParallaxCircleMenuRandom />
       <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
       <MainMenu />
       <Scratchpad />
