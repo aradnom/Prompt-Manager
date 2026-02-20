@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "@server/trpc";
+import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { decrypt } from "@server/lib/auth";
 import { LLM_TARGETS, type LLMTarget } from "@server/config";
 import type { LLMOperation } from "@shared/llm/types";
+import { RATE_LIMITS } from "@shared/limits";
 
 const LLM_OPERATIONS: [LLMOperation, ...LLMOperation[]] = [
   "more-descriptive",
@@ -30,6 +31,13 @@ const thinkingConfigSchema = z
 
 export const llmRouter = router({
   transform: protectedProcedure
+    .use(
+      withRateLimit(
+        "llm.transform",
+        RATE_LIMITS.llmTransform.windowMs,
+        RATE_LIMITS.llmTransform.maxRequests,
+      ),
+    )
     .input(
       z.object({
         text: z.string(),
