@@ -99,7 +99,7 @@ async function main() {
     "/trpc",
     createExpressMiddleware({
       router: appRouter,
-      createContext: createContext(storage, llmService, config),
+      createContext: createContext(storage, llmService, config, rateLimitRedis),
     }),
   );
 
