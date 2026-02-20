@@ -1,9 +1,17 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "@server/trpc";
+import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { generateDisplayId } from "@server/lib/generate-display-id";
+import { RATE_LIMITS } from "@shared/limits";
+
+const mutationRL = withRateLimit(
+  "stacks.create",
+  RATE_LIMITS.mutation.windowMs,
+  RATE_LIMITS.mutation.maxRequests,
+);
 
 export const stacksRouter = router({
   create: protectedProcedure
+    .use(mutationRL)
     .input(
       z.object({
         uuid: z.string(),
@@ -116,6 +124,7 @@ export const stacksRouter = router({
     }),
 
   duplicate: protectedProcedure
+    .use(mutationRL)
     .input(
       z.object({
         id: z.number(),
@@ -375,6 +384,7 @@ export const stacksRouter = router({
     }),
 
   createSnapshot: protectedProcedure
+    .use(mutationRL)
     .input(
       z.object({
         stackId: z.number(),

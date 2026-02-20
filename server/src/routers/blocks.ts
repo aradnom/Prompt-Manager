@@ -1,8 +1,16 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "@server/trpc";
+import { router, protectedProcedure, withRateLimit } from "@server/trpc";
+import { RATE_LIMITS } from "@shared/limits";
+
+const mutationRL = withRateLimit(
+  "blocks.create",
+  RATE_LIMITS.mutation.windowMs,
+  RATE_LIMITS.mutation.maxRequests,
+);
 
 export const blocksRouter = router({
   create: protectedProcedure
+    .use(mutationRL)
     .input(
       z.object({
         uuid: z.string(),
