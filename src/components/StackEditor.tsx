@@ -73,6 +73,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 interface StackEditorProps {
   stack: BlockStack;
@@ -102,6 +103,8 @@ export function StackEditor({ stack }: StackEditorProps) {
   const snapshotDoneRef = useRef({ flash: false, mutation: false });
   const generateMutation = useTransform();
   const enrichMutation = useTransform();
+  const contentOverLimit =
+    renderedContent.length > LENGTH_LIMITS.renderedContent;
 
   const {
     data: fullStack,
@@ -187,9 +190,11 @@ export function StackEditor({ stack }: StackEditorProps) {
       setRenderedContent(finalContent);
       setRenderedContentWithMarkers(finalContentWithMarkers);
 
-      // Save the rendered content to the revision (debounced)
+      // Save the rendered content to the revision (debounced), skip if over limit
       const timeoutId = setTimeout(() => {
-        saveContent(stack.id, finalContent);
+        if (finalContent.length <= LENGTH_LIMITS.renderedContent) {
+          saveContent(stack.id, finalContent);
+        }
       }, 500);
 
       return () => clearTimeout(timeoutId);
@@ -806,6 +811,15 @@ export function StackEditor({ stack }: StackEditorProps) {
             )}
           </div>
         </CardContent>
+        {contentOverLimit && (
+          <div className="px-6 py-2 text-sm text-magenta-light bg-magenta-dark/20 border-t border-magenta-medium/40">
+            Prompt content exceeds the{" "}
+            {(LENGTH_LIMITS.renderedContent / 1_000_000).toFixed(0)}M character
+            limit ({renderedContent.length.toLocaleString()} /{" "}
+            {LENGTH_LIMITS.renderedContent.toLocaleString()}). Auto-save and
+            snapshots are disabled until the content is reduced.
+          </div>
+        )}
         <CardFooter className="border-t p-4 bg-cyan-dark/20">
           {!isCreatingNew && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:flex gap-2 w-full">
@@ -861,7 +875,8 @@ export function StackEditor({ stack }: StackEditorProps) {
                       variant="tertiary"
                       disabled={
                         !renderedContent.trim() ||
-                        createSnapshotMutation.isPending
+                        createSnapshotMutation.isPending ||
+                        contentOverLimit
                       }
                     >
                       <Camera className="mr-2 h-4 w-4" />
