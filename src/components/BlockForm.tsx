@@ -348,6 +348,7 @@ export function BlockForm({
                   placeholder="e.g., scene, landscape, outdoor"
                   className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                   value={labels}
+                  maxLength={LENGTH_LIMITS.labels * (LENGTH_LIMITS.name + 2)}
                   onChange={(e) => {
                     setLabels(e.target.value);
                     debouncedSave();
@@ -361,7 +362,7 @@ export function BlockForm({
                   placeholder="Add notes about this block..."
                   className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background resize-none h-24 font-mono text-sm"
                   value={notes}
-                  maxLength={4000}
+                  maxLength={LENGTH_LIMITS.notes}
                   onChange={(e) => {
                     setNotes(e.target.value);
                     debouncedSave();
