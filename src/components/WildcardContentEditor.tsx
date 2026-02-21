@@ -2,6 +2,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
 import { yaml } from "@codemirror/lang-yaml";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 interface WildcardContentEditorProps {
   value: string;
@@ -33,7 +34,11 @@ export function WildcardContentEditor({
       height="300px"
       theme={vscodeDark}
       extensions={getExtensions()}
-      onChange={onChange}
+      onChange={(val) => {
+        if (val.length <= LENGTH_LIMITS.wildcardContent) {
+          onChange(val);
+        }
+      }}
       editable={!disabled}
       basicSetup={{
         lineNumbers: true,
