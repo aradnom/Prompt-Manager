@@ -389,7 +389,11 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t">
-        <Button variant="outline" onClick={() => setIsSearchOpen(true)}>
+        <Button
+          variant="outline"
+          onClick={() => setIsSearchOpen(true)}
+          disabled={blockIds.length >= LENGTH_LIMITS.blockIds}
+        >
           <Search className="mr-2 h-4 w-4" />
           Add Existing Block
         </Button>

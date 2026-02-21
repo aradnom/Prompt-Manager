@@ -152,6 +152,8 @@ export function StackEditor({ stack }: StackEditorProps) {
 
   // We cast here because we know we requested includeBlocks: true
   const stackWithBlocks = fullStack as StackWithBlocks;
+  const blocksAtLimit =
+    (stackWithBlocks?.blocks?.length ?? 0) >= LENGTH_LIMITS.blockIds;
 
   // Apply comma separation to content if enabled
   const processCommas = useCallback(
@@ -823,15 +825,27 @@ export function StackEditor({ stack }: StackEditorProps) {
         <CardFooter className="border-t p-4 bg-cyan-dark/20">
           {!isCreatingNew && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:flex gap-2 w-full">
-              <Button onClick={() => setIsSearchOpen(true)} variant="default">
+              <Button
+                onClick={() => setIsSearchOpen(true)}
+                variant="default"
+                disabled={blocksAtLimit}
+              >
                 <Search className="mr-2 h-4 w-4" />
                 Add Existing Block
               </Button>
-              <Button onClick={() => setIsCreatingNew(true)} variant="tertiary">
+              <Button
+                onClick={() => setIsCreatingNew(true)}
+                variant="tertiary"
+                disabled={blocksAtLimit}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Block
               </Button>
-              <Button onClick={handleGenerateOpen} variant="tertiary">
+              <Button
+                onClick={handleGenerateOpen}
+                variant="tertiary"
+                disabled={blocksAtLimit}
+              >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate New Block
               </Button>
@@ -841,7 +855,9 @@ export function StackEditor({ stack }: StackEditorProps) {
                     <Button
                       onClick={handleEnrichPrompt}
                       variant="tertiary"
-                      disabled={!renderedContent.trim() || isEnriching}
+                      disabled={
+                        !renderedContent.trim() || isEnriching || blocksAtLimit
+                      }
                     >
                       {isEnriching ? (
                         <DefragLoader size={16} className="mr-2" />
