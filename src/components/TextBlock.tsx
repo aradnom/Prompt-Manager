@@ -983,6 +983,7 @@ export function TextBlock({
                 }
               }}
               className="box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -m-2 resize-none border-inline-input"
+              maxLength={LENGTH_LIMITS.blockText}
               minRows={1}
             />
           ) : (
