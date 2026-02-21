@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import type { OutputStyle } from "@/types/schema";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
 type StackWithBlocks = RouterOutput["stacks"]["get"];
@@ -178,6 +179,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
               placeholder="e.g., Summer Landscapes"
               className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={editName}
+              maxLength={LENGTH_LIMITS.name}
               onChange={(e) => {
                 setEditName(e.target.value);
                 debouncedSave();
@@ -191,6 +193,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
             <DisplayIdInput
               placeholder="e.g., summer-landscape-v1"
               className="w-full"
+              maxLength={LENGTH_LIMITS.displayId}
               value={editDisplayId}
               onChange={(value) => {
                 setEditDisplayId(value);

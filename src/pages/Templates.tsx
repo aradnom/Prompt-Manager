@@ -22,6 +22,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotesDialog } from "@/components/NotesDialog";
+import { LENGTH_LIMITS } from "@shared/limits";
 import {
   Tooltip,
   TooltipContent,
@@ -130,7 +131,7 @@ function TemplateCard({
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Enter template name..."
                   className="text-sm font-medium font-mono px-2 py-0.5 border-inline-input"
-                  maxLength={255}
+                  maxLength={LENGTH_LIMITS.name}
                   autoFocus
                 />
               ) : (

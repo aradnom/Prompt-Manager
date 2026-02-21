@@ -47,6 +47,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
+import { LENGTH_LIMITS } from "@shared/limits";
 import {
   Dialog,
   DialogContent,
@@ -141,7 +142,7 @@ function StackCard({
                     onClick={(e) => e.stopPropagation()}
                     placeholder="Enter prompt name..."
                     className="text-lg font-semibold px-2 py-0.5 border-inline-input"
-                    maxLength={255}
+                    maxLength={LENGTH_LIMITS.name}
                     autoFocus
                   />
                 ) : (
@@ -525,6 +526,7 @@ function StackList() {
                   placeholder="e.g., Summer Landscape"
                   className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                   value={name}
+                  maxLength={LENGTH_LIMITS.name}
                   onChange={(e) => {
                     setName(e.target.value);
                     setDisplayId(normalizeDisplayId(e.target.value));
@@ -548,6 +550,7 @@ function StackList() {
                   <DisplayIdInput
                     placeholder="e.g., summer-landscape-v1"
                     className="flex-1"
+                    maxLength={LENGTH_LIMITS.displayId}
                     value={displayId}
                     onChange={setDisplayId}
                     onKeyDown={(e) => {
@@ -879,6 +882,7 @@ function StackList() {
                 placeholder="e.g., Portrait Prompts"
                 className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                 value={newFolderName}
+                maxLength={LENGTH_LIMITS.name}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newFolderName.trim()) {

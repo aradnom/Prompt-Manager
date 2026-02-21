@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WildcardContentEditor } from "@/components/WildcardContentEditor";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 const PAGE_SIZE = 20;
 
@@ -139,6 +140,7 @@ function WildcardForm({
             <input
               type="text"
               value={name}
+              maxLength={LENGTH_LIMITS.name}
               onChange={(e) => {
                 setName(e.target.value);
                 if (mode === "create") {
@@ -162,6 +164,7 @@ function WildcardForm({
                   onChange={setDisplayId}
                   placeholder="unique-id"
                   className="flex-1"
+                  maxLength={LENGTH_LIMITS.displayId}
                   required
                   disabled={isSubmitting}
                 />
@@ -528,7 +531,7 @@ export default function Wildcards() {
                               onClick={(e) => e.stopPropagation()}
                               placeholder="Enter wildcard name..."
                               className="text-lg font-semibold px-2 py-0.5 border-inline-input"
-                              maxLength={255}
+                              maxLength={LENGTH_LIMITS.name}
                               autoFocus
                             />
                           ) : (
@@ -772,6 +775,7 @@ export default function Wildcards() {
                   <input
                     type="text"
                     value={generatedName}
+                    maxLength={LENGTH_LIMITS.name}
                     onChange={(e) => setGeneratedName(e.target.value)}
                     placeholder="My Wildcard"
                     className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
@@ -789,6 +793,7 @@ export default function Wildcards() {
                       onChange={setGeneratedDisplayId}
                       placeholder="unique-id"
                       className="flex-1"
+                      maxLength={LENGTH_LIMITS.displayId}
                     />
                     <Button
                       variant="outline"

@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DotDivider } from "@/components/ui/dot-divider";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 const PAGE_SIZE = 50;
 
@@ -631,6 +632,7 @@ export default function Blocks() {
                 placeholder="e.g., Character Descriptions"
                 className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
                 value={newFolderName}
+                maxLength={LENGTH_LIMITS.name}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newFolderName.trim()) {

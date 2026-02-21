@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { OutputStyle } from "@/types/schema";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 type Template = RouterOutput["stackTemplates"]["get"];
 
@@ -265,6 +266,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
           placeholder="e.g., Portrait Base Template"
           className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
           value={editName}
+          maxLength={LENGTH_LIMITS.name}
           onChange={(e) => {
             setEditName(e.target.value);
             debouncedSave();

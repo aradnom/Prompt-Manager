@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { WildcardBrowser } from "@/components/WildcardBrowser";
 import { CollapsibleSection } from "@/components/ui/collapsible";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 export interface BlockFormValues {
   name?: string;
@@ -257,6 +258,7 @@ export function BlockForm({
               placeholder="e.g., Mountain Landscape"
               className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
               value={name}
+              maxLength={LENGTH_LIMITS.name}
               onChange={(e) => {
                 setName(e.target.value);
                 if (mode === "create") {
@@ -274,6 +276,7 @@ export function BlockForm({
               <DisplayIdInput
                 placeholder="e.g., mountain-scene-v1"
                 className="flex-1"
+                maxLength={LENGTH_LIMITS.displayId}
                 value={displayId}
                 onChange={(value) => {
                   setDisplayId(value);

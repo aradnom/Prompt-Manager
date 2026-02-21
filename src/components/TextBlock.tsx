@@ -59,6 +59,7 @@ import {
 
 import { useTransform } from "@/hooks/useTransform";
 import type { OutputStyle } from "@/types/schema";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 /**
  * Get the approximate pixel position of a text offset within a textarea
@@ -686,7 +687,7 @@ export function TextBlock({
                       onClick={(e) => e.stopPropagation()}
                       placeholder="Enter block name..."
                       className="font-semibold px-2 py-0.5 border-inline-input"
-                      maxLength={255}
+                      maxLength={LENGTH_LIMITS.name}
                       autoFocus
                     />
                   ) : (

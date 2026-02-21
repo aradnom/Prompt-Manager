@@ -4,6 +4,7 @@ import { X, Trash2, StickyNote, Copy } from "lucide-react";
 import { api, RouterOutput } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotesDialog } from "@/components/NotesDialog";
+import { LENGTH_LIMITS } from "@shared/limits";
 import {
   Tooltip,
   TooltipContent,
@@ -114,7 +115,7 @@ function SnapshotCard({ snapshot, stackId }: SnapshotCardProps) {
             }}
             placeholder="Enter snapshot name..."
             className="w-full text-sm font-medium font-mono px-2 py-1 border-inline-input relative focus:z-10"
-            maxLength={255}
+            maxLength={LENGTH_LIMITS.name}
             autoFocus
           />
         ) : (

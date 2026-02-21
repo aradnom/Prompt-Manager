@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 interface FolderRowProps {
   folder: { id: number; name: string; description: string | null };
@@ -84,6 +85,7 @@ export function FolderRow({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 className="font-medium px-2 py-0.5 border-inline-input"
+                maxLength={LENGTH_LIMITS.name}
                 autoFocus
               />
             ) : (
