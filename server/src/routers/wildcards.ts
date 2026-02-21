@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
-import { RATE_LIMITS } from "@shared/limits";
+import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 
 const mutationRL = withRateLimit(
   "wildcards.create",
@@ -13,11 +13,11 @@ export const wildcardsRouter = router({
     .use(mutationRL)
     .input(
       z.object({
-        uuid: z.string(),
-        displayId: z.string(),
-        name: z.string(),
-        format: z.string(),
-        content: z.string(),
+        uuid: z.string().max(LENGTH_LIMITS.name),
+        displayId: z.string().max(LENGTH_LIMITS.displayId),
+        name: z.string().max(LENGTH_LIMITS.name),
+        format: z.string().max(LENGTH_LIMITS.wildcardFormat),
+        content: z.string().max(LENGTH_LIMITS.wildcardContent),
         meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -48,7 +48,7 @@ export const wildcardsRouter = router({
   getByUuid: protectedProcedure
     .input(
       z.object({
-        uuid: z.string(),
+        uuid: z.string().max(LENGTH_LIMITS.name),
       }),
     )
     .query(async ({ input, ctx }) => {
@@ -66,9 +66,9 @@ export const wildcardsRouter = router({
     .input(
       z.object({
         id: z.number(),
-        name: z.string().optional(),
-        format: z.string().optional(),
-        content: z.string().optional(),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
+        format: z.string().max(LENGTH_LIMITS.wildcardFormat).optional(),
+        content: z.string().max(LENGTH_LIMITS.wildcardContent).optional(),
         meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -123,7 +123,7 @@ export const wildcardsRouter = router({
   search: protectedProcedure
     .input(
       z.object({
-        query: z.string().optional(),
+        query: z.string().max(LENGTH_LIMITS.searchQuery).optional(),
         limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
       }),

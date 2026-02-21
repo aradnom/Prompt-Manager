@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
-import { RATE_LIMITS } from "@shared/limits";
+import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 
 const mutationRL = withRateLimit(
   "revisions.create",
@@ -14,7 +14,7 @@ export const revisionsRouter = router({
     .input(
       z.object({
         blockId: z.number(),
-        text: z.string(),
+        text: z.string().max(LENGTH_LIMITS.blockText),
         meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )

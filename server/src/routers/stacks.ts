@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { generateDisplayId } from "@server/lib/generate-display-id";
-import { RATE_LIMITS } from "@shared/limits";
+import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 
 const mutationRL = withRateLimit(
   "stacks.create",
@@ -14,13 +14,13 @@ export const stacksRouter = router({
     .use(mutationRL)
     .input(
       z.object({
-        uuid: z.string(),
-        name: z.string().optional(),
-        displayId: z.string(),
+        uuid: z.string().max(LENGTH_LIMITS.name),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
+        displayId: z.string().max(LENGTH_LIMITS.displayId),
         commaSeparated: z.boolean().optional(),
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
-        blockIds: z.array(z.number()).optional(),
+        blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -55,7 +55,7 @@ export const stacksRouter = router({
   getByUuid: protectedProcedure
     .input(
       z.object({
-        uuid: z.string(),
+        uuid: z.string().max(LENGTH_LIMITS.name),
         includeBlocks: z.boolean().optional().default(false),
         includeRevisions: z.boolean().optional().default(false),
       }),
@@ -77,7 +77,7 @@ export const stacksRouter = router({
   getByDisplayId: protectedProcedure
     .input(
       z.object({
-        displayId: z.string(),
+        displayId: z.string().max(LENGTH_LIMITS.displayId),
         includeBlocks: z.boolean().optional().default(false),
         includeRevisions: z.boolean().optional().default(false),
       }),
@@ -101,12 +101,12 @@ export const stacksRouter = router({
     .input(
       z.object({
         id: z.number(),
-        name: z.string().optional(),
-        displayId: z.string().optional(),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
+        displayId: z.string().max(LENGTH_LIMITS.displayId).optional(),
         commaSeparated: z.boolean().optional(),
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
-        notes: z.string().max(4000).nullable().optional(),
+        notes: z.string().max(LENGTH_LIMITS.notes).nullable().optional(),
         folderId: z.number().nullish(),
       }),
     )
@@ -238,7 +238,7 @@ export const stacksRouter = router({
   search: protectedProcedure
     .input(
       z.object({
-        query: z.string().optional(),
+        query: z.string().max(LENGTH_LIMITS.searchQuery).optional(),
         limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
       }),
@@ -259,7 +259,10 @@ export const stacksRouter = router({
         stackId: z.number(),
         blockId: z.number(),
         order: z.number().optional(),
-        renderedContent: z.string().optional(),
+        renderedContent: z
+          .string()
+          .max(LENGTH_LIMITS.renderedContent)
+          .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -285,7 +288,10 @@ export const stacksRouter = router({
       z.object({
         stackId: z.number(),
         blockId: z.number(),
-        renderedContent: z.string().optional(),
+        renderedContent: z
+          .string()
+          .max(LENGTH_LIMITS.renderedContent)
+          .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -309,8 +315,11 @@ export const stacksRouter = router({
     .input(
       z.object({
         stackId: z.number(),
-        blockIds: z.array(z.number()),
-        renderedContent: z.string().optional(),
+        blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds),
+        renderedContent: z
+          .string()
+          .max(LENGTH_LIMITS.renderedContent)
+          .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -356,7 +365,7 @@ export const stacksRouter = router({
     .input(
       z.object({
         stackId: z.number(),
-        renderedContent: z.string(),
+        renderedContent: z.string().max(LENGTH_LIMITS.renderedContent),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -388,9 +397,9 @@ export const stacksRouter = router({
     .input(
       z.object({
         stackId: z.number(),
-        renderedContent: z.string(),
-        name: z.string().max(255).optional(),
-        notes: z.string().max(4000).optional(),
+        renderedContent: z.string().max(LENGTH_LIMITS.renderedContent),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
+        notes: z.string().max(LENGTH_LIMITS.notes).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -436,8 +445,8 @@ export const stacksRouter = router({
       z.object({
         id: z.number(),
         stackId: z.number(),
-        name: z.string().max(255).nullable().optional(),
-        notes: z.string().max(4000).nullable().optional(),
+        name: z.string().max(LENGTH_LIMITS.name).nullable().optional(),
+        notes: z.string().max(LENGTH_LIMITS.notes).nullable().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -488,7 +497,7 @@ export const stacksRouter = router({
   searchSnapshots: protectedProcedure
     .input(
       z.object({
-        query: z.string().optional(),
+        query: z.string().max(LENGTH_LIMITS.searchQuery).optional(),
         limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
       }),

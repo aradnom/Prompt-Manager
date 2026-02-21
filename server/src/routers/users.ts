@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "@server/trpc";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 export const usersRouter = router({
   getScratchpad: protectedProcedure.query(async ({ ctx }) => {
@@ -10,7 +11,7 @@ export const usersRouter = router({
   setScratchpad: protectedProcedure
     .input(
       z.object({
-        content: z.string(),
+        content: z.string().max(LENGTH_LIMITS.scratchpad),
       }),
     )
     .mutation(async ({ input, ctx }) => {

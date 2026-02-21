@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { generateDisplayId } from "@server/lib/generate-display-id";
-import { RATE_LIMITS } from "@shared/limits";
+import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 
 const mutationRL = withRateLimit(
   "stackTemplates.create",
@@ -14,13 +14,16 @@ export const stackTemplatesRouter = router({
     .use(mutationRL)
     .input(
       z.object({
-        name: z.string().max(255).optional(),
-        blockIds: z.array(z.number()).optional(),
-        disabledBlockIds: z.array(z.number()).optional(),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
+        blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds).optional(),
+        disabledBlockIds: z
+          .array(z.number())
+          .max(LENGTH_LIMITS.blockIds)
+          .optional(),
         commaSeparated: z.boolean().optional(),
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
-        notes: z.string().max(4000).optional(),
+        notes: z.string().max(LENGTH_LIMITS.notes).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -48,13 +51,16 @@ export const stackTemplatesRouter = router({
     .input(
       z.object({
         id: z.number(),
-        name: z.string().max(255).nullable().optional(),
-        blockIds: z.array(z.number()).optional(),
-        disabledBlockIds: z.array(z.number()).optional(),
+        name: z.string().max(LENGTH_LIMITS.name).nullable().optional(),
+        blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds).optional(),
+        disabledBlockIds: z
+          .array(z.number())
+          .max(LENGTH_LIMITS.blockIds)
+          .optional(),
         commaSeparated: z.boolean().optional(),
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
-        notes: z.string().max(4000).nullable().optional(),
+        notes: z.string().max(LENGTH_LIMITS.notes).nullable().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -100,7 +106,7 @@ export const stackTemplatesRouter = router({
   search: protectedProcedure
     .input(
       z.object({
-        query: z.string().optional(),
+        query: z.string().max(LENGTH_LIMITS.searchQuery).optional(),
         limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
       }),
@@ -118,7 +124,7 @@ export const stackTemplatesRouter = router({
     .input(
       z.object({
         stackId: z.number(),
-        name: z.string().max(255).optional(),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {

@@ -3,7 +3,7 @@ import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { decrypt } from "@server/lib/auth";
 import { LLM_TARGETS, type LLMTarget } from "@server/config";
 import type { LLMOperation } from "@shared/llm/types";
-import { RATE_LIMITS } from "@shared/limits";
+import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 
 const LLM_OPERATIONS: [LLMOperation, ...LLMOperation[]] = [
   "more-descriptive",
@@ -40,11 +40,14 @@ export const llmRouter = router({
     )
     .input(
       z.object({
-        text: z.string(),
+        text: z.string().max(LENGTH_LIMITS.llmText),
         operation: llmOperationSchema,
         target: llmTargetSchema,
         style: outputStyleSchema,
-        wildcards: z.array(z.string()).optional(),
+        wildcards: z
+          .array(z.string().max(LENGTH_LIMITS.name))
+          .max(LENGTH_LIMITS.llmWildcards)
+          .optional(),
         thinking: thinkingConfigSchema,
       }),
     )

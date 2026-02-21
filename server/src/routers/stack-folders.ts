@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
-import { RATE_LIMITS } from "@shared/limits";
+import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 
 const mutationRL = withRateLimit(
   "stackFolders.create",
@@ -13,8 +13,8 @@ export const stackFoldersRouter = router({
     .use(mutationRL)
     .input(
       z.object({
-        name: z.string(),
-        description: z.string().optional(),
+        name: z.string().max(LENGTH_LIMITS.name),
+        description: z.string().max(LENGTH_LIMITS.folderDescription).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -41,8 +41,8 @@ export const stackFoldersRouter = router({
     .input(
       z.object({
         id: z.number(),
-        name: z.string().optional(),
-        description: z.string().optional(),
+        name: z.string().max(LENGTH_LIMITS.name).optional(),
+        description: z.string().max(LENGTH_LIMITS.folderDescription).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
