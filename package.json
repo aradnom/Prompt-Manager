@@ -15,7 +15,8 @@
     "test:llm": "vitest run --config server/vitest.config.ts",
     "migrate": "tsx server/src/migrate.ts",
     "migrate:down": "tsx server/src/migrate.ts down",
-    "migrate:check": "tsx server/src/migrate-check.ts"
+    "migrate:check": "tsx server/src/migrate-check.ts",
+    "deploy": "deploy/deploy.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
