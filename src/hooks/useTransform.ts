@@ -73,6 +73,15 @@ export function useTransform() {
         );
       }
 
+      if (
+        input.wildcards &&
+        input.wildcards.length > LENGTH_LIMITS.llmWildcards
+      ) {
+        throw new Error(
+          `Too many wildcards (${input.wildcards.length}). Maximum is ${LENGTH_LIMITS.llmWildcards}.`,
+        );
+      }
+
       const target = activeTarget;
       const thinking = getThinkingConfig();
 
