@@ -8,6 +8,7 @@ import type {
   OutputStyle,
   ThinkingConfig,
 } from "@shared/llm/types";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 // Read thinking settings from localStorage
 function getThinkingConfig(): ThinkingConfig | undefined {
@@ -66,6 +67,12 @@ export function useTransform() {
 
   const mutateAsync = useCallback(
     async (input: TransformInput): Promise<TransformResult> => {
+      if (input.text.length > LENGTH_LIMITS.llmText) {
+        throw new Error(
+          `Text exceeds the ${LENGTH_LIMITS.llmText.toLocaleString()} character limit for LLM transforms.`,
+        );
+      }
+
       const target = activeTarget;
       const thinking = getThinkingConfig();
 
