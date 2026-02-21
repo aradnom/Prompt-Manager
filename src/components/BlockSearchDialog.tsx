@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { api } from "@/lib/api";
+import { LENGTH_LIMITS } from "@shared/limits";
 import {
   Dialog,
   DialogContent,
@@ -82,6 +83,7 @@ export function BlockSearchDialog({
               className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-cyan-medium disabled:cursor-not-allowed disabled:opacity-50"
               placeholder="Search blocks..."
               value={search}
+              maxLength={LENGTH_LIMITS.searchQuery}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
             />

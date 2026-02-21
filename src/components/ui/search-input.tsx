@@ -1,4 +1,5 @@
 import { Search, X } from "lucide-react";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 interface SearchInputProps {
   value: string;
@@ -23,6 +24,7 @@ export function SearchInput({
         className="flex h-12 w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none placeholder:text-cyan-light/50 disabled:cursor-not-allowed disabled:opacity-50"
         placeholder={placeholder}
         value={value}
+        maxLength={LENGTH_LIMITS.searchQuery}
         onChange={(e) => onChange(e.target.value)}
       />
       {value && (

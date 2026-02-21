@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { LENGTH_LIMITS } from "@shared/limits";
 
 interface WildcardBrowserProps {
   open: boolean;
@@ -74,6 +75,7 @@ export function WildcardBrowser({
             placeholder="Search wildcards..."
             className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
             value={searchQuery}
+            maxLength={LENGTH_LIMITS.searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoFocus
           />
