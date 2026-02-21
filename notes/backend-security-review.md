@@ -29,7 +29,7 @@ If `CORS_ORIGINS` is not set in production, `cors()` is called with no config, w
 
 ---
 
-### 2. No Rate Limiting on tRPC Routes or Integration Endpoints
+### 2. No Rate Limiting on tRPC Routes or Integration Endpoints - FIXED
 
 **Files:** `server/src/index.ts:109-115`, `server/src/express-routes/integrations.ts`
 
@@ -47,7 +47,7 @@ This means:
 
 ---
 
-### 3. No Input Length Limits on LLM Text Input
+### 3. No Input Length Limits on LLM Text Input - FIXED
 
 **Files:** `server/src/routers/llm.ts:35`, `server/src/services/llm-service.ts`
 
@@ -66,7 +66,7 @@ The `text` field sent to LLM providers has no maximum length. A user could send 
 
 ---
 
-### 4. No Input Length Limits on Several Data Fields
+### 4. No Input Length Limits on Several Data Fields - FIXED
 
 **Files:** `server/src/routers/blocks.ts`, `server/src/routers/stacks.ts`, `server/src/routers/wildcards.ts`
 
