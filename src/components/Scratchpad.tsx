@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
+import { LENGTH_LIMITS } from "@shared/limits";
 import { RasterIcon } from "@/components/RasterIcon";
 import {
   Dialog,
@@ -86,6 +87,7 @@ export function Scratchpad() {
                 onChange={(e) => handleChange(e.target.value)}
                 placeholder="Jot down your ideas..."
                 className="w-full h-full resize-none bg-transparent border border-cyan-medium rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-magenta-medium font-mono text-sm"
+                maxLength={LENGTH_LIMITS.scratchpad}
                 autoFocus
               />
             )}
