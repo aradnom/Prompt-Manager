@@ -824,7 +824,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         )}
         <CardFooter className="border-t p-4 bg-cyan-dark/20">
           {!isCreatingNew && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:flex gap-2 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2 w-full lg:[&>button]:min-w-48">
               <Button
                 onClick={() => setIsSearchOpen(true)}
                 variant="default"
