@@ -7,7 +7,7 @@ import { generateUUID } from "@/lib/uuid";
 import { cn } from "@/lib/utils";
 import {
   generateDisplayId,
-  normalizeDisplayId,
+  normalizeDisplayIdWithSuffix,
 } from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
@@ -144,7 +144,7 @@ function WildcardForm({
               onChange={(e) => {
                 setName(e.target.value);
                 if (mode === "create") {
-                  setDisplayId(normalizeDisplayId(e.target.value));
+                  setDisplayId(normalizeDisplayIdWithSuffix(e.target.value));
                 }
               }}
               placeholder="My Wildcard"

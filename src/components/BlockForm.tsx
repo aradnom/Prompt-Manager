@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   generateDisplayId,
-  normalizeDisplayId,
+  normalizeDisplayIdWithSuffix,
 } from "@/lib/generate-display-id";
 import { useTypes } from "@/contexts/TypesContext";
 import { insertWildcard } from "@/lib/wildcard-parser";
@@ -262,7 +262,7 @@ export function BlockForm({
               onChange={(e) => {
                 setName(e.target.value);
                 if (mode === "create") {
-                  setDisplayId(normalizeDisplayId(e.target.value));
+                  setDisplayId(normalizeDisplayIdWithSuffix(e.target.value));
                 } else {
                   debouncedSave();
                 }

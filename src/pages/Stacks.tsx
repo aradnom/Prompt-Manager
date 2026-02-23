@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
 import {
   generateDisplayId,
-  normalizeDisplayId,
+  normalizeDisplayIdWithSuffix,
 } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
@@ -529,7 +529,7 @@ function StackList() {
                   maxLength={LENGTH_LIMITS.name}
                   onChange={(e) => {
                     setName(e.target.value);
-                    setDisplayId(normalizeDisplayId(e.target.value));
+                    setDisplayId(normalizeDisplayIdWithSuffix(e.target.value));
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleCreate();
