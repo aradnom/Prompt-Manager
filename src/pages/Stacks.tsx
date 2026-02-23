@@ -922,6 +922,7 @@ function StackList() {
 
 function SinglePromptView({ displayId }: { displayId: string }) {
   const navigate = useNavigate();
+  const { setActiveStack } = useActiveStack();
   const utils = api.useUtils();
 
   const {
@@ -1044,6 +1045,17 @@ function SinglePromptView({ displayId }: { displayId: string }) {
           />
         </CardContent>
       </Card>
+
+      <div className="mt-4 flex justify-end">
+        <Button
+          onClick={() => {
+            setActiveStack(stack);
+            navigate("/");
+          }}
+        >
+          Make Active
+        </Button>
+      </div>
 
       <NotesDialog
         title="Prompt Notes"
