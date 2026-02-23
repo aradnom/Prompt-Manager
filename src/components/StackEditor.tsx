@@ -914,7 +914,10 @@ export function StackEditor({ stack }: StackEditorProps) {
                         createTemplateMutation.mutate({ stackId: stack.id });
                       }}
                       variant="tertiary"
-                      disabled={createTemplateMutation.isPending}
+                      disabled={
+                        createTemplateMutation.isPending ||
+                        !stackWithBlocks?.blocks?.length
+                      }
                     >
                       <LayoutTemplate className="mr-2 h-4 w-4" />
                       {createTemplateMutation.isPending
