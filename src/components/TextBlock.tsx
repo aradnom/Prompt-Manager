@@ -51,6 +51,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
+import { LLMGuard } from "@/components/LLMGuard";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 import {
   TextSelectionMenu,
@@ -58,6 +59,7 @@ import {
 } from "@/components/TextSelectionMenu";
 
 import { useTransform } from "@/hooks/useTransform";
+import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import type { OutputStyle } from "@/types/schema";
 import { LENGTH_LIMITS } from "@shared/limits";
 
@@ -201,6 +203,7 @@ export function TextBlock({
   const hasPendingInlineSave = useRef(false);
   const inlineTextRef = useRef(block.text);
   const utils = api.useUtils();
+  const { isLLMConfigured } = useLLMStatus();
   const transformMutation = useTransform();
   const exploreMutation = useTransform();
   const { data: wildcardsData } = api.wildcards.list.useQuery();
@@ -1018,74 +1021,90 @@ export function TextBlock({
         </div>
         <div className="border-t pt-4">
           <div className="flex gap-2 flex-wrap">
-            <ButtonGroup>
-              <LoadingAnimatedButton
-                variant="secondary"
-                size="sm"
-                active={isActive}
-                onClick={handleMoreDescriptive}
-                loading={activeTransform === "more"}
-                disabled={activeTransform !== null || exploreMutation.isPending}
-              >
-                More Descriptive
-              </LoadingAnimatedButton>
-              <ButtonGroupSeparator />
-              <LoadingAnimatedButton
-                variant="secondary"
-                size="sm"
-                active={isActive}
-                onClick={handleLessDescriptive}
-                loading={activeTransform === "less"}
-                disabled={activeTransform !== null || exploreMutation.isPending}
-              >
-                Less Descriptive
-              </LoadingAnimatedButton>
-            </ButtonGroup>
-            <ButtonGroup>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <LoadingAnimatedButton
-                    variant="secondary"
-                    size="sm"
-                    active={isActive}
-                    loading={activeTransform === "variation"}
-                    disabled={
-                      activeTransform !== null || exploreMutation.isPending
-                    }
-                  >
-                    Variation
-                  </LoadingAnimatedButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem
-                    onClick={() => handleVariation("variation-slight")}
-                  >
-                    Slightly Different
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleVariation("variation-fair")}
-                  >
-                    Fairly Different
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleVariation("variation-very")}
-                  >
-                    Very Different
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <ButtonGroupSeparator />
-              <LoadingAnimatedButton
-                variant="secondary"
-                size="sm"
-                active={isActive}
-                onClick={handleExplore}
-                loading={exploreMutation.isPending}
-                disabled={activeTransform !== null || exploreMutation.isPending}
-              >
-                Explore Variations
-              </LoadingAnimatedButton>
-            </ButtonGroup>
+            <LLMGuard>
+              <ButtonGroup>
+                <LoadingAnimatedButton
+                  variant="secondary"
+                  size="sm"
+                  active={isActive}
+                  onClick={handleMoreDescriptive}
+                  loading={activeTransform === "more"}
+                  disabled={
+                    !isLLMConfigured ||
+                    activeTransform !== null ||
+                    exploreMutation.isPending
+                  }
+                >
+                  More Descriptive
+                </LoadingAnimatedButton>
+                <ButtonGroupSeparator />
+                <LoadingAnimatedButton
+                  variant="secondary"
+                  size="sm"
+                  active={isActive}
+                  onClick={handleLessDescriptive}
+                  loading={activeTransform === "less"}
+                  disabled={
+                    !isLLMConfigured ||
+                    activeTransform !== null ||
+                    exploreMutation.isPending
+                  }
+                >
+                  Less Descriptive
+                </LoadingAnimatedButton>
+              </ButtonGroup>
+              <ButtonGroup>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <LoadingAnimatedButton
+                      variant="secondary"
+                      size="sm"
+                      active={isActive}
+                      loading={activeTransform === "variation"}
+                      disabled={
+                        !isLLMConfigured ||
+                        activeTransform !== null ||
+                        exploreMutation.isPending
+                      }
+                    >
+                      Variation
+                    </LoadingAnimatedButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      onClick={() => handleVariation("variation-slight")}
+                    >
+                      Slightly Different
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleVariation("variation-fair")}
+                    >
+                      Fairly Different
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleVariation("variation-very")}
+                    >
+                      Very Different
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <ButtonGroupSeparator />
+                <LoadingAnimatedButton
+                  variant="secondary"
+                  size="sm"
+                  active={isActive}
+                  onClick={handleExplore}
+                  loading={exploreMutation.isPending}
+                  disabled={
+                    !isLLMConfigured ||
+                    activeTransform !== null ||
+                    exploreMutation.isPending
+                  }
+                >
+                  Explore Variations
+                </LoadingAnimatedButton>
+              </ButtonGroup>
+            </LLMGuard>
             <AnimatedButton
               variant="secondary"
               size="sm"
