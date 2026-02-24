@@ -395,11 +395,12 @@ function StackList() {
   const showLoading = isSearchMode ? isSearching : isLoading;
 
   const createMutation = api.stacks.create.useMutation({
-    onSuccess: () => {
-      refetch();
+    onSuccess: (newStack) => {
       setIsCreating(false);
       setDisplayId("");
       setName("");
+      setActiveStack(newStack);
+      navigate("/");
     },
   });
   const deleteMutation = api.stacks.delete.useMutation({
