@@ -8,12 +8,13 @@ import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FolderRow } from "@/components/FolderRow";
-import { ChevronLeft, ChevronRight, FolderPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { GenerateBlockDialog } from "@/components/GenerateBlockDialog";
 import {
   Dialog,
   DialogContent,
@@ -127,6 +128,7 @@ export default function Blocks() {
   );
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [isGenerateOpen, setIsGenerateOpen] = useState(false);
 
   const offset = page * PAGE_SIZE;
   const utils = api.useUtils();
@@ -305,6 +307,10 @@ export default function Blocks() {
           >
             <FolderPlus className="h-4 w-4 mr-2" />
             New Folder
+          </Button>
+          <Button onClick={() => setIsGenerateOpen(true)} variant="outline">
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate New Block
           </Button>
           <Button onClick={() => setIsCreating(true)}>Create New Block</Button>
         </div>
@@ -615,6 +621,12 @@ export default function Blocks() {
         description="Are you sure you want to delete this folder? Blocks in the folder will not be deleted."
         confirmText="Delete"
         variant="destructive"
+      />
+
+      <GenerateBlockDialog
+        open={isGenerateOpen}
+        onOpenChange={setIsGenerateOpen}
+        onGenerated={() => refetch()}
       />
 
       <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
