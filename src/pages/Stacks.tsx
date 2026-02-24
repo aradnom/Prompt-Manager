@@ -3,11 +3,6 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
-import {
-  generateDisplayId,
-  normalizeDisplayIdWithSuffix,
-} from "@/lib/generate-display-id";
-import { generateUUID } from "@/lib/uuid";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
 import { RasterIcon } from "@/components/RasterIcon";
@@ -29,7 +24,6 @@ import {
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
 import { Button } from "@/components/ui/button";
-import { DisplayIdInput } from "@/components/ui/display-id-input";
 import {
   Card,
   CardContent,
@@ -47,6 +41,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
+import { CreatePromptForm } from "@/components/CreatePromptForm";
 import { LENGTH_LIMITS } from "@shared/limits";
 import {
   Dialog,
@@ -328,8 +323,6 @@ function StackFolderContent({
 
 function StackList() {
   const [isCreating, setIsCreating] = useState(false);
-  const [displayId, setDisplayId] = useState("");
-  const [name, setName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [stackToDelete, setStackToDelete] = useState<number | null>(null);
   const [showRevisionsForStack, setShowRevisionsForStack] = useState<
@@ -394,15 +387,6 @@ function StackList() {
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
   const showLoading = isSearchMode ? isSearching : isLoading;
 
-  const createMutation = api.stacks.create.useMutation({
-    onSuccess: (newStack) => {
-      setIsCreating(false);
-      setDisplayId("");
-      setName("");
-      setActiveStack(newStack);
-      navigate("/");
-    },
-  });
   const deleteMutation = api.stacks.delete.useMutation({
     onSuccess: () => {
       refetch();
@@ -446,16 +430,6 @@ function StackList() {
         next.add(folderId);
       }
       return next;
-    });
-  };
-
-  const handleCreate = () => {
-    if (!displayId.trim()) return;
-
-    createMutation.mutate({
-      uuid: generateUUID(),
-      displayId: displayId.trim(),
-      name: name.trim() || undefined,
     });
   };
 
@@ -509,89 +483,16 @@ function StackList() {
       </div>
 
       {isCreating ? (
-        <Card className="mb-8 bg-cyan-dark">
-          <CardHeader>
-            <CardTitle>Create New Prompt</CardTitle>
-            <CardDescription>
-              Enter a memorable ID for your new prompt
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Name (optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Summer Landscape"
-                  className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
-                  value={name}
-                  maxLength={LENGTH_LIMITS.name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setDisplayId(normalizeDisplayIdWithSuffix(e.target.value));
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreate();
-                    if (e.key === "Escape") {
-                      setIsCreating(false);
-                      setDisplayId("");
-                      setName("");
-                    }
-                  }}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Display ID
-                </label>
-                <div className="flex gap-2">
-                  <DisplayIdInput
-                    placeholder="e.g., summer-landscape-v1"
-                    className="flex-1"
-                    maxLength={LENGTH_LIMITS.displayId}
-                    value={displayId}
-                    onChange={setDisplayId}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleCreate();
-                      if (e.key === "Escape") {
-                        setIsCreating(false);
-                        setDisplayId("");
-                        setName("");
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => setDisplayId(generateDisplayId())}
-                    type="button"
-                  >
-                    Regenerate
-                  </Button>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCreate}
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? "Creating..." : "Create"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreating(false);
-                    setDisplayId("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-8">
+          <CreatePromptForm
+            onCreated={(newStack) => {
+              setIsCreating(false);
+              setActiveStack(newStack);
+              navigate("/");
+            }}
+            onCancel={() => setIsCreating(false)}
+          />
+        </div>
       ) : (
         <div className="mb-8 flex justify-end gap-2">
           <Link to="/snapshots">
@@ -613,14 +514,7 @@ function StackList() {
             <FolderPlus className="h-4 w-4 mr-2" />
             New Folder
           </Button>
-          <Button
-            onClick={() => {
-              setIsCreating(true);
-              setDisplayId(generateDisplayId());
-            }}
-          >
-            Create New Prompt
-          </Button>
+          <Button onClick={() => setIsCreating(true)}>Create New Prompt</Button>
         </div>
       )}
 
@@ -835,12 +729,7 @@ function StackList() {
           <CardContent className="py-12">
             <div className="text-center text-cyan-medium">
               <p className="mb-4">No prompts yet</p>
-              <Button
-                onClick={() => {
-                  setIsCreating(true);
-                  setDisplayId(generateDisplayId());
-                }}
-              >
+              <Button onClick={() => setIsCreating(true)}>
                 Create Your First Prompt
               </Button>
             </div>

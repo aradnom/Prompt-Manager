@@ -16,15 +16,18 @@ import { HorizontalRule } from "@/components/ui/horizontal-rule";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import { AccountTokenModal } from "@/components/AccountTokenModal";
 import { PromptSwitcher } from "@/components/PromptSwitcher";
+import { CreatePromptForm } from "@/components/CreatePromptForm";
+import { Button } from "@/components/ui/button";
 import { DotDivider } from "@/components/ui/dot-divider";
 
 function HomeContent() {
-  const { activeStack } = useActiveStack();
+  const { activeStack, setActiveStack } = useActiveStack();
   const { isMinimized } = useStackOutput();
   const { isAuthenticated, isLoading } = useSession();
   const { stackCount } = useUserState();
   const [newAccountToken, setNewAccountToken] = useState<string | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
+  const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
 
   const handleAccountCreated = (token: string) => {
     setNewAccountToken(token);
@@ -136,37 +139,35 @@ function HomeContent() {
               </p>
             </div>
 
-            <div className="space-y-3">
-              <h3 className="text-xl font-semibold text-cyan-light mb-4">
-                Get Started:
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <Link
-                    to="/prompts"
-                    className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
-                  >
-                    Build Prompts
-                  </Link>
-                  <p className="text-sm text-cyan-medium mt-1">
-                    Combine your blocks into prompts and set one as active to
-                    start working with it here.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    to="/blocks"
-                    className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
-                  >
-                    Create Blocks
-                  </Link>
-                  <p className="text-sm text-cyan-medium mt-1">
-                    Start by creating reusable prompt blocks with your favorite
-                    subjects, styles, and modifiers.
-                  </p>
+            {isCreatingPrompt ? (
+              <CreatePromptForm
+                onCreated={(newStack) => {
+                  setIsCreatingPrompt(false);
+                  setActiveStack(newStack);
+                }}
+                onCancel={() => setIsCreatingPrompt(false)}
+              />
+            ) : (
+              <div className="space-y-3">
+                <Button size="lg" onClick={() => setIsCreatingPrompt(true)}>
+                  Create Your First Prompt
+                </Button>
+                <div className="space-y-4 mt-6">
+                  <div>
+                    <Link
+                      to="/blocks"
+                      className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
+                    >
+                      Create Blocks
+                    </Link>
+                    <p className="text-sm text-cyan-medium mt-1">
+                      Start by creating reusable prompt blocks with your
+                      favorite subjects, styles, and modifiers.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
       ) : (
