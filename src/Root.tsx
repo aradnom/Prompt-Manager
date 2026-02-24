@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MutationCache } from "@tanstack/react-query";
 import { trpc, trpcClient } from "./lib/trpc";
 import { emitGlobalError } from "./lib/global-error";
+import { toFriendlyError } from "./lib/friendly-errors";
 import App from "./App.tsx";
 
 export default function Root() {
@@ -13,7 +14,7 @@ export default function Root() {
           onError: (error, _variables, _context, mutation) => {
             // Only emit global error if the mutation doesn't have its own onError handler.
             if (!mutation.options.onError) {
-              emitGlobalError(error.message || "An unexpected error occurred.");
+              emitGlobalError(toFriendlyError(error.message));
             }
           },
         }),
