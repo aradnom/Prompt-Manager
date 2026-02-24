@@ -14,6 +14,8 @@ const CollapsibleContent = CollapsiblePrimitive.Content;
 interface CollapsibleSectionProps {
   title: string;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -21,10 +23,14 @@ interface CollapsibleSectionProps {
 function CollapsibleSection({
   title,
   defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   children,
   className,
 }: CollapsibleSectionProps) {
-  const [open, setOpen] = React.useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={className}>
