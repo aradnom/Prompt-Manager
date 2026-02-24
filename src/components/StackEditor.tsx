@@ -41,6 +41,8 @@ import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { GenerateBlockDialog } from "@/components/GenerateBlockDialog";
+import { LLMGuard } from "@/components/LLMGuard";
+import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
@@ -72,6 +74,7 @@ interface StackEditorProps {
 
 export function StackEditor({ stack }: StackEditorProps) {
   const navigate = useNavigate();
+  const { isLLMConfigured } = useLLMStatus();
   const { setActiveStack, setActiveStackBlocks } = useActiveStack();
   const { renderedContent, setRenderedContent, setRenderedContentWithMarkers } =
     useStackContent();
@@ -769,38 +772,43 @@ export function StackEditor({ stack }: StackEditorProps) {
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Block
               </Button>
-              <Button
-                onClick={() => setIsGenerateOpen(true)}
-                variant="tertiary"
-                disabled={blocksAtLimit}
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Generate New Block
-              </Button>
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleEnrichPrompt}
-                      variant="tertiary"
-                      disabled={
-                        !renderedContent.trim() || isEnriching || blocksAtLimit
-                      }
-                    >
-                      {isEnriching ? (
-                        <DefragLoader size={16} className="mr-2" />
-                      ) : (
-                        <Wand2 className="mr-2 h-4 w-4" />
-                      )}
-                      Enrich Prompt
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Automatically generate a new block that fleshes out the
-                    current prompt contents
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <LLMGuard>
+                <Button
+                  onClick={() => setIsGenerateOpen(true)}
+                  variant="tertiary"
+                  disabled={!isLLMConfigured || blocksAtLimit}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate New Block
+                </Button>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip open={!isLLMConfigured ? false : undefined}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleEnrichPrompt}
+                        variant="tertiary"
+                        disabled={
+                          !isLLMConfigured ||
+                          !renderedContent.trim() ||
+                          isEnriching ||
+                          blocksAtLimit
+                        }
+                      >
+                        {isEnriching ? (
+                          <DefragLoader size={16} className="mr-2" />
+                        ) : (
+                          <Wand2 className="mr-2 h-4 w-4" />
+                        )}
+                        Enrich Prompt
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Automatically generate a new block that fleshes out the
+                      current prompt contents
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </LLMGuard>
               <TooltipProvider delayDuration={0}>
                 <Tooltip>
                   <TooltipTrigger asChild>
