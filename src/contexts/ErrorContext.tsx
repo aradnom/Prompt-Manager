@@ -3,9 +3,14 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   ReactNode,
 } from "react";
 import { generateUUID } from "@/lib/uuid";
+import {
+  setGlobalErrorHandler,
+  clearGlobalErrorHandler,
+} from "@/lib/global-error";
 
 interface ErrorLink {
   label: string;
@@ -80,6 +85,13 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
   const removeProgress = useCallback((id: string) => {
     setProgressMessages((prev) => prev.filter((p) => p.id !== id));
   }, []);
+
+  // Register as the global error handler so non-React code (e.g. MutationCache)
+  // can surface errors through the ErrorContext.
+  useEffect(() => {
+    setGlobalErrorHandler(addError);
+    return () => clearGlobalErrorHandler();
+  }, [addError]);
 
   return (
     <ErrorContext.Provider

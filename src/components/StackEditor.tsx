@@ -321,7 +321,6 @@ export function StackEditor({ stack }: StackEditorProps) {
       setIsCreatingNew(false);
     } catch (error) {
       console.error("Failed to create and add block:", error);
-      // Error handling (toast notification could go here)
     }
   };
 

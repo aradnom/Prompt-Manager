@@ -363,7 +363,6 @@ export default function Wildcards() {
       setShowGenerateForm(true);
     } catch (error) {
       console.error("Generate failed:", error);
-      addError("Failed to generate wildcard");
     }
   };
 

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
+import { useErrors } from "@/contexts/ErrorContext";
 import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
 import { MODELS } from "@shared/llm/model-info";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
@@ -55,6 +56,7 @@ export default function Account() {
     checkSession,
     setAuthenticated,
   } = useSession();
+  const { addError } = useErrors();
   const { activeTarget, setActiveTarget, availableTargets, getTargetInfo } =
     useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
@@ -348,6 +350,7 @@ export default function Account() {
       }
     } catch (err) {
       console.error("Error logging out:", err);
+      addError("Failed to log out. Please try again.");
     }
   };
 

@@ -99,9 +99,7 @@ export function StackOutputBlock() {
       setActiveStack(newStack);
       navigate("/");
     } catch (error) {
-      addError(
-        error instanceof Error ? error.message : "Failed to convert to block",
-      );
+      console.error("Failed to convert to block:", error);
     } finally {
       setIsConverting(false);
     }

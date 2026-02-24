@@ -2,6 +2,7 @@ import { useState } from "react";
 import { HeroInput } from "@/components/ui/hero-input";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/contexts/SessionContext";
+import { useErrors } from "@/contexts/ErrorContext";
 
 interface CreateAccountOrLoginProps {
   onAccountCreated?: (token: string) => void;
@@ -13,6 +14,7 @@ export function CreateAccountOrLogin({
   const [token, setToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { checkSession } = useSession();
+  const { addError } = useErrors();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +37,7 @@ export function CreateAccountOrLogin({
       await checkSession();
     } catch (error) {
       console.error("Error logging in:", error);
+      addError("Failed to log in. Please check your Account ID and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +69,7 @@ export function CreateAccountOrLogin({
       }
     } catch (error) {
       console.error("Error creating account:", error);
+      addError("Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
-
 interface StackRevisionsOverlayProps {
   stackId: number;
   activeRevisionId: number | null;
