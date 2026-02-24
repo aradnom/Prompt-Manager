@@ -12,6 +12,7 @@ interface UserStateContextType {
   stackCount: number;
   blockCount: number;
   activeLLMPlatform: string | null;
+  setActiveLLMPlatform: (platform: string | null) => void;
   isLoading: boolean;
   accountDataLoaded: boolean;
   refetch: () => void;
@@ -102,6 +103,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
         stackCount,
         blockCount,
         activeLLMPlatform,
+        setActiveLLMPlatform,
         accountDataLoaded,
         isLoading,
         refetch,

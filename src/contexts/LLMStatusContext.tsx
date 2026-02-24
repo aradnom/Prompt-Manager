@@ -80,6 +80,9 @@ interface LLMStatusContextType {
   // Get info about a target
   getTargetInfo: (target: LLMTarget) => LLMTargetInfo;
 
+  // Whether the user has explicitly configured an LLM platform
+  isLLMConfigured: boolean;
+
   // Check if target runs on server or client
   isServerTarget: (target: LLMTarget) => boolean;
   isClientTarget: (target: LLMTarget) => boolean;
@@ -201,6 +204,7 @@ export function LLMStatusProvider({ children }: LLMStatusProviderProps) {
         setActiveTarget,
         isAvailable,
         getTargetInfo,
+        isLLMConfigured: !!activeLLMPlatform,
         isServerTarget,
         isClientTarget,
       }}

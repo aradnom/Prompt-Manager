@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
+import { useUserState } from "@/contexts/UserStateContext";
 import { useErrors } from "@/contexts/ErrorContext";
 import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
 import { MODELS } from "@shared/llm/model-info";
@@ -57,6 +58,7 @@ export default function Account() {
     setAuthenticated,
   } = useSession();
   const { addError } = useErrors();
+  const { setActiveLLMPlatform: setGlobalActiveLLMPlatform } = useUserState();
   const { activeTarget, setActiveTarget, availableTargets, getTargetInfo } =
     useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
@@ -330,6 +332,7 @@ export default function Account() {
 
       setActiveLLMPlatform(platform);
       setActiveTarget(platform as LLMTarget);
+      setGlobalActiveLLMPlatform(platform);
     } catch (err) {
       console.error("Error setting active platform:", err);
       setError("Failed to set active platform");
@@ -404,6 +407,17 @@ export default function Account() {
       setError("Failed to revoke API key");
     }
   };
+
+  // Scroll to hash anchor after content has rendered
+  useEffect(() => {
+    if (isLoadingAccount || sessionLoading || !accountData) return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const el = document.querySelector(hash);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isLoadingAccount, sessionLoading, accountData]);
 
   const isLoading = sessionLoading || isLoadingAccount;
 
@@ -517,7 +531,7 @@ export default function Account() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card id="llm-settings">
               <CardHeader>
                 <CardTitle>LLM Settings</CardTitle>
                 <CardDescription>
