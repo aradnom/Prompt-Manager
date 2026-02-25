@@ -15,6 +15,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { GenerateBlockDialog } from "@/components/GenerateBlockDialog";
+import { LLMGuard } from "@/components/LLMGuard";
+import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import {
   Dialog,
   DialogContent,
@@ -129,6 +131,7 @@ export default function Blocks() {
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
+  const { isLLMConfigured } = useLLMStatus();
 
   const offset = page * PAGE_SIZE;
   const utils = api.useUtils();
@@ -308,10 +311,16 @@ export default function Blocks() {
             <FolderPlus className="h-4 w-4 mr-2" />
             New Folder
           </Button>
-          <Button onClick={() => setIsGenerateOpen(true)} variant="outline">
-            <Sparkles className="mr-2 h-4 w-4" />
-            Generate New Block
-          </Button>
+          <LLMGuard>
+            <Button
+              onClick={() => setIsGenerateOpen(true)}
+              variant="outline"
+              disabled={!isLLMConfigured}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generate New Block
+            </Button>
+          </LLMGuard>
           <Button onClick={() => setIsCreating(true)}>Create New Block</Button>
         </div>
       )}
