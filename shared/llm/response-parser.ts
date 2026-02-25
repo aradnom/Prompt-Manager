@@ -31,6 +31,17 @@ export function shouldParseNumberedList(operation: string): boolean {
 }
 
 /**
+ * Strips markdown code fences from LLM responses.
+ * Some models wrap JSON or other output in ```json ... ``` blocks.
+ */
+export function stripCodeFences(text: string): string {
+  return text
+    .replace(/^```(?:\w+)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+}
+
+/**
  * Processes LLM response text based on the operation type.
  * Returns either the raw text or a parsed array.
  */
@@ -38,10 +49,11 @@ export function processLLMResponse(
   text: string,
   operation: LLMOperation,
 ): string | string[] {
+  const cleaned = stripCodeFences(text);
   if (shouldParseNumberedList(operation)) {
-    return parseNumberedList(text);
+    return parseNumberedList(cleaned);
   }
-  return text.trim();
+  return cleaned;
 }
 
 /** Operations where wildcards should be preserved and appended to the result */

@@ -89,7 +89,7 @@ Format your response as exactly 20 lines, with each value on its own line, numbe
     case "auto-label":
       basePrompt = `The user will provide some text content. Analyze the text and generate both a descriptive title and a code-friendly identifier.
 
-Return your response as valid JSON with this exact structure:
+Return your response as raw JSON only — no markdown formatting, no code fences, no backticks. The response must be directly parseable by JSON.parse(). Use this exact structure:
 {
   "title": "Your Descriptive Title Here",
   "code": "your-code-identifier"
