@@ -565,7 +565,7 @@ export function registerAuthRoutes(
 
           // Minimal message call to test the key
           await client.messages.create({
-            model: "claude-3-5-haiku-20241022",
+            model: config.llm.anthropic.model,
             max_tokens: 10,
             messages: [{ role: "user", content: "Hi" }],
           });
