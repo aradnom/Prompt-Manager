@@ -59,8 +59,7 @@ export default function Account() {
   } = useSession();
   const { addError } = useErrors();
   const { setActiveLLMPlatform: setGlobalActiveLLMPlatform } = useUserState();
-  const { activeTarget, setActiveTarget, availableTargets, getTargetInfo } =
-    useLLMStatus();
+  const { setActiveTarget, availableTargets, getTargetInfo } = useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
     null,
   );
@@ -543,10 +542,10 @@ export default function Account() {
                 <div className="space-y-6">
                   <div className="text-sm text-cyan-light mb-4">
                     {(() => {
-                      const platform = activeLLMPlatform || activeTarget;
+                      const platform = activeLLMPlatform;
                       const platformName = platform
                         ? getTargetInfo(platform as LLMTarget)?.name
-                        : "None";
+                        : "Not configured";
                       const model = platform
                         ? apiKeyInfo[platform]?.model
                         : null;
@@ -560,7 +559,9 @@ export default function Account() {
                           </span>
                           <span>{platformName}</span>
                           {model && <span> / {model}</span>}
-                          <span> / {thinkingStatus.toLowerCase()}</span>
+                          {platform && (
+                            <span> / {thinkingStatus.toLowerCase()}</span>
+                          )}
                         </div>
                       );
                     })()}
@@ -571,7 +572,7 @@ export default function Account() {
                       LLM Platforms
                     </label>
                     <RadioGroup
-                      value={activeLLMPlatform || activeTarget || ""}
+                      value={activeLLMPlatform || ""}
                       onValueChange={handleSetActivePlatform}
                     >
                       {availableTargets.map((target) => {
