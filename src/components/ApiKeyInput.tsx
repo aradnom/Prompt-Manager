@@ -49,7 +49,7 @@ export function ApiKeyInput({
   return (
     <div
       className={cn(
-        "space-y-4 border border-cyan-medium/50 rounded-lg p-4 transition-colors",
+        "space-y-4 border border-cyan-medium/50 rounded-lg p-4 transition-colors focus-within:opacity-100 focus-within:bg-cyan-dark",
         {
           "opacity-50": !enabled,
           "bg-cyan-dark": enabled,
