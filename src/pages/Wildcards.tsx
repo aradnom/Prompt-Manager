@@ -11,6 +11,7 @@ import {
 } from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
+import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useTransform } from "@/hooks/useTransform";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { LLMGuard } from "@/components/LLMGuard";
 import { WildcardContentEditor } from "@/components/WildcardContentEditor";
 import { LENGTH_LIMITS } from "@shared/limits";
 
@@ -226,6 +228,7 @@ function WildcardForm({
 
 export default function Wildcards() {
   const { addError } = useErrors();
+  const { isLLMConfigured } = useLLMStatus();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -442,10 +445,16 @@ export default function Wildcards() {
           <Button onClick={() => setIsCreating(true)}>
             Create New Wildcard
           </Button>
-          <Button onClick={() => setIsGenerateOpen(true)} variant="outline">
-            <Sparkles className="mr-2 h-4 w-4" />
-            Generate New Wildcard
-          </Button>
+          <LLMGuard>
+            <Button
+              onClick={() => setIsGenerateOpen(true)}
+              variant="outline"
+              disabled={!isLLMConfigured}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generate New Wildcard
+            </Button>
+          </LLMGuard>
         </div>
       )}
 
