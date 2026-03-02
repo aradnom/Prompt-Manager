@@ -208,24 +208,19 @@ export function TextBlock({
   const exploreMutation = useTransform();
   const { data: wildcardsData } = api.wildcards.list.useQuery();
   const wildcards = wildcardsData?.items;
+  const invalidateBlocks = () => {
+    utils.blocks.invalidate();
+    utils.blockFolders.invalidate();
+    utils.stacks.invalidate();
+  };
   const setActiveRevisionMutation = api.blocks.setActiveRevision.useMutation({
-    onSuccess: () => {
-      // Refetch blocks list and stacks to show updated text
-      utils.blocks.list.invalidate();
-      utils.stacks.invalidate();
-    },
+    onSuccess: invalidateBlocks,
   });
   const updateNotesMutation = api.blocks.update.useMutation({
-    onSuccess: () => {
-      utils.blocks.list.invalidate();
-      utils.stacks.invalidate();
-    },
+    onSuccess: invalidateBlocks,
   });
   const renameMutation = api.blocks.update.useMutation({
-    onSuccess: () => {
-      utils.blocks.list.invalidate();
-      utils.stacks.invalidate();
-    },
+    onSuccess: invalidateBlocks,
   });
 
   const saveBlockName = () => {
