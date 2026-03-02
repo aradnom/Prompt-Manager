@@ -86,6 +86,8 @@ export function StackEditor({ stack }: StackEditorProps) {
     new Set(),
   );
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
+  const [isRenamingStack, setIsRenamingStack] = useState(false);
+  const [stackRenameValue, setStackRenameValue] = useState("");
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
@@ -108,10 +110,20 @@ export function StackEditor({ stack }: StackEditorProps) {
   const { data: wildcardsData } = api.wildcards.list.useQuery();
   const wildcards = wildcardsData?.items;
 
+  const saveStackName = () => {
+    const trimmed = stackRenameValue.trim();
+    const newName = trimmed || undefined;
+    if ((newName ?? null) !== (stack.name ?? null)) {
+      updateStackMutation.mutate({ id: stack.id, name: newName });
+    }
+    setIsRenamingStack(false);
+  };
+
   const updateContentMutation = api.stacks.updateContent.useMutation();
+  const utils = api.useUtils();
   const updateStackMutation = api.stacks.update.useMutation({
     onSuccess: () => {
-      refetch();
+      utils.stacks.invalidate();
     },
   });
 
@@ -512,7 +524,43 @@ export function StackEditor({ stack }: StackEditorProps) {
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-2xl">
-                Active Prompt: {stack.name || stack.displayId}
+                Active Prompt:{" "}
+                {isRenamingStack ? (
+                  <input
+                    type="text"
+                    value={stackRenameValue}
+                    onChange={(e) => setStackRenameValue(e.target.value)}
+                    onBlur={saveStackName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveStackName();
+                      if (e.key === "Escape") {
+                        setStackRenameValue(stack.name ?? "");
+                        setIsRenamingStack(false);
+                      }
+                    }}
+                    placeholder="Enter prompt name..."
+                    className="text-2xl font-semibold px-2 py-0.5 border-inline-input"
+                    maxLength={LENGTH_LIMITS.name}
+                    autoFocus
+                  />
+                ) : (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className="cursor-pointer hover:text-magenta-light transition-colors"
+                          onClick={() => {
+                            setStackRenameValue(stack.name ?? "");
+                            setIsRenamingStack(true);
+                          }}
+                        >
+                          {stack.name || stack.displayId}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Click to rename</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
