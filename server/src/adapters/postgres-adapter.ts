@@ -3011,6 +3011,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const blockResults = await this.db
         .selectFrom("blocks")
         .leftJoin("types", "blocks.type_id", "types.id")
+        .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
         .selectAll("blocks")
         .select((eb) => [
           // First try to get text from active_revision_id if set, otherwise get latest revision
@@ -3034,6 +3035,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           "types.id as type_id_joined",
           "types.name as type_name",
           "types.description as type_description",
+          "block_folders.name as folder_name",
         ])
         .where("blocks.id", "in", blockIds)
         .execute();
@@ -3048,7 +3050,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
             }
           : null;
 
-        const b = this.mapBlock(r, type);
+        const b = this.mapBlock(r, type, r.folder_name ?? null);
         b.text = r.text || "";
         blocksMap.set(b.id, b);
       }
