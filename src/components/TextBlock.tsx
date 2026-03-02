@@ -5,6 +5,7 @@ import {
   Info,
   Clock,
   Copy,
+  Folder,
   RefreshCw,
   Trash2,
   Eye,
@@ -52,6 +53,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { LLMGuard } from "@/components/LLMGuard";
+import { InlineIconBadge } from "@/components/ui/inline-icon-badge";
 import { TextWithWildcards } from "@/components/TextWithWildcards";
 import {
   TextSelectionMenu,
@@ -750,10 +752,18 @@ export function TextBlock({
                     </TooltipProvider>
                   </ExpandingIcon>
                   {isActive && (
-                    <span className="text-xs text-cyan-medium">
-                      {block.text.length.toLocaleString()} chars &middot; ~
-                      {Math.ceil(block.text.length / 4).toLocaleString()} tokens
-                    </span>
+                    <>
+                      <span className="text-xs text-cyan-medium">
+                        {block.text.length.toLocaleString()} chars &middot; ~
+                        {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
+                        tokens
+                      </span>
+                      {block.folderName && (
+                        <InlineIconBadge icon={Folder}>
+                          {block.folderName}
+                        </InlineIconBadge>
+                      )}
+                    </>
                   )}
                 </div>
                 {block.name && (

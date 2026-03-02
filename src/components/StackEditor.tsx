@@ -42,6 +42,7 @@ import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { GenerateBlockDialog } from "@/components/GenerateBlockDialog";
 import { LLMGuard } from "@/components/LLMGuard";
+import { InlineIconBadge } from "@/components/ui/inline-icon-badge";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
@@ -600,10 +601,9 @@ export function StackEditor({ stack }: StackEditorProps) {
                     <span className="text-cyan-medium">&bull;</span>
                   )}
                   {stack.folderName && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-medium/40 text-cyan-medium">
-                      <Folder className="h-3 w-3" />
+                    <InlineIconBadge icon={Folder}>
                       {stack.folderName}
-                    </span>
+                    </InlineIconBadge>
                   )}
                 </CardDescription>
               )}
