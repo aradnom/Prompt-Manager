@@ -297,6 +297,26 @@ export function BlockForm({
               </Button>
             </div>
           </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Folder</label>
+            <Select
+              value={folderId?.toString() || "none"}
+              onValueChange={handleFolderChange}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {folders?.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id.toString()}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <CollapsibleSection title="Other Settings">
             <div className="space-y-4">
               <div>
@@ -314,26 +334,6 @@ export function BlockForm({
                     {types.map((type) => (
                       <SelectItem key={type.id} value={type.id.toString()}>
                         {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Folder</label>
-                <Select
-                  value={folderId?.toString() || "none"}
-                  onValueChange={handleFolderChange}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {folders?.map((folder) => (
-                      <SelectItem key={folder.id} value={folder.id.toString()}>
-                        {folder.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
