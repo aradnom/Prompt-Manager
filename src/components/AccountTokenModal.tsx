@@ -34,13 +34,15 @@ export function AccountTokenModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">Your Account ID</DialogTitle>
-          <DialogDescription className="text-base space-y-4 pt-4">
-            <div className="text-magenta-light font-semibold">
-              Please jot this down.
-            </div>
-            <div>
-              This is your unique Account ID. You'll need it to log in to your
-              account. If you lose it, it can't be found again.
+          <DialogDescription asChild>
+            <div className="text-base space-y-4 pt-4">
+              <div className="text-magenta-light font-semibold">
+                Please jot this down.
+              </div>
+              <div>
+                This is your unique Account ID. You'll need it to log in to your
+                account. If you lose it, it can't be found again.
+              </div>
             </div>
           </DialogDescription>
         </DialogHeader>
