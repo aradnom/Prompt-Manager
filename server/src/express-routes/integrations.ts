@@ -94,6 +94,17 @@ export function registerIntegrationRoutes(
   // ComfyUI Integration Endpoints
   // ============================================================================
 
+  app.get("/api/integrations/comfyui/heartbeat", async (req, res) => {
+    const userId = await authenticateComfyUI(
+      req,
+      res,
+      storage,
+      config.tokenSecret,
+    );
+    if (userId === null) return;
+    res.json({ status: "ok" });
+  });
+
   app.get("/api/integrations/comfyui/prompts/list", async (req, res) => {
     try {
       const userId = await authenticateComfyUI(
