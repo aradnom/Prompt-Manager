@@ -57,15 +57,19 @@ export function ActiveStackProvider({ children }: { children: ReactNode }) {
     }
   }, [fetchedStack]);
 
+  const notifyActiveStackMutation = api.stacks.notifyActiveStack.useMutation();
+
   const setActiveStack = (stack: BlockStack | null) => {
     _setActiveStack(stack);
     if (stack) {
       storage.setActiveStackId(stack.id);
       setStoredId(stack.id);
+      notifyActiveStackMutation.mutate({ stackId: stack.id });
     } else {
       storage.clearActiveStackId();
       setStoredId(null);
       setActiveStackBlocks([]);
+      notifyActiveStackMutation.mutate({ stackId: null });
     }
   };
 
