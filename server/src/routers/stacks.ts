@@ -386,7 +386,12 @@ export const stacksRouter = router({
       // Send SSE notification
       if (ctx.userId) {
         const { notifyStackUpdate } = await import("@server/index");
-        notifyStackUpdate(ctx.userId, stack.displayId, input.renderedContent);
+        notifyStackUpdate(
+          ctx.userId,
+          stack.displayId,
+          stack.name,
+          input.renderedContent,
+        );
       }
 
       return { success: true };
@@ -403,7 +408,7 @@ export const stacksRouter = router({
 
       if (input.stackId === null) {
         const { notifyActiveStackChanged } = await import("@server/index");
-        notifyActiveStackChanged(ctx.userId, null, null);
+        notifyActiveStackChanged(ctx.userId, null, null, null);
         return { success: true };
       }
 
@@ -421,7 +426,12 @@ export const stacksRouter = router({
       );
 
       const { notifyActiveStackChanged } = await import("@server/index");
-      notifyActiveStackChanged(ctx.userId, stack.displayId, renderedContent);
+      notifyActiveStackChanged(
+        ctx.userId,
+        stack.displayId,
+        stack.name,
+        renderedContent,
+      );
       return { success: true };
     }),
 

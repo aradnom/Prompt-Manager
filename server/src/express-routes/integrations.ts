@@ -9,12 +9,14 @@ const sseClients = new Map<number, Set<Response>>();
 export function notifyStackUpdate(
   userId: number,
   displayId: string,
+  name: string | null,
   renderedContent: string,
 ) {
   const clients = sseClients.get(userId);
   if (clients) {
     const payload = JSON.stringify({
       display_id: displayId,
+      name,
       prompt: renderedContent,
     });
     clients.forEach((client) => {
@@ -26,12 +28,14 @@ export function notifyStackUpdate(
 export function notifyActiveStackChanged(
   userId: number,
   displayId: string | null,
+  name: string | null,
   renderedContent: string | null,
 ) {
   const clients = sseClients.get(userId);
   if (clients) {
     const payload = JSON.stringify({
       display_id: displayId,
+      name,
       prompt: renderedContent,
     });
     clients.forEach((client) => {
@@ -116,9 +120,13 @@ export function registerIntegrationRoutes(
       if (userId === null) return;
 
       const { items: stacks } = await storage.listStacks(userId);
-      const displayIds = stacks.map((stack) => stack.displayId);
 
-      res.json({ prompts: displayIds });
+      res.json({
+        prompts: stacks.map((s) => ({
+          display_id: s.displayId,
+          name: s.name,
+        })),
+      });
     } catch (error) {
       console.error("Error fetching prompts for ComfyUI:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -143,13 +151,14 @@ export function registerIntegrationRoutes(
           .json({ error: "display_id query parameter is required" });
       }
 
-      const prompt = await storage.getCompiledPrompt(displayId, userId);
-
-      if (prompt === null) {
+      const stack = await storage.getStackByDisplayId(displayId, userId);
+      if (!stack) {
         return res.status(404).json({ error: "Prompt not found" });
       }
 
-      res.json({ prompt });
+      const prompt = await storage.getCompiledPrompt(displayId, userId);
+
+      res.json({ display_id: stack.displayId, name: stack.name, prompt });
     } catch (error) {
       console.error("Error fetching raw prompt content for ComfyUI:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -174,13 +183,14 @@ export function registerIntegrationRoutes(
           .json({ error: "display_id query parameter is required" });
       }
 
-      const prompt = await storage.getRenderedPrompt(displayId, userId);
-
-      if (prompt === null) {
+      const stack = await storage.getStackByDisplayId(displayId, userId);
+      if (!stack) {
         return res.status(404).json({ error: "Prompt not found" });
       }
 
-      res.json({ prompt });
+      const prompt = await storage.getRenderedPrompt(displayId, userId);
+
+      res.json({ display_id: stack.displayId, name: stack.name, prompt });
     } catch (error) {
       console.error(
         "Error fetching rendered prompt content for ComfyUI:",
@@ -211,7 +221,7 @@ export function registerIntegrationRoutes(
       }
 
       const prompt = await storage.getRenderedPrompt(stack.displayId, userId);
-      res.json({ display_id: stack.displayId, prompt });
+      res.json({ display_id: stack.displayId, name: stack.name, prompt });
     } catch (error) {
       console.error("Error fetching active prompt for ComfyUI:", error);
       res.status(500).json({ error: "Internal server error" });
