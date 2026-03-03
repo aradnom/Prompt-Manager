@@ -16,6 +16,7 @@ import { registerAuthRoutes } from "@server/express-routes/auth";
 import {
   registerIntegrationRoutes,
   notifyStackUpdate as _notifyStackUpdate,
+  notifyActiveStackChanged as _notifyActiveStackChanged,
 } from "@server/express-routes/integrations";
 import { registerSystemRoutes } from "@server/express-routes/system";
 import { createRateLimitMiddleware } from "@server/middleware/rate-limit";
@@ -23,6 +24,7 @@ import { checkPendingMigrations } from "@server/lib/migration-check";
 
 // Re-export notifyStackUpdate for use by other modules (e.g., stacks router)
 export const notifyStackUpdate = _notifyStackUpdate;
+export const notifyActiveStackChanged = _notifyActiveStackChanged;
 
 async function main() {
   const config = loadConfig();

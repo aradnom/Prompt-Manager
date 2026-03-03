@@ -18,7 +18,24 @@ export function notifyStackUpdate(
       prompt: renderedContent,
     });
     clients.forEach((client) => {
-      client.write(`data: ${payload}\n\n`);
+      client.write(`event: stackUpdate\ndata: ${payload}\n\n`);
+    });
+  }
+}
+
+export function notifyActiveStackChanged(
+  userId: number,
+  displayId: string | null,
+  renderedContent: string | null,
+) {
+  const clients = sseClients.get(userId);
+  if (clients) {
+    const payload = JSON.stringify({
+      display_id: displayId,
+      prompt: renderedContent,
+    });
+    clients.forEach((client) => {
+      client.write(`event: activeStackChanged\ndata: ${payload}\n\n`);
     });
   }
 }

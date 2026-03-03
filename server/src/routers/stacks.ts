@@ -392,6 +392,37 @@ export const stacksRouter = router({
       return { success: true };
     }),
 
+  notifyActiveStack: protectedProcedure
+    .input(
+      z.object({
+        stackId: z.number().nullable(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (input.stackId === null) {
+        const { notifyActiveStackChanged } = await import("@server/index");
+        notifyActiveStackChanged(ctx.userId, null, null);
+        return { success: true };
+      }
+
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) {
+        throw new Error("Stack not found");
+      }
+      if (stack.userId !== ctx.userId) {
+        throw new Error("Unauthorized");
+      }
+
+      const renderedContent = await ctx.storage.getRenderedPrompt(
+        stack.displayId,
+        ctx.userId,
+      );
+
+      const { notifyActiveStackChanged } = await import("@server/index");
+      notifyActiveStackChanged(ctx.userId, stack.displayId, renderedContent);
+      return { success: true };
+    }),
+
   createSnapshot: protectedProcedure
     .use(mutationRL)
     .input(
@@ -457,7 +488,7 @@ export const stacksRouter = router({
       if (stack.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      const { id, stackId: _, ...updates } = input;
+      const { id, ...updates } = input;
       return ctx.storage.updateStackSnapshot(id, updates);
     }),
 
