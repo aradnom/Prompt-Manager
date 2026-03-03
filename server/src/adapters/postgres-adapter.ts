@@ -1913,6 +1913,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db.deleteFrom("stack_snapshots").where("id", "=", id).execute();
   }
 
+  async getSnapshotByDisplayId(
+    displayId: string,
+    userId: number,
+  ): Promise<StackSnapshot | null> {
+    const result = await this.db
+      .selectFrom("stack_snapshots")
+      .selectAll()
+      .where("display_id", "=", displayId)
+      .where("user_id", "=", userId)
+      .executeTakeFirst();
+
+    if (!result) return null;
+    return this.mapStackSnapshot(result);
+  }
+
   async listAllSnapshots(
     userId: number,
     pagination?: PaginationOptions,

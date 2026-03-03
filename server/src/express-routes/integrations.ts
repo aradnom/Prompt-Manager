@@ -218,6 +218,69 @@ export function registerIntegrationRoutes(
     }
   });
 
+  // ============================================================================
+  // Snapshot Endpoints
+  // ============================================================================
+
+  app.get("/api/integrations/comfyui/snapshots/list", async (req, res) => {
+    try {
+      const userId = await authenticateComfyUI(
+        req,
+        res,
+        storage,
+        config.tokenSecret,
+      );
+      if (userId === null) return;
+
+      const { items: snapshots } = await storage.listAllSnapshots(userId);
+
+      res.json({
+        snapshots: snapshots.map((s) => ({
+          display_id: s.displayId,
+          name: s.name,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching snapshots for ComfyUI:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/integrations/comfyui/snapshots/get", async (req, res) => {
+    try {
+      const userId = await authenticateComfyUI(
+        req,
+        res,
+        storage,
+        config.tokenSecret,
+      );
+      if (userId === null) return;
+
+      const displayId = req.query.display_id as string;
+
+      if (!displayId) {
+        return res
+          .status(400)
+          .json({ error: "display_id query parameter is required" });
+      }
+
+      const snapshot = await storage.getSnapshotByDisplayId(displayId, userId);
+
+      if (!snapshot) {
+        return res.status(404).json({ error: "Snapshot not found" });
+      }
+
+      res.json({
+        display_id: snapshot.displayId,
+        name: snapshot.name,
+        prompt: snapshot.renderedContent,
+      });
+    } catch (error) {
+      console.error("Error fetching snapshot for ComfyUI:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // SSE endpoint for ComfyUI integration
   app.get("/api/integrations/comfyui/events", async (req, res) => {
     const userId = await authenticateComfyUI(

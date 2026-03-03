@@ -57,6 +57,10 @@ export interface IStorageAdapter {
   getUserScratchpad(userId: number): Promise<string | null>;
   setUserScratchpad(userId: number, content: string): Promise<void>;
   setUserActiveStackId(userId: number, stackId: number | null): Promise<void>;
+  getSnapshotByDisplayId(
+    displayId: string,
+    userId: number,
+  ): Promise<StackSnapshot | null>;
 
   createBlock(input: CreateBlockInput): Promise<Block>;
   getBlock(id: number): Promise<Block | null>;
