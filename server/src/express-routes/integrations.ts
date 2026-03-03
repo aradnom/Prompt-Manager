@@ -179,6 +179,34 @@ export function registerIntegrationRoutes(
     }
   });
 
+  app.get("/api/integrations/comfyui/prompts/active", async (req, res) => {
+    try {
+      const userId = await authenticateComfyUI(
+        req,
+        res,
+        storage,
+        config.tokenSecret,
+      );
+      if (userId === null) return;
+
+      const user = await storage.getUserById(userId);
+      if (!user?.activeStackId) {
+        return res.json({ display_id: null, prompt: null });
+      }
+
+      const stack = await storage.getStack(user.activeStackId);
+      if (!stack || stack.userId !== userId) {
+        return res.json({ display_id: null, prompt: null });
+      }
+
+      const prompt = await storage.getRenderedPrompt(stack.displayId, userId);
+      res.json({ display_id: stack.displayId, prompt });
+    } catch (error) {
+      console.error("Error fetching active prompt for ComfyUI:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // SSE endpoint for ComfyUI integration
   app.get("/api/integrations/comfyui/events", async (req, res) => {
     const userId = await authenticateComfyUI(
