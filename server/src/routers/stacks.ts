@@ -399,6 +399,8 @@ export const stacksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await ctx.storage.setUserActiveStackId(ctx.userId, input.stackId);
+
       if (input.stackId === null) {
         const { notifyActiveStackChanged } = await import("@server/index");
         notifyActiveStackChanged(ctx.userId, null, null);

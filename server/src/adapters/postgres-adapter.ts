@@ -92,6 +92,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       apiKey: result.api_key,
       adminUser: result.admin_user ?? false,
       scratchpad: result.scratchpad,
+      activeStackId: result.active_stack_id ?? null,
     };
   }
 
@@ -113,6 +114,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       apiKey: result.api_key,
       adminUser: result.admin_user ?? false,
       scratchpad: result.scratchpad,
+      activeStackId: result.active_stack_id ?? null,
     };
   }
 
@@ -137,6 +139,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       apiKey: result.api_key,
       adminUser: result.admin_user ?? false,
       scratchpad: result.scratchpad,
+      activeStackId: result.active_stack_id ?? null,
     };
   }
 
@@ -183,6 +186,17 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     await this.db
       .updateTable("users")
       .set({ scratchpad: content, updated_at: new Date() })
+      .where("id", "=", userId)
+      .execute();
+  }
+
+  async setUserActiveStackId(
+    userId: number,
+    stackId: number | null,
+  ): Promise<void> {
+    await this.db
+      .updateTable("users")
+      .set({ active_stack_id: stackId, updated_at: new Date() })
       .where("id", "=", userId)
       .execute();
   }

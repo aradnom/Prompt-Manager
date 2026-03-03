@@ -33,6 +33,7 @@ export interface User {
   apiKey: string | null;
   adminUser: boolean;
   scratchpad: string | null;
+  activeStackId: number | null;
 }
 
 export interface CreateUserInput {
@@ -55,6 +56,7 @@ export interface IStorageAdapter {
   clearUserApiKey(userId: number): Promise<void>;
   getUserScratchpad(userId: number): Promise<string | null>;
   setUserScratchpad(userId: number, content: string): Promise<void>;
+  setUserActiveStackId(userId: number, stackId: number | null): Promise<void>;
 
   createBlock(input: CreateBlockInput): Promise<Block>;
   getBlock(id: number): Promise<Block | null>;

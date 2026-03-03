@@ -8,6 +8,7 @@ CREATE TABLE users (
     account_data jsonb,
     api_key character varying(255),
     scratchpad text,
+    active_stack_id integer,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
 );
@@ -150,3 +151,10 @@ CREATE TABLE wildcards (
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     meta json
 );
+
+-- deferred foreign keys (circular references)
+
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_active_stack
+    FOREIGN KEY (active_stack_id) REFERENCES stacks(id)
+    ON DELETE SET NULL ON UPDATE CASCADE;

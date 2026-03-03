@@ -11,6 +11,7 @@ export interface UsersTable {
   api_key: ColumnType<string | null, string | null, string | null>;
   admin_user: ColumnType<boolean, boolean | undefined, boolean | undefined>;
   scratchpad: ColumnType<string | null, string | null, string | null>;
+  active_stack_id: number | null;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
