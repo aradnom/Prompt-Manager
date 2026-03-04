@@ -3,13 +3,16 @@ import { HeroInput } from "@/components/ui/hero-input";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/contexts/SessionContext";
 import { useErrors } from "@/contexts/ErrorContext";
+import { cn } from "@/lib/utils";
 
 interface CreateAccountOrLoginProps {
   onAccountCreated?: (token: string) => void;
+  bordered?: boolean;
 }
 
 export function CreateAccountOrLogin({
   onAccountCreated,
+  bordered = false,
 }: CreateAccountOrLoginProps) {
   const [token, setToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +79,12 @@ export function CreateAccountOrLogin({
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div
+      className={cn(
+        "max-w-3xl mx-auto space-y-6",
+        bordered && "border-2 border-cyan-dark rounded-lg p-5",
+      )}
+    >
       {/* Create Account Section */}
       <div className="flex justify-center">
         <Button
@@ -86,7 +94,7 @@ export function CreateAccountOrLogin({
           className="w-full"
           disabled={isLoading}
         >
-          {isLoading ? "Creating Account..." : "Create an Account"}
+          {isLoading ? "Creating Account..." : "Create an Account (it's free!)"}
         </Button>
       </div>
 
