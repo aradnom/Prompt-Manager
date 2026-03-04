@@ -94,6 +94,23 @@ export function registerIntegrationRoutes(
   storage: PostgresStorageAdapter,
   config: ServerConfig,
 ) {
+  // Permissive CORS for integration routes — API key auth is the security boundary
+  app.use("/api/integrations", (_req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type",
+    );
+
+    if (_req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+
+    next();
+  });
+
   // ============================================================================
   // ComfyUI Integration Endpoints
   // ============================================================================
