@@ -8,6 +8,7 @@ import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
 import { useErrors } from "@/contexts/ErrorContext";
+import { useSession } from "@/contexts/SessionContext";
 import { AnimatedBorderButton } from "./AnimatedBorderButton";
 import { RasterIcon } from "./RasterIcon";
 import {
@@ -46,6 +47,7 @@ interface LayoutProps {
 
 function LayoutContent({ children }: LayoutProps) {
   const { isOpen } = useMenu();
+  const { isAuthenticated } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -59,12 +61,12 @@ function LayoutContent({ children }: LayoutProps) {
       <ParallaxCircleMenuRandom />
       <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
       <MainMenu />
-      <Scratchpad />
-      {location.pathname !== "/account" && (
+      {isAuthenticated && <Scratchpad />}
+      {isAuthenticated && location.pathname !== "/account" && (
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="fixed top-4 right-4 z-50 w-12.5 h-12.5">
+              <span className="fixed top-1 right-1 z-50 w-12.5 h-12.5">
                 <AnimatedBorderButton
                   onClick={() => navigate("/account")}
                   position="right"
