@@ -43,6 +43,59 @@
     z-index: 1;
   }
 
+  .accent-border-gradient-bl {
+    position: relative;
+  }
+
+  .accent-border-gradient-bl::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 2px solid transparent;
+    border-radius: inherit;
+    background: linear-gradient(
+        45deg,
+        var(--color-magenta-dark) 0%,
+        transparent 20%
+      )
+      border-box;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) padding-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .group:hover .footer-link-text {
+    color: transparent;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-magenta-light) 0%,
+      var(--color-magenta-light) 40%,
+      white 50%,
+      var(--color-magenta-light) 60%,
+      var(--color-magenta-light) 100%
+    );
+    background-size: 300% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: text-sweep 0.7s ease-in-out forwards;
+  }
+
+  @keyframes text-sweep {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: 0% 0;
+    }
+  }
+
   /* Animated gradient - creates a flowing effect by animating background position */
   .animate-gradient {
     background-size: 200% 100%;
