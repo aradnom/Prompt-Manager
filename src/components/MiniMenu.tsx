@@ -26,7 +26,7 @@ export function MiniMenu() {
           <RasterIcon name="menu" size={20} opacity={0.8} />
         </div>
       </AnimatedBorderButton>
-      <nav className="fixed top-17 left-8 z-50 flex flex-col gap-4">
+      <nav className="fixed top-14 left-5 z-50 flex flex-col gap-4">
         {navItems.map((item) =>
           item.label ? (
             <TooltipProvider key={item.path} delayDuration={0}>

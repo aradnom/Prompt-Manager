@@ -14,12 +14,12 @@ export function AnimatedBorderButton({
   color = "border-magenta-dark",
   children,
 }: AnimatedBorderButtonProps) {
-  const positionClass = position === "left" ? "left-4" : "right-4";
+  const positionClass = position === "left" ? "left-1" : "right-1";
 
   return (
     <motion.button
       onClick={onClick}
-      className={`fixed top-4 ${positionClass} z-50 flex items-center justify-center group cursor-pointer`}
+      className={`fixed top-1 ${positionClass} z-50 flex items-center justify-center group cursor-pointer`}
       style={{ width: "50px", height: "50px" }}
       whileHover="hover"
       initial="initial"
