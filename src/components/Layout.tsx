@@ -20,6 +20,8 @@ import {
 // import { ParallaxCircleMenuAligned } from "./ParallaxCircleMenuAligned";
 import { ParallaxCircleMenuRandom } from "./ParallaxCircleMenuRandom";
 import { FadePresence } from "@/components/ui/fade-presence";
+import { FooterLink } from "./FooterLink";
+import { DotDivider } from "@/components/ui/dot-divider";
 
 const TRANSFORMERS_PROGRESS_ID = "transformers-js-load";
 
@@ -88,6 +90,10 @@ function LayoutContent({ children }: LayoutProps) {
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>
+      <DotDivider dotColor="bg-cyan-medium/50" />
+      <footer className="relative flex justify-center py-6">
+        <FooterLink />
+      </footer>
       <TransformersLoadProgress />
       <LMStudioCorsWarning />
       <ErrorBanner />
