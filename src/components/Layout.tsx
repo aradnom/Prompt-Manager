@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 // import { ParallaxCircleMenuAligned } from "./ParallaxCircleMenuAligned";
 import { ParallaxCircleMenuRandom } from "./ParallaxCircleMenuRandom";
+import { FadePresence } from "@/components/ui/fade-presence";
 
 const TRANSFORMERS_PROGRESS_ID = "transformers-js-load";
 
@@ -61,8 +62,10 @@ function LayoutContent({ children }: LayoutProps) {
       <ParallaxCircleMenuRandom />
       <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
       <MainMenu />
-      {isAuthenticated && <Scratchpad />}
-      {isAuthenticated && location.pathname !== "/account" && (
+      <FadePresence show={isAuthenticated}>
+        <Scratchpad />
+      </FadePresence>
+      <FadePresence show={isAuthenticated && location.pathname !== "/account"}>
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -81,7 +84,7 @@ function LayoutContent({ children }: LayoutProps) {
             <TooltipContent side="left">Account</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      )}
+      </FadePresence>
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>

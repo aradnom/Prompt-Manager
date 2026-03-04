@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { useMenu } from "@/contexts/MenuContext";
+import { useSession } from "@/contexts/SessionContext";
 import { AnimatedBorderButton } from "@/components/AnimatedBorderButton";
 import { RasterIcon } from "@/components/RasterIcon";
+import { FadePresence } from "@/components/ui/fade-presence";
 import {
   Tooltip,
   TooltipContent,
@@ -18,9 +20,10 @@ const navItems = [
 
 export function MiniMenu() {
   const { setIsOpen } = useMenu();
+  const { isAuthenticated } = useSession();
 
   return (
-    <>
+    <FadePresence show={isAuthenticated}>
       <AnimatedBorderButton onClick={() => setIsOpen(true)} position="left">
         <div className="opacity-75 group-hover:opacity-100 transition-opacity duration-300">
           <RasterIcon name="menu" size={20} opacity={0.8} />
@@ -53,6 +56,6 @@ export function MiniMenu() {
           ),
         )}
       </nav>
-    </>
+    </FadePresence>
   );
 }
