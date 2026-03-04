@@ -89,12 +89,9 @@ async function authenticateComfyUI(
   return userId;
 }
 
-export function registerIntegrationRoutes(
-  app: Express,
-  storage: PostgresStorageAdapter,
-  config: ServerConfig,
-) {
-  // Permissive CORS for integration routes — API key auth is the security boundary
+// Permissive CORS for integration routes — API key auth is the security boundary.
+// Must be registered before the global cors() middleware in index.ts.
+export function registerIntegrationCors(app: Express) {
   app.use("/api/integrations", (_req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -110,7 +107,13 @@ export function registerIntegrationRoutes(
 
     next();
   });
+}
 
+export function registerIntegrationRoutes(
+  app: Express,
+  storage: PostgresStorageAdapter,
+  config: ServerConfig,
+) {
   // ============================================================================
   // ComfyUI Integration Endpoints
   // ============================================================================

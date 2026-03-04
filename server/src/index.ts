@@ -15,6 +15,7 @@ import { LLMService } from "@server/services/llm-service";
 import { registerAuthRoutes } from "@server/express-routes/auth";
 import {
   registerIntegrationRoutes,
+  registerIntegrationCors,
   notifyStackUpdate as _notifyStackUpdate,
   notifyActiveStackChanged as _notifyActiveStackChanged,
 } from "@server/express-routes/integrations";
@@ -35,12 +36,22 @@ async function main() {
     app.set("trust proxy", 1);
   }
 
-  // CORS configuration
+  // Integration routes get permissive CORS (API key is the security boundary)
+  registerIntegrationCors(app);
+
+  // CORS configuration (skip integration routes — they handle their own CORS)
+  const globalCors = (corsOpts: Parameters<typeof cors>[0]) => {
+    const handler = cors(corsOpts);
+    app.use((req, res, next) => {
+      if (req.path.startsWith("/api/integrations")) return next();
+      handler(req, res, next);
+    });
+  };
   if (process.env.CORS_ORIGINS) {
     const origins = process.env.CORS_ORIGINS.split(",").map((s) => s.trim());
-    app.use(cors({ origin: origins, credentials: true }));
+    globalCors({ origin: origins, credentials: true });
   } else if (config.nodeEnv === "development") {
-    app.use(cors({ origin: true, credentials: true }));
+    globalCors({ origin: true, credentials: true });
   }
   app.use(express.json());
   app.use(cookieParser());
