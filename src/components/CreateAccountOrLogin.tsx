@@ -77,6 +77,31 @@ export function CreateAccountOrLogin({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Create Account Section */}
+      <div className="flex justify-center">
+        <Button
+          onClick={handleCreateAccount}
+          variant="hero"
+          size="hero"
+          className="w-full"
+          disabled={isLoading}
+        >
+          {isLoading ? "Creating Account..." : "Create an Account"}
+        </Button>
+      </div>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-cyan-medium/50"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-4 bg-background text-cyan-medium font-bold">
+            or
+          </span>
+        </div>
+      </div>
+
       {/* Login Section */}
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="flex gap-4 items-center">
@@ -97,31 +122,6 @@ export function CreateAccountOrLogin({
           </Button>
         </div>
       </form>
-
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-cyan-medium/50"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-background text-cyan-medium font-bold">
-            or
-          </span>
-        </div>
-      </div>
-
-      {/* Create Account Section */}
-      <div className="flex justify-center">
-        <Button
-          onClick={handleCreateAccount}
-          variant="hero"
-          size="hero"
-          className="w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? "Creating Account..." : "Create an Account"}
-        </Button>
-      </div>
     </div>
   );
 }

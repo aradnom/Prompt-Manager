@@ -46,7 +46,7 @@ export function HeroInput({
     >
       <input
         type={type}
-        className="flex h-16 w-full rounded-lg bg-transparent px-6 py-4 text-lg outline-none placeholder:text-cyan-light/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 w-full rounded-lg bg-transparent px-6 py-4 text-lg outline-none placeholder:text-cyan-light/50 disabled:cursor-not-allowed disabled:opacity-50"
         placeholder={placeholder}
         value={value}
         onChange={handleChange}
