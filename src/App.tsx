@@ -13,12 +13,12 @@ import Home from "./pages/Home";
 import Stacks from "./pages/Stacks";
 import Blocks from "./pages/Blocks";
 import Wildcards from "./pages/Wildcards";
-import WhatIsThis from "./pages/WhatIsThis";
 import Account from "./pages/Account";
 import DeveloperSettings from "./pages/DeveloperSettings";
 import LMStudioCors from "./pages/LMStudioCors";
 import Snapshots from "./pages/Snapshots";
 import Templates from "./pages/Templates";
+import Features from "./pages/Features";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -91,10 +91,7 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          <Route
-                            path="/what-is-this"
-                            element={<WhatIsThis />}
-                          />
+                          <Route path="/features" element={<Features />} />
                           <Route
                             path="/account"
                             element={

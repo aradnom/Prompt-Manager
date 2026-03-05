@@ -38,11 +38,7 @@ export function MainMenu() {
     "divider",
     [
       { path: "/account", label: "Account", icon: "user" },
-      {
-        path: "/what-is-this",
-        label: "What is This Thing?",
-        icon: "question-mark",
-      },
+      { path: "/features", label: "Features", icon: "lightning" },
       ...(isAdmin
         ? [
             {
