@@ -3,6 +3,7 @@ import { HeroInput } from "@/components/ui/hero-input";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/contexts/SessionContext";
 import { useErrors } from "@/contexts/ErrorContext";
+import { storage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 interface CreateAccountOrLoginProps {
@@ -62,6 +63,11 @@ export function CreateAccountOrLogin({
       }
 
       const data = await response.json();
+
+      // Store the active stack ID so ActiveStackContext picks it up
+      if (data.activeStackId) {
+        await storage.setActiveStackId(data.activeStackId);
+      }
 
       // Update session context
       await checkSession();

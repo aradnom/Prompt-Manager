@@ -14,6 +14,7 @@ import {
   generateAPIKey,
 } from "@server/lib/auth";
 import { withDerivedKey } from "@server/middleware/account-data";
+import { generateDisplayId } from "@server/lib/generate-display-id";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import "express-session"; // Required for session type augmentation
@@ -69,6 +70,15 @@ export function registerAuthRoutes(
         accountData,
       });
 
+      // Create first prompt and set it as active
+      const firstStack = await storage.createStack({
+        uuid: crypto.randomUUID(),
+        displayId: generateDisplayId(),
+        name: "First Prompt",
+        userId: user.id,
+      });
+      await storage.setUserActiveStackId(user.id, firstStack.id);
+
       // Generate session encryption key
       const sessionKey = generateSessionKey();
 
@@ -102,8 +112,8 @@ export function registerAuthRoutes(
 
         console.debug(`Created new user account: ${user.id}`);
 
-        // Return plaintext token to user (only time they'll see it unless they log in)
-        res.json({ token });
+        // Return plaintext token and first stack ID to user
+        res.json({ token, activeStackId: firstStack.id });
       });
     } catch (error) {
       console.error("Error creating account:", error);
