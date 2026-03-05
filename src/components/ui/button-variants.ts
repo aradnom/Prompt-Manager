@@ -20,7 +20,7 @@ export const buttonVariants = cva(
           "border border-cyan-medium bg-background hover:bg-cyan-dark hover:text-foreground border-t-0 border-l-0 !rounded-none !rounded-br-md",
         ghost: "hover:bg-cyan-dark hover:text-foreground",
         link: "text-foreground underline-offset-4 hover:underline",
-        hero: "bg-gradient-to-r from-magenta-dark to-magenta-light/75 text-foreground border-2 border-magenta-dark hover:from-magenta-medium/90 hover:to-magenta-light/90 hover:border-magenta-light text-lg font-semibold shadow-lg hover:shadow-xl",
+        hero: "bg-gradient-to-r from-magenta-dark to-magenta-light/80 text-foreground border-2 border-magenta-dark hover:from-magenta-medium/90 hover:to-magenta-light/90 hover:border-magenta-light text-lg font-semibold shadow-lg hover:shadow-xl",
       },
       size: {
         default: "h-10 px-4 py-2",
