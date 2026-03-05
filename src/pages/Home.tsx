@@ -12,13 +12,15 @@ import {
 import { StackEditor } from "@/components/StackEditor";
 import { StackOutputBlock } from "@/components/StackOutputBlock";
 import { RasterIcon } from "@/components/RasterIcon";
-import { HorizontalRule } from "@/components/ui/horizontal-rule";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import { AccountTokenModal } from "@/components/AccountTokenModal";
 import { PromptSwitcher } from "@/components/PromptSwitcher";
 import { CreatePromptForm } from "@/components/CreatePromptForm";
 import { Button } from "@/components/ui/button";
 import { DotDivider } from "@/components/ui/dot-divider";
+import { VideoClip } from "@/components/VideoClip";
+import { FeatureShowcase } from "@/components/FeatureShowcase";
+import { CTALink } from "@/components/CTALink";
 
 function HomeContent() {
   const { activeStack, setActiveStack } = useActiveStack();
@@ -60,8 +62,6 @@ function HomeContent() {
         </div>
       </motion.div>
 
-      {!activeStack && <HorizontalRule parallax />}
-
       {isLoading ? (
         <div className="mt-12">
           <p className="text-cyan-medium">Loading...</p>
@@ -74,12 +74,20 @@ function HomeContent() {
           className="mt-12 w-full"
         >
           <div className="standard-content accent-border-gradient">
-            <div className="mb-12 space-y-4 text-md text-foreground">
+            <div className="space-y-4 text-foreground">
               <p>
-                Prompt Manager is a powerful tool for organizing and managing
-                your text-to-image diffusion model prompts. Create reusable
-                prompt blocks, combine them into stacks, and fine-tune your
-                output with advanced styling options.
+                <strong className="text-magenta-light">Prompt Manager</strong>{" "}
+                is a tool for organizing and managing your text-to-image
+                diffusion model prompts. Create reusable prompt blocks, combine
+                them into stacks, fine-tune your output with advanced
+                styling/transformation options and{" "}
+                <a
+                  href="https://github.com/aradnom/Prompt-Manager-ComfyUI"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  pipe the finished output directly into ComfyUI.
+                </a>
               </p>
               <p>
                 Whether you're working with Stable Diffusion, Flux, or other
@@ -87,8 +95,72 @@ function HomeContent() {
                 across your generations while making it easy to experiment with
                 variations.
               </p>
+              <div className="h3">Features include:</div>
+              <ul className="list-disc pl-10 pr-5 py-5 border-2 border-cyan-medium/50 rounded-lg accent-border-gradient">
+                <li>
+                  <strong>Basic organization:</strong> Compose prompts from text
+                  blocks and organize with folders, types and custom labels.
+                  Fully searchable across everything.
+                </li>
+                <li>
+                  <strong>Blocks:</strong> Build prompts from small text blocks
+                  that can be easily added/deleted/rearranged/disabled.
+                </li>
+                <li>
+                  <strong>Transformations:</strong> Easily generate new block
+                  content via LLMs, transform existing content in various ways,
+                  explore text variations, etc.
+                </li>
+                <li>
+                  <strong>Wildcards:</strong> Import/generate wildcards and
+                  inject into block content with a nice interface for
+                  randomizing/selecting specific options/freezing specific
+                  wildcards, etc.
+                </li>
+                <li>
+                  <strong>Revisions:</strong> Supports full revision history for
+                  text blocks and prompts. Easily tell what changed between
+                  versions and roll back to a previous version.
+                </li>
+                <li>
+                  <strong>Templates:</strong> Have a particular block
+                  arrangement you tend to use a lot? Create a template from it
+                  and use that combination as a starting point with a single
+                  click.
+                </li>
+                <li>
+                  <strong>Snapshots:</strong> Create a named, static snapshot of
+                  a prompt for moments when you stumble across a prompt that
+                  really nails what you were going for. Won't change if the
+                  parent prompt it came from does later.
+                </li>
+                <li>
+                  <strong>ComfyUI support:</strong> Pipe prompts directly into
+                  ComfyUI via{" "}
+                  <a
+                    href="https://github.com/aradnom/Prompt-Manager-ComfyUI"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    a custom node
+                  </a>{" "}
+                  that automatically syncs whatever you're currently working on.
+                </li>
+              </ul>
             </div>
 
+            <CTALink
+              to="/features"
+              className="max-w-3xl mx-auto block mt-8"
+              theme="magenta"
+            >
+              Explore All Features
+            </CTALink>
+          </div>
+
+          <DotDivider className="py-8" />
+
+          <div className="standard-content">
             <CreateAccountOrLogin onAccountCreated={handleAccountCreated} />
           </div>
         </motion.div>
@@ -178,6 +250,18 @@ function HomeContent() {
           className="mt-12 w-full"
         >
           <div className="standard-content accent-border-gradient">
+            <FeatureShowcase
+              title="Create a New Prompt"
+              description="Start building prompts from scratch"
+            >
+              <VideoClip name="create-new-prompt" />
+              <p>
+                Create a new prompt by going to Prompts, then clicking on Create
+                New Prompt, then set the prompt as active so you can add content
+                to it by clicking Make Active.
+              </p>
+            </FeatureShowcase>
+
             <div className="mb-6 space-y-4 text-md text-foreground">
               <p>You don't currently have an active prompt selected.</p>
             </div>
