@@ -36,6 +36,16 @@
   body {
     @apply bg-background text-foreground;
   }
+  a {
+    color: var(--color-cyan-light);
+    text-decoration: underline;
+  }
+  li {
+    margin-bottom: 0.8rem;
+  }
+  li:last-child {
+    margin-bottom: 0;
+  }
 }
 
 @layer components {
