@@ -21,6 +21,7 @@ import { DotDivider } from "@/components/ui/dot-divider";
 import { VideoClip } from "@/components/VideoClip";
 import { FeatureShowcase } from "@/components/FeatureShowcase";
 import { CTALink } from "@/components/CTALink";
+import { DismissableContainer } from "@/components/ui/dismissable-container";
 
 function HomeContent() {
   const { activeStack, setActiveStack } = useActiveStack();
@@ -30,6 +31,7 @@ function HomeContent() {
   const [newAccountToken, setNewAccountToken] = useState<string | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
+  const [introVisible, setIntroVisible] = useState(true);
 
   const handleAccountCreated = (token: string) => {
     setNewAccountToken(token);
@@ -73,7 +75,11 @@ function HomeContent() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mt-12 w-full"
         >
-          <div className="standard-content accent-border-gradient">
+          <DismissableContainer
+            id="home-intro-content"
+            className="accent-border-gradient"
+            onVisibilityChange={setIntroVisible}
+          >
             <div className="space-y-4 text-foreground">
               <p>
                 <strong className="text-magenta-light">Prompt Manager</strong>{" "}
@@ -108,7 +114,9 @@ function HomeContent() {
                 </li>
                 <li>
                   <strong>Transformations:</strong> Easily generate new block
-                  content via LLMs, transform existing content in various ways,
+                  content via LLMs (supports BYOK with
+                  OpenAI/Anthropic/Gemini/Grok, or LM Studio, or local model
+                  in-browser), transform existing content in various ways,
                   explore text variations, etc.
                 </li>
                 <li>
@@ -156,13 +164,13 @@ function HomeContent() {
             >
               Explore All Features
             </CTALink>
-          </div>
+          </DismissableContainer>
 
-          <DotDivider className="py-8" />
+          {introVisible && <DotDivider className="py-8" />}
 
-          <div className="standard-content">
+          <section className="standard-content">
             <CreateAccountOrLogin onAccountCreated={handleAccountCreated} />
-          </div>
+          </section>
         </motion.div>
       ) : activeStack ? (
         <StackContentProvider>
@@ -197,7 +205,7 @@ function HomeContent() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mt-12 w-full"
         >
-          <div className="standard-content accent-border-gradient">
+          <section className="standard-content accent-border-gradient">
             <div className="mb-8 space-y-4 text-md text-foreground">
               <p>
                 Welcome! You don't have any prompts yet. To get started, you'll
@@ -240,7 +248,7 @@ function HomeContent() {
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </motion.div>
       ) : (
         <motion.div
@@ -249,7 +257,7 @@ function HomeContent() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mt-12 w-full"
         >
-          <div className="standard-content accent-border-gradient">
+          <section className="standard-content accent-border-gradient">
             <FeatureShowcase
               title="Create a New Prompt"
               description="Start building prompts from scratch"
@@ -279,7 +287,7 @@ function HomeContent() {
                 View your prompts and select one to work with.
               </p>
             </div>
-          </div>
+          </section>
         </motion.div>
       )}
 
