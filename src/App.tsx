@@ -84,6 +84,14 @@ function App() {
                             }
                           />
                           <Route
+                            path="/blocks/new"
+                            element={
+                              <ProtectedRoute>
+                                <Blocks />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
                             path="/wildcards"
                             element={
                               <ProtectedRoute>
