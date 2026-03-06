@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { useSession } from "@/contexts/SessionContext";
-import { useUserState } from "@/contexts/UserStateContext";
 import { StackContentProvider } from "@/contexts/StackContentContext";
 import {
   StackOutputProvider,
@@ -15,23 +14,19 @@ import { RasterIcon } from "@/components/RasterIcon";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
 import { AccountTokenModal } from "@/components/AccountTokenModal";
 import { PromptSwitcher } from "@/components/PromptSwitcher";
-import { CreatePromptForm } from "@/components/CreatePromptForm";
-import { Button } from "@/components/ui/button";
 import { DotDivider } from "@/components/ui/dot-divider";
-import { VideoClip } from "@/components/VideoClip";
-import { FeatureShowcase } from "@/components/FeatureShowcase";
 import { CTALink } from "@/components/CTALink";
 import { DismissableContainer } from "@/components/ui/dismissable-container";
+import { NextSteps } from "@/components/NextSteps";
 
 function HomeContent() {
-  const { activeStack, setActiveStack } = useActiveStack();
+  const { activeStack } = useActiveStack();
   const { isMinimized } = useStackOutput();
   const { isAuthenticated, isLoading } = useSession();
-  const { stackCount } = useUserState();
   const [newAccountToken, setNewAccountToken] = useState<string | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
-  const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
   const [introVisible, setIntroVisible] = useState(true);
+  const [nextStepsVisible, setNextStepsVisible] = useState(true);
 
   const handleAccountCreated = (token: string) => {
     setNewAccountToken(token);
@@ -175,7 +170,12 @@ function HomeContent() {
       ) : activeStack ? (
         <StackContentProvider>
           <PromptSwitcher />
-          <DotDivider className="mb-3" />
+          <DotDivider className="mb-4" />
+          <NextSteps
+            className="mb-4"
+            onVisibilityChange={setNextStepsVisible}
+          />
+          {nextStepsVisible && <DotDivider className="mb-4" />}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -198,58 +198,6 @@ function HomeContent() {
             </div>
           </motion.div>
         </StackContentProvider>
-      ) : stackCount === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mt-12 w-full"
-        >
-          <section className="standard-content accent-border-gradient">
-            <div className="mb-8 space-y-4 text-md text-foreground">
-              <p>
-                Welcome! You don't have any prompts yet. To get started, you'll
-                need to create some prompt blocks and organize them into a
-                prompt.
-              </p>
-              <p>
-                Blocks are reusable pieces of text that can be combined in
-                different ways. Prompts let you arrange blocks in a specific
-                order to create complete prompts for your diffusion models.
-              </p>
-            </div>
-
-            {isCreatingPrompt ? (
-              <CreatePromptForm
-                onCreated={(newStack) => {
-                  setIsCreatingPrompt(false);
-                  setActiveStack(newStack);
-                }}
-                onCancel={() => setIsCreatingPrompt(false)}
-              />
-            ) : (
-              <div className="space-y-3">
-                <Button size="lg" onClick={() => setIsCreatingPrompt(true)}>
-                  Create Your First Prompt
-                </Button>
-                <div className="space-y-4 mt-6">
-                  <div>
-                    <Link
-                      to="/blocks"
-                      className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
-                    >
-                      Create Blocks
-                    </Link>
-                    <p className="text-sm text-cyan-medium mt-1">
-                      Start by creating reusable prompt blocks with your
-                      favorite subjects, styles, and modifiers.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        </motion.div>
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -258,34 +206,35 @@ function HomeContent() {
           className="mt-12 w-full"
         >
           <section className="standard-content accent-border-gradient">
-            <FeatureShowcase
-              title="Create a New Prompt"
-              description="Start building prompts from scratch"
-            >
-              <VideoClip name="create-new-prompt" />
-              <p>
-                Create a new prompt by going to Prompts, then clicking on Create
-                New Prompt, then set the prompt as active so you can add content
-                to it by clicking Make Active.
-              </p>
-            </FeatureShowcase>
-
             <div className="mb-6 space-y-4 text-md text-foreground">
               <p>You don't currently have an active prompt selected.</p>
             </div>
 
             <PromptSwitcher />
 
-            <div className="mt-4">
-              <Link
-                to="/prompts"
-                className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
-              >
-                Go to Prompts
-              </Link>
-              <p className="text-sm text-cyan-medium mt-1">
-                View your prompts and select one to work with.
-              </p>
+            <div className="mt-4 flex gap-6">
+              <div>
+                <Link
+                  to="/prompts"
+                  className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
+                >
+                  Go to Prompts
+                </Link>
+                <p className="text-sm text-cyan-medium mt-1">
+                  View your prompts and select one to work with.
+                </p>
+              </div>
+              <div>
+                <Link
+                  to="/prompts/new"
+                  className="text-magenta-medium hover:text-magenta-light font-semibold text-lg underline"
+                >
+                  Create a New Prompt
+                </Link>
+                <p className="text-sm text-cyan-medium mt-1">
+                  Start a new prompt from scratch.
+                </p>
+              </div>
             </div>
           </section>
         </motion.div>
