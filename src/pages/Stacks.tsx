@@ -322,7 +322,6 @@ function StackFolderContent({
 }
 
 function StackList() {
-  const [isCreating, setIsCreating] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [stackToDelete, setStackToDelete] = useState<number | null>(null);
   const [showRevisionsForStack, setShowRevisionsForStack] = useState<
@@ -482,41 +481,27 @@ function StackList() {
         </p>
       </div>
 
-      {isCreating ? (
-        <div className="mb-8">
-          <CreatePromptForm
-            onCreated={(newStack) => {
-              setIsCreating(false);
-              setActiveStack(newStack);
-              navigate("/");
-            }}
-            onCancel={() => setIsCreating(false)}
-          />
-        </div>
-      ) : (
-        <div className="mb-8 flex justify-end gap-2">
-          <Link to="/snapshots">
-            <Button variant="outline">
-              <Camera className="h-4 w-4 mr-2" />
-              Prompt Snapshots
-            </Button>
-          </Link>
-          <Link to="/templates">
-            <Button variant="outline">
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Prompt Templates
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            onClick={() => setNewFolderDialogOpen(true)}
-          >
-            <FolderPlus className="h-4 w-4 mr-2" />
-            New Folder
+      <div className="mb-8 flex justify-end gap-2">
+        <Link to="/snapshots">
+          <Button variant="outline">
+            <Camera className="h-4 w-4 mr-2" />
+            Prompt Snapshots
           </Button>
-          <Button onClick={() => setIsCreating(true)}>Create New Prompt</Button>
-        </div>
-      )}
+        </Link>
+        <Link to="/templates">
+          <Button variant="outline">
+            <LayoutTemplate className="h-4 w-4 mr-2" />
+            Prompt Templates
+          </Button>
+        </Link>
+        <Button variant="outline" onClick={() => setNewFolderDialogOpen(true)}>
+          <FolderPlus className="h-4 w-4 mr-2" />
+          New Folder
+        </Button>
+        <Link to="/prompts/new">
+          <Button>Create New Prompt</Button>
+        </Link>
+      </div>
 
       {/* Search */}
       <div className="mb-2">
@@ -729,9 +714,9 @@ function StackList() {
           <CardContent className="py-12">
             <div className="text-center text-cyan-medium">
               <p className="mb-4">No prompts yet</p>
-              <Button onClick={() => setIsCreating(true)}>
-                Create Your First Prompt
-              </Button>
+              <Link to="/prompts/new">
+                <Button>Create Your First Prompt</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -806,6 +791,37 @@ function StackList() {
           </div>
         </DialogContent>
       </Dialog>
+    </main>
+  );
+}
+
+function NewPromptView() {
+  const navigate = useNavigate();
+  const { setActiveStack } = useActiveStack();
+
+  return (
+    <main className="standard-page-container">
+      <div className="mb-8">
+        <Link
+          to="/prompts"
+          className="inline-flex items-center gap-1.5 text-sm text-cyan-medium hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Prompts
+        </Link>
+        <h1 className="text-4xl font-bold flex items-center gap-3">
+          <RasterIcon name="chat" size={36} />
+          Create New Prompt
+        </h1>
+      </div>
+
+      <CreatePromptForm
+        onCreated={(newStack) => {
+          setActiveStack(newStack);
+          navigate("/");
+        }}
+        onCancel={() => navigate("/prompts")}
+      />
     </main>
   );
 }
@@ -974,6 +990,10 @@ function SinglePromptView({ displayId }: { displayId: string }) {
 
 export default function Stacks() {
   const { displayId } = useParams<{ displayId: string }>();
+
+  if (displayId === "new") {
+    return <NewPromptView />;
+  }
 
   if (displayId) {
     return <SinglePromptView displayId={displayId} />;
