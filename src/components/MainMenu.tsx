@@ -95,7 +95,7 @@ export function MainMenu() {
                         <RasterIcon
                           name={item.icon}
                           size={20}
-                          className="mr-2"
+                          className={`mr-2 ${isActive(item.path) ? "drop-shadow-[2px_2px_2px_rgba(0,0,0,0.3)]" : ""}`}
                         />
                       )}
                       {item.label}
