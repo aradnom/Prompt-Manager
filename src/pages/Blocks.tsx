@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -8,7 +9,13 @@ import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FolderRow } from "@/components/FolderRow";
-import { ChevronLeft, ChevronRight, FolderPlus, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  FolderPlus,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
@@ -115,8 +122,57 @@ function BlockFolderContent({
   );
 }
 
-export default function Blocks() {
-  const [isCreating, setIsCreating] = useState(false);
+function NewBlockView() {
+  const navigate = useNavigate();
+  const utils = api.useUtils();
+
+  const createMutation = api.blocks.create.useMutation({
+    onSuccess: () => {
+      utils.blocks.listWithFolders.invalidate();
+      utils.blockFolders.getBlocks.invalidate();
+      navigate("/blocks");
+    },
+  });
+
+  const handleCreate = (values: BlockFormValues) => {
+    createMutation.mutate({
+      uuid: generateUUID(),
+      name: values.name,
+      displayId: values.displayId,
+      text: values.text,
+      labels: values.labels,
+      typeId: values.typeId,
+      folderId: values.folderId,
+    });
+  };
+
+  return (
+    <main className="standard-page-container">
+      <div className="mb-8">
+        <Link
+          to="/blocks"
+          className="inline-flex items-center gap-1.5 text-sm text-cyan-medium hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Blocks
+        </Link>
+        <h1 className="text-4xl font-bold flex items-center gap-3">
+          <RasterIcon name="blocks" size={36} />
+          Create New Block
+        </h1>
+      </div>
+
+      <BlockForm
+        mode="create"
+        onSubmit={handleCreate}
+        onCancel={() => navigate("/blocks")}
+        isSubmitting={createMutation.isPending}
+      />
+    </main>
+  );
+}
+
+function BlockList() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [blockToDelete, setBlockToDelete] = useState<number | null>(null);
@@ -190,14 +246,6 @@ export default function Blocks() {
     });
   };
 
-  const createMutation = api.blocks.create.useMutation({
-    onSuccess: () => {
-      refetch();
-      utils.blockFolders.getBlocks.invalidate();
-      setIsCreating(false);
-    },
-  });
-
   const updateMutation = api.blocks.update.useMutation({
     onSuccess: () => {
       refetch();
@@ -231,18 +279,6 @@ export default function Blocks() {
       refetch();
     },
   });
-
-  const handleCreate = (values: BlockFormValues) => {
-    createMutation.mutate({
-      uuid: generateUUID(),
-      name: values.name,
-      displayId: values.displayId,
-      text: values.text,
-      labels: values.labels,
-      typeId: values.typeId,
-      folderId: values.folderId,
-    });
-  };
 
   const handleUpdate = (id: number, values: BlockFormValues) => {
     updateMutation.mutate({
@@ -293,37 +329,25 @@ export default function Blocks() {
         </p>
       </div>
 
-      {isCreating ? (
-        <div className="mb-8">
-          <BlockForm
-            mode="create"
-            onSubmit={handleCreate}
-            onCancel={() => setIsCreating(false)}
-            isSubmitting={createMutation.isPending}
-          />
-        </div>
-      ) : (
-        <div className="mb-8 flex justify-end gap-2">
+      <div className="mb-8 flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setNewFolderDialogOpen(true)}>
+          <FolderPlus className="h-4 w-4 mr-2" />
+          New Folder
+        </Button>
+        <LLMGuard>
           <Button
+            onClick={() => setIsGenerateOpen(true)}
             variant="outline"
-            onClick={() => setNewFolderDialogOpen(true)}
+            disabled={!isLLMConfigured}
           >
-            <FolderPlus className="h-4 w-4 mr-2" />
-            New Folder
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate New Block
           </Button>
-          <LLMGuard>
-            <Button
-              onClick={() => setIsGenerateOpen(true)}
-              variant="outline"
-              disabled={!isLLMConfigured}
-            >
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate New Block
-            </Button>
-          </LLMGuard>
-          <Button onClick={() => setIsCreating(true)}>Create New Block</Button>
-        </div>
-      )}
+        </LLMGuard>
+        <Link to="/blocks/new">
+          <Button>Create New Block</Button>
+        </Link>
+      </div>
 
       {/* Search */}
       <div className="mb-2">
@@ -604,9 +628,9 @@ export default function Blocks() {
           <CardContent className="py-12">
             <div className="text-center text-cyan-medium">
               <p className="mb-4">No blocks yet</p>
-              <Button onClick={() => setIsCreating(true)}>
-                Create Your First Block
-              </Button>
+              <Link to="/blocks/new">
+                <Button>Create Your First Block</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -689,4 +713,14 @@ export default function Blocks() {
       </Dialog>
     </main>
   );
+}
+
+export default function Blocks() {
+  const location = useLocation();
+
+  if (location.pathname === "/blocks/new") {
+    return <NewBlockView />;
+  }
+
+  return <BlockList />;
 }
