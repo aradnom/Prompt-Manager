@@ -813,6 +813,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                 Add Existing Block
               </Button>
               <Button
+                data-action="add-new-block"
                 onClick={() => setIsCreatingNew(true)}
                 variant="tertiary"
                 disabled={blocksAtLimit}
