@@ -3,6 +3,7 @@ import superjson from "superjson";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { IStorageAdapter } from "@server/adapters/storage-adapter.interface";
 import type { LLMService } from "@server/services/llm-service";
+import type { EmailService } from "@server/services/email-service";
 import { decryptDerivedKey } from "@server/lib/auth";
 import { checkRateLimit, type RedisClient } from "@server/lib/rate-limit";
 
@@ -11,6 +12,7 @@ import type { ServerConfig } from "@server/config";
 export interface Context {
   storage: IStorageAdapter;
   llmService: LLMService;
+  emailService: EmailService;
   config: ServerConfig;
   rateLimitRedis?: RedisClient;
   userId?: number;
@@ -20,6 +22,7 @@ export interface Context {
 export const createContext = (
   storage: IStorageAdapter,
   llmService: LLMService,
+  emailService: EmailService,
   config: ServerConfig,
   rateLimitRedis?: RedisClient,
 ) => {
@@ -43,6 +46,7 @@ export const createContext = (
     return {
       storage,
       llmService,
+      emailService,
       config,
       rateLimitRedis,
       userId,

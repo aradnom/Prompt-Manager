@@ -56,6 +56,7 @@ export interface IStorageAdapter {
   clearUserApiKey(userId: number): Promise<void>;
   getUserScratchpad(userId: number): Promise<string | null>;
   setUserScratchpad(userId: number, content: string): Promise<void>;
+  countUsers(): Promise<number>;
   setUserActiveStackId(userId: number, stackId: number | null): Promise<void>;
   getSnapshotByDisplayId(
     displayId: string,
@@ -222,6 +223,7 @@ export interface IStorageAdapter {
     userId?: number,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Wildcard>>;
+  countWildcards(): Promise<number>;
 }
 
 export interface GetStackOptions {

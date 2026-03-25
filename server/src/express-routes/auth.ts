@@ -17,6 +17,7 @@ import { withDerivedKey } from "@server/middleware/account-data";
 import { generateDisplayId } from "@server/lib/generate-display-id";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
+import { getWatchdog } from "@server/services/watchdog-singleton";
 import "express-session"; // Required for session type augmentation
 
 interface ProviderApiKeyConfig {
@@ -78,6 +79,12 @@ export function registerAuthRoutes(
         userId: user.id,
       });
       await storage.setUserActiveStackId(user.id, firstStack.id);
+
+      // Notify watchdog of new user
+      getWatchdog()?.notify(`newUserCreated:${user.id}`, {
+        subject: `New user registered (ID: ${user.id})`,
+        text: `A new user has registered on Prompt Manager (user ID: ${user.id}).`,
+      });
 
       // Generate session encryption key
       const sessionKey = generateSessionKey();

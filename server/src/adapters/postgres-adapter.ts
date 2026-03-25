@@ -143,6 +143,14 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     };
   }
 
+  async countUsers(): Promise<number> {
+    const result = await this.db
+      .selectFrom("users")
+      .select((eb) => eb.fn.countAll<number>().as("count"))
+      .executeTakeFirst();
+    return Number(result?.count ?? 0);
+  }
+
   async updateUserAccountData(
     userId: number,
     accountData: Record<string, string>,
@@ -3025,6 +3033,14 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       items: results.map((r) => this.mapWildcard(r)),
       total: Number(countResult?.count ?? 0),
     };
+  }
+
+  async countWildcards(): Promise<number> {
+    const result = await this.db
+      .selectFrom("wildcards")
+      .select((eb) => eb.fn.countAll<number>().as("count"))
+      .executeTakeFirst();
+    return Number(result?.count ?? 0);
   }
 
   private async expandStack(

@@ -12,6 +12,8 @@ import { createContext } from "@server/trpc";
 import { appRouter } from "@server/routers";
 import { loadConfig } from "@server/config";
 import { LLMService } from "@server/services/llm-service";
+import { EmailService } from "@server/services/email-service";
+import { WatchdogService } from "@server/services/watchdog-service";
 import { registerAuthRoutes } from "@server/express-routes/auth";
 import {
   registerIntegrationRoutes,
@@ -26,6 +28,8 @@ import { checkPendingMigrations } from "@server/lib/migration-check";
 // Re-export notifyStackUpdate for use by other modules (e.g., stacks router)
 export const notifyStackUpdate = _notifyStackUpdate;
 export const notifyActiveStackChanged = _notifyActiveStackChanged;
+
+import { setWatchdog } from "@server/services/watchdog-singleton";
 
 async function main() {
   const config = loadConfig();
@@ -98,6 +102,9 @@ async function main() {
 
   const storage = new PostgresStorageAdapter(config.databaseUrl);
   const llmService = new LLMService(config.llm);
+  const emailService = new EmailService(config.resendApiKey);
+  const watchdog = new WatchdogService(storage, emailService, config);
+  setWatchdog(watchdog);
 
   await storage.initialize();
   console.debug("✓ Database connection established");
@@ -112,7 +119,13 @@ async function main() {
     "/trpc",
     createExpressMiddleware({
       router: appRouter,
-      createContext: createContext(storage, llmService, config, rateLimitRedis),
+      createContext: createContext(
+        storage,
+        llmService,
+        emailService,
+        config,
+        rateLimitRedis,
+      ),
     }),
   );
 
@@ -165,6 +178,8 @@ async function main() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+  await watchdog.start();
 
   app.listen(config.port, () => {
     console.debug(`✓ Server listening on port ${config.port}`);
