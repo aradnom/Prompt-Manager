@@ -49,6 +49,8 @@ export interface ServerConfig {
   resendApiKey?: string;
   adminEmails: string[];
   notificationDatabaseUrl: string;
+  cfTurnstileSiteKey?: string;
+  cfTurnstileSecretKey?: string;
 }
 
 function parseAllowedTargets(envValue: string | undefined): Set<string> {
@@ -105,6 +107,8 @@ export function loadConfig(): ServerConfig {
     notificationDatabaseUrl: resolveLocalhost(
       process.env.NOTIFICATION_DATABASE_URL || "redis://localhost:6379/2",
     ),
+    cfTurnstileSiteKey: process.env.CF_TURNSTILE_SITE_KEY,
+    cfTurnstileSecretKey: process.env.CF_TURNSTILE_SECRET_KEY,
     llm: {
       allowedTargets: parseAllowedTargets(process.env.LLM_ALLOWED_TARGETS),
       lmStudioUrl: resolveLocalhost(

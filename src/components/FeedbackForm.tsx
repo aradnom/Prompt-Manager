@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
+import { Turnstile } from "@/components/ui/turnstile";
 import {
   Dialog,
   DialogContent,
@@ -20,12 +21,20 @@ export function FeedbackForm() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setTurnstileToken(null);
+    }
+  }, []);
 
   const submitMutation = api.users.submitFeedback.useMutation({
     onSuccess: () => {
       setSent(true);
       setTimeout(() => {
-        setIsOpen(false);
+        handleOpenChange(false);
         setEmail("");
         setMessage("");
         setSent(false);
@@ -35,8 +44,10 @@ export function FeedbackForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!turnstileToken) return;
     submitMutation.mutate({
       message,
+      turnstileToken,
       ...(email ? { email } : {}),
     });
   };
@@ -57,7 +68,7 @@ export function FeedbackForm() {
         </Tooltip>
       </TooltipProvider>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Send Feedback</DialogTitle>
@@ -105,10 +116,19 @@ export function FeedbackForm() {
                 />
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-col items-end gap-4">
+                <Turnstile
+                  onVerify={setTurnstileToken}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => setTurnstileToken(null)}
+                />
                 <Button
                   type="submit"
-                  disabled={!message.trim() || submitMutation.isPending}
+                  disabled={
+                    !message.trim() ||
+                    !turnstileToken ||
+                    submitMutation.isPending
+                  }
                 >
                   {submitMutation.isPending ? "Sending..." : "Send"}
                 </Button>

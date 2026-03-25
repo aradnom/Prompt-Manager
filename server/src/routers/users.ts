@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { LENGTH_LIMITS } from "@shared/limits";
+import { verifyTurnstileToken } from "@server/lib/turnstile";
 
 const feedbackRL = withRateLimit("users.submitFeedback", 60_000, 3);
 
@@ -27,9 +29,23 @@ export const usersRouter = router({
       z.object({
         email: z.string().email().max(254).optional(),
         message: z.string().min(1).max(5000),
+        turnstileToken: z.string().min(1),
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.config.cfTurnstileSecretKey) {
+        const valid = await verifyTurnstileToken(
+          input.turnstileToken,
+          ctx.config.cfTurnstileSecretKey,
+        );
+        if (!valid) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Turnstile verification failed",
+          });
+        }
+      }
+
       if (!ctx.config.adminEmails.length || !ctx.emailService.isConfigured) {
         return { success: false };
       }

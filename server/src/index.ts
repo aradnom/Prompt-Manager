@@ -156,7 +156,7 @@ async function main() {
 
     const csp = [
       "default-src 'self'",
-      "script-src 'self' blob: 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
+      "script-src 'self' blob: 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline'",
       `connect-src 'self' ${connectSrcDomains.join(" ")}`,
       "img-src 'self' data: blob:",
@@ -165,6 +165,7 @@ async function main() {
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "frame-src https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
     ].join("; ");
 
