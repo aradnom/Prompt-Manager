@@ -4,6 +4,7 @@ import { MainMenu } from "./MainMenu";
 import { ErrorBanner } from "./ErrorBanner";
 import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
 import { Scratchpad } from "./Scratchpad";
+import { FeedbackForm } from "./FeedbackForm";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
@@ -66,6 +67,9 @@ function LayoutContent({ children }: LayoutProps) {
       <MainMenu />
       <FadePresence show={isAuthenticated}>
         <Scratchpad />
+      </FadePresence>
+      <FadePresence show={isAuthenticated}>
+        <FeedbackForm />
       </FadePresence>
       <FadePresence show={isAuthenticated && location.pathname !== "/account"}>
         <TooltipProvider delayDuration={0}>
