@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
-
-declare const __TURNSTILE_SITE_KEY__: string;
+import { api } from "@/lib/api";
 
 const SCRIPT_URL =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
@@ -36,6 +35,9 @@ export function Turnstile({ onVerify, onExpire, onError }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
+  const { data: config } = api.config.getSettings.useQuery();
+  const siteKey = config?.turnstileSiteKey ?? null;
+
   // Stable refs for callbacks so we don't re-render the widget
   const onVerifyRef = useRef(onVerify);
   const onExpireRef = useRef(onExpire);
@@ -43,8 +45,6 @@ export function Turnstile({ onVerify, onExpire, onError }: TurnstileProps) {
   onVerifyRef.current = onVerify;
   onExpireRef.current = onExpire;
   onErrorRef.current = onError;
-
-  const siteKey = __TURNSTILE_SITE_KEY__;
 
   const renderWidget = useCallback(async () => {
     if (!containerRef.current || !siteKey) return;

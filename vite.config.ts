@@ -9,9 +9,6 @@ export default defineConfig(({ mode }) => {
   const serverUrl = env.SERVER_URL || "http://localhost:3001";
 
   return {
-    define: {
-      __TURNSTILE_SITE_KEY__: JSON.stringify(env.CF_TURNSTILE_SITE_KEY ?? ""),
-    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

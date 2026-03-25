@@ -8,6 +8,7 @@ export const configRouter = router({
         allowedTargets: Array.from(ctx.config.llm.allowedTargets),
         allTargets: Array.from(LLM_TARGETS),
       },
+      turnstileSiteKey: ctx.config.cfTurnstileSiteKey ?? null,
     };
   }),
 });
