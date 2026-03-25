@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "@server/trpc";
+import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { LENGTH_LIMITS } from "@shared/limits";
+
+const feedbackRL = withRateLimit("users.submitFeedback", 60_000, 3);
 
 export const usersRouter = router({
   getScratchpad: protectedProcedure.query(async ({ ctx }) => {
@@ -20,6 +22,7 @@ export const usersRouter = router({
     }),
 
   submitFeedback: protectedProcedure
+    .use(feedbackRL)
     .input(
       z.object({
         email: z.string().email().max(254).optional(),
