@@ -33,3 +33,4 @@ server/auth/*.json
 *.sw?
 
 design-dump
+notes-private
