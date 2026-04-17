@@ -17,7 +17,7 @@ export default function LMStudioCors() {
         </h1>
         <p className="text-cyan-medium mb-8">
           <mark className="highlighted-text">
-            How to connect Prompt Manager to LM Studio
+            How to connect Diffusion Prompt Manager to LM Studio
           </mark>
         </p>
       </motion.div>
@@ -36,9 +36,9 @@ export default function LMStudioCors() {
             </CardHeader>
             <CardContent className="space-y-3 text-foreground">
               <p>
-                Prompt Manager talks to LM Studio directly from your browser.
-                When your browser makes a request to LM Studio, it has to
-                explicitly allow the request. This is called{" "}
+                Diffusion Prompt Manager talks to LM Studio directly from your
+                browser. When your browser makes a request to LM Studio, it has
+                to explicitly allow the request. This is called{" "}
                 <strong>CORS (Cross-Origin Resource Sharing)</strong>.
               </p>
               <p>

@@ -49,7 +49,7 @@ function HomeContent() {
         <RasterIcon name="logo1" width={90} height={100} className="mr-5" />
         <div>
           <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-            Prompt Manager
+            Diffusion Prompt Manager
           </h1>
           <p className="text-magenta-dark mb-8">
             <mark className="highlighted-text">
@@ -77,7 +77,9 @@ function HomeContent() {
           >
             <div className="space-y-4 text-foreground">
               <p>
-                <strong className="text-magenta-light">Prompt Manager</strong>{" "}
+                <strong className="text-magenta-light">
+                  Diffusion Prompt Manager
+                </strong>{" "}
                 is a tool for organizing and managing your text-to-image
                 diffusion model prompts. Create reusable prompt blocks, combine
                 them into stacks, fine-tune your output with advanced
@@ -92,9 +94,9 @@ function HomeContent() {
               </p>
               <p>
                 Whether you're working with Stable Diffusion, Flux, or other
-                diffusion models, Prompt Manager helps you maintain consistency
-                across your generations while making it easy to experiment with
-                variations.
+                diffusion models, Diffusion Prompt Manager helps you maintain
+                consistency across your generations while making it easy to
+                experiment with variations.
               </p>
               <div className="h3">Features include:</div>
               <ul className="list-disc pl-10 pr-5 py-5 border-2 border-cyan-medium/50 rounded-lg accent-border-gradient">

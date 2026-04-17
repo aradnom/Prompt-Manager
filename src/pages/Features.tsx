@@ -17,7 +17,7 @@ export default function Features() {
         </h1>
         <p className="text-cyan-medium mb-8">
           <mark className="highlighted-text">
-            See what Prompt Manager can do
+            See what Diffusion Prompt Manager can do
           </mark>
         </p>
       </motion.div>
@@ -35,10 +35,10 @@ export default function Features() {
           various ways.
         </p>
         <p>
-          Prompt Manager gives you a structured way to organize these pieces.
-          Instead of managing walls of text or keeping track of variations in
-          scattered files, you can build a library of reusable components and
-          combine them however you need.
+          Diffusion Prompt Manager gives you a structured way to organize these
+          pieces. Instead of managing walls of text or keeping track of
+          variations in scattered files, you can build a library of reusable
+          components and combine them however you need.
         </p>
       </motion.div>
 

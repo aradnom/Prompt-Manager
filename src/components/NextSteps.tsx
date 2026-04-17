@@ -92,7 +92,7 @@ export function NextSteps({
               Explore all features
             </Link>
             <p className="text-sm text-cyan-medium mt-0.5">
-              Video walkthroughs of everything Prompt Manager can do.
+              Video walkthroughs of everything Diffusion Prompt Manager can do.
             </p>
           </div>
         </li>
