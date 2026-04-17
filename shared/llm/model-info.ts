@@ -13,14 +13,25 @@ export type ModelRegistry = Record<string, ModelInfo>;
 
 export const MODELS: Record<string, ModelRegistry> = {
   vertex: {
+    "gemini-3.1-flash-lite-preview": {
+      name: "Gemini 3.1 Flash Lite Preview",
+      hasThinking: true,
+      // MINIMAL and MEDIUM only for Flash, mapping: low->MINIMAL, medium->MEDIUM, high->HIGH
+      thinkingLevels: ["low", "medium", "high"],
+    },
+    "gemini-3.1-pro-preview": {
+      name: "Gemini 3.1 Pro Preview",
+      hasThinking: true,
+      thinkingLevels: ["low", "high"],
+    },
     "gemini-3-flash-preview": {
-      name: "Gemini 3 Flash (Preview)",
+      name: "Gemini 3 Flash Preview",
       hasThinking: true,
       // MINIMAL and MEDIUM only for Flash, mapping: low->MINIMAL, medium->MEDIUM, high->HIGH
       thinkingLevels: ["low", "medium", "high"],
     },
     "gemini-3-pro-preview": {
-      name: "Gemini 3 Pro (Preview)",
+      name: "Gemini 3 Pro Preview",
       hasThinking: true,
       thinkingLevels: ["low", "high"],
     },
@@ -30,30 +41,45 @@ export const MODELS: Record<string, ModelRegistry> = {
       // 2.5 models only support budget, not levels - we'll map to budget internally
       thinkingLevels: ["low", "medium", "high"],
     },
-    "gemini-2.5-pro": {
-      name: "Gemini 2.5 Pro",
-      hasThinking: true,
-      thinkingLevels: ["low", "medium", "high"],
-    },
     "gemini-2.5-flash-lite": {
       name: "Gemini 2.5 Flash Lite",
       // Lite model likely doesn't support thinking
       hasThinking: false,
     },
+    "gemini-2.5-pro": {
+      name: "Gemini 2.5 Pro",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
   },
   openai: {
+    "gpt-5.4-nano": {
+      name: "GPT 5.4 Nano",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
+    "gpt-5.4-mini": {
+      name: "GPT 5.4 Mini",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
+    "gpt-5.4": {
+      name: "GPT 5.4",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
     "gpt-5.2": {
       name: "GPT 5.2",
       hasThinking: true,
       thinkingLevels: ["low", "medium", "high"],
     },
-    "gpt-5-mini": {
-      name: "GPT 5 Mini",
+    "gpt-5-nano": {
+      name: "GPT 5 Nano",
       hasThinking: true,
       thinkingLevels: ["low", "medium", "high"],
     },
-    "gpt-5-nano": {
-      name: "GPT 5 Nano",
+    "gpt-5-mini": {
+      name: "GPT 5 Mini",
       hasThinking: true,
       thinkingLevels: ["low", "medium", "high"],
     },
@@ -64,6 +90,16 @@ export const MODELS: Record<string, ModelRegistry> = {
     },
   },
   anthropic: {
+    "claude-opus-4-7": {
+      name: "Claude 4.7 Opus",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
+    "claude-sonnet-4-6": {
+      name: "Claude 4.6 Sonnet",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
     "claude-opus-4-6": {
       name: "Claude 4.6 Opus",
       hasThinking: true,
@@ -84,25 +120,32 @@ export const MODELS: Record<string, ModelRegistry> = {
       hasThinking: true,
       thinkingLevels: ["low", "medium", "high"],
     },
-    "claude-sonnet-4-0": {
-      name: "Claude 4 Sonnet",
-      hasThinking: true,
-      thinkingLevels: ["low", "medium", "high"],
-    },
     "claude-opus-4-1": {
       name: "Claude 4.1 Opus",
       hasThinking: true,
       thinkingLevels: ["low", "medium", "high"],
     },
+    "claude-sonnet-4-0": {
+      name: "Claude 4 Sonnet",
+      hasThinking: true,
+      thinkingLevels: ["low", "medium", "high"],
+    },
   },
   grok: {
+    "grok-4.20-0309-non-reasoning": {
+      name: "Grok 4.2 Non-Reasoning",
+      hasThinking: false,
+    },
+    "grok-4.20-0309-reasoning": {
+      name: "Grok 4.2",
+      hasThinking: false,
+    },
     "grok-4-1-fast-non-reasoning": {
       name: "Grok 4.1 Fast Non-Reasoning",
       hasThinking: false,
     },
     "grok-4-1-fast-reasoning": {
       name: "Grok 4.1 Fast",
-      // Doesn't support reasoning_effort parameter
       hasThinking: false,
     },
     "grok-4-fast-non-reasoning": {
@@ -111,7 +154,6 @@ export const MODELS: Record<string, ModelRegistry> = {
     },
     "grok-4-fast-reasoning": {
       name: "Grok 4 Fast",
-      // Doesn't support reasoning_effort parameter
       hasThinking: false,
     },
     "grok-3-mini": {
@@ -121,7 +163,6 @@ export const MODELS: Record<string, ModelRegistry> = {
     },
     "grok-3": {
       name: "Grok 3",
-      // Regular grok-3 might not support reasoning_effort
       hasThinking: false,
     },
   },
