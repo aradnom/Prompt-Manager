@@ -34,6 +34,7 @@ export interface Block {
   userId: number | null;
   meta: Record<string, unknown> | null;
   activeRevisionId: number | null;
+  includeInCaption: boolean;
 }
 
 export interface BlockRevision {
@@ -171,6 +172,7 @@ export interface CreateBlockInput {
   notes?: string | null;
   userId?: number;
   meta?: Record<string, unknown>;
+  includeInCaption?: boolean;
 }
 
 export interface UpdateBlockInput {
@@ -182,6 +184,7 @@ export interface UpdateBlockInput {
   labels?: string[];
   notes?: string | null;
   meta?: Record<string, unknown>;
+  includeInCaption?: boolean;
 }
 
 export interface CreateBlockFolderInput {

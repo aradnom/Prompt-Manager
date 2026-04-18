@@ -47,7 +47,8 @@ CREATE TABLE blocks (
     labels character varying(255)[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     meta json,
-    active_revision_id integer REFERENCES block_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
+    active_revision_id integer REFERENCES block_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    include_in_caption boolean NOT NULL DEFAULT false
 );
 
 -- block_revisions

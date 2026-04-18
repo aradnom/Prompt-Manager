@@ -221,6 +221,9 @@ export function TextBlock({
   const updateNotesMutation = api.blocks.update.useMutation({
     onSuccess: invalidateBlocks,
   });
+  const toggleCaptionMutation = api.blocks.update.useMutation({
+    onSuccess: invalidateBlocks,
+  });
   const renameMutation = api.blocks.update.useMutation({
     onSuccess: invalidateBlocks,
   });
@@ -812,6 +815,31 @@ export function TextBlock({
                     {block.type.name}
                   </button>
                 )}
+                <ExpandingIcon active={isActive} origin="right">
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Checkbox
+                          checked={block.includeInCaption}
+                          onCheckedChange={(checked) => {
+                            toggleCaptionMutation.mutate({
+                              id: block.id,
+                              includeInCaption: checked === true,
+                            });
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Include in training captions"
+                          className="cursor-pointer"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {block.includeInCaption
+                          ? "Included in training captions"
+                          : "Include in training captions"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </ExpandingIcon>
                 <ExpandingIcon active={isActive} origin="right">
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>

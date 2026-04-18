@@ -25,6 +25,7 @@ export const blocksRouter = router({
           .optional(),
         notes: z.string().max(LENGTH_LIMITS.notes).nullish(),
         meta: z.record(z.string(), z.unknown()).optional(),
+        includeInCaption: z.boolean().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -120,6 +121,7 @@ export const blocksRouter = router({
           .optional(),
         notes: z.string().max(LENGTH_LIMITS.notes).nullish(),
         meta: z.record(z.string(), z.unknown()).optional(),
+        includeInCaption: z.boolean().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {

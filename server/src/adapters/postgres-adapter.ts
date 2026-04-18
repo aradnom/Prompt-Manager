@@ -226,6 +226,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           notes: input.notes ?? null,
           user_id: input.userId ?? null,
           meta: input.meta ? JSON.stringify(input.meta) : null,
+          include_in_caption: input.includeInCaption ?? false,
           created_at: now,
           updated_at: now,
         })
@@ -440,6 +441,9 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
       if (updates.meta !== undefined) {
         updateData.meta = updates.meta ? JSON.stringify(updates.meta) : null;
+      }
+      if (updates.includeInCaption !== undefined) {
+        updateData.include_in_caption = updates.includeInCaption;
       }
 
       // Update block metadata first (without touching active_revision_id yet)
@@ -3152,6 +3156,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       labels: row.labels,
       userId: row.user_id,
       meta: typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta,
+      includeInCaption: row.include_in_caption ?? false,
     };
   }
 

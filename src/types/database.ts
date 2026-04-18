@@ -49,6 +49,11 @@ export interface BlocksTable {
     string | null
   >;
   active_revision_id: number | null;
+  include_in_caption: ColumnType<
+    boolean,
+    boolean | undefined,
+    boolean | undefined
+  >;
 }
 
 export interface BlockRevisionsTable {
