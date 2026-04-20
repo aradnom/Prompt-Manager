@@ -18,11 +18,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-// import { ParallaxCircleMenuAligned } from "./ParallaxCircleMenuAligned";
-import { ParallaxCircleMenuRandom } from "./ParallaxCircleMenuRandom";
 import { FadePresence } from "@/components/ui/fade-presence";
 import { FooterLink } from "./FooterLink";
 import { DotDivider } from "@/components/ui/dot-divider";
+import { ConstellationBackground } from "./ConstellationBackground";
 
 const TRANSFORMERS_PROGRESS_ID = "transformers-js-load";
 
@@ -61,9 +60,7 @@ function LayoutContent({ children }: LayoutProps) {
         isOpen ? "blur-sm" : ""
       }`}
     >
-      <div className="fixed w-250 h-250 radial-gradient-magenta" />
-      <ParallaxCircleMenuRandom />
-      <div className="film-grain fixed top-0 left-0 w-full h-full opacity-30" />
+      <ConstellationBackground />
       <MainMenu />
       <FadePresence show={isAuthenticated}>
         <Scratchpad />
