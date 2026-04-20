@@ -49,11 +49,14 @@ export function FolderRow({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
+      className={cn(
+        "rounded-lg",
+        index === 0 && "accent-border-gradient before:top-0! before:right-0!",
+      )}
     >
       <div
         className={cn(
           "border-2 border-cyan-medium/30 rounded-lg overflow-hidden",
-          index === 0 && "accent-border-gradient",
         )}
       >
         {/* Folder header */}
