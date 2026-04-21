@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useScroll } from "@/contexts/ScrollContext";
 
 /**
  * ConstellationBackground
@@ -111,6 +112,12 @@ const CONNECTION_DISTANCE = 140;
 
 export function ConstellationBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { scrollY } = useScroll();
+  const targetOffsetRef = useRef(0);
+
+  useEffect(() => {
+    targetOffsetRef.current = scrollY * 0.05;
+  }, [scrollY]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -180,6 +187,7 @@ export function ConstellationBackground() {
 
     // ── Draw loop ───────────────────────────────────────────────────────
     let rafId: number;
+    let currentOffset = 0;
 
     const draw = () => {
       const cW = W();
@@ -196,29 +204,19 @@ export function ConstellationBackground() {
         drawStars(sctx, cW, cH);
       }
 
-      // Trail fade
+      // Trail fade (full viewport, no parallax)
       ctx.fillStyle = `rgba(${BG},0.18)`;
       ctx.fillRect(0, 0, cW, cH);
 
+      // Ease current offset toward target for "sky drift" after scroll stops
+      currentOffset += (targetOffsetRef.current - currentOffset) * 0.08;
+
+      // Parallax: offset all sky elements upward as user scrolls
+      ctx.save();
+      ctx.translate(0, -currentOffset);
+
       // Static star field
       ctx.drawImage(starCanvas, 0, 0);
-
-      // Horizon glow — radial gradient centered below viewport
-      const hgrd = ctx.createRadialGradient(
-        cW * 0.5,
-        cH * 1.5,
-        0,
-        cW * 0.5,
-        cH * 1.5,
-        cH * 1.35,
-      );
-      hgrd.addColorStop(0, "rgba(200,40,180,0.15)");
-      hgrd.addColorStop(0.15, "rgba(160,40,220,0.12)");
-      hgrd.addColorStop(0.45, "rgba(120,30,200,0.06)");
-      hgrd.addColorStop(0.75, "rgba(80,20,160,0.0225)");
-      hgrd.addColorStop(1, "transparent");
-      ctx.fillStyle = hgrd;
-      ctx.fillRect(0, 0, cW, cH);
 
       // Sky darkening toward top
       const topGrd = ctx.createLinearGradient(0, 0, 0, cH * 0.4);
@@ -408,6 +406,25 @@ export function ConstellationBackground() {
           ctx.fill();
         }
       }
+
+      ctx.restore();
+
+      // Horizon glow — radial gradient anchored to viewport bottom (no parallax)
+      const hgrd = ctx.createRadialGradient(
+        cW * 0.5,
+        cH * 1.5,
+        0,
+        cW * 0.5,
+        cH * 1.5,
+        cH * 1.35,
+      );
+      hgrd.addColorStop(0, "rgba(200,40,180,0.15)");
+      hgrd.addColorStop(0.15, "rgba(160,40,220,0.12)");
+      hgrd.addColorStop(0.45, "rgba(120,30,200,0.06)");
+      hgrd.addColorStop(0.75, "rgba(80,20,160,0.0225)");
+      hgrd.addColorStop(1, "transparent");
+      ctx.fillStyle = hgrd;
+      ctx.fillRect(0, 0, cW, cH);
 
       rafId = requestAnimationFrame(draw);
     };
