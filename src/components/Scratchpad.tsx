@@ -64,7 +64,7 @@ export function Scratchpad() {
               onClick={() => setIsOpen(true)}
               className="fixed bottom-5 left-5 z-50 opacity-75 transition-opacity hover:opacity-100 cursor-pointer"
             >
-              <RasterIcon name="note" size={20} opacity={0.8} />
+              <RasterIcon name="note-cyan" size={20} opacity={0.8} />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">Scratchpad</TooltipContent>
