@@ -10,7 +10,7 @@ export function DotDivider({
   dotColor = "bg-cyan-medium",
 }: DotDividerProps) {
   return (
-    <div className={cn("flex justify-center gap-1 py-4", className)}>
+    <div className={cn("flex justify-center gap-1 py-4 relative", className)}>
       {Array.from({ length: 5 }, (_, i) => (
         <div
           key={i}
