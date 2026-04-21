@@ -4,6 +4,7 @@ import { useSession } from "@/contexts/SessionContext";
 import { AnimatedBorderButton } from "@/components/AnimatedBorderButton";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FadePresence } from "@/components/ui/fade-presence";
+import { DotDivider } from "./ui/dot-divider";
 import {
   Tooltip,
   TooltipContent,
@@ -30,6 +31,12 @@ export function MiniMenu() {
         </div>
       </AnimatedBorderButton>
       <nav className="fixed top-14 left-5 z-50 flex flex-col gap-4">
+        <DotDivider
+          dotNum={1}
+          dotSize={4}
+          dotColor="bg-magenta-medium/50"
+          className="py-2"
+        />
         {navItems.map((item) =>
           item.label ? (
             <TooltipProvider key={item.path} delayDuration={0}>
