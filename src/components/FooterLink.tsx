@@ -24,7 +24,7 @@ export function FooterLink() {
       href="https://github.com/aradnom"
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative inline-flex items-center gap-1.5 text-sm text-cyan-medium/60 hover:text-cyan-medium transition-colors px-3 py-1.5 no-underline"
+      className="group relative inline-flex items-center gap-1.5 text-sm text-cyan-medium/80 hover:text-cyan-medium transition-colors px-3 py-1.5 no-underline"
     >
       {/* Border trace */}
       {size.w > 0 && (

@@ -91,7 +91,7 @@ function LayoutContent({ children }: LayoutProps) {
       <div className={`pl-0 relative transition-all duration-200`}>
         {children}
       </div>
-      <DotDivider dotColor="bg-cyan-medium/50" />
+      <DotDivider dotColor="bg-cyan-medium/75" />
       <footer className="relative flex justify-center py-6">
         <FooterLink />
       </footer>
