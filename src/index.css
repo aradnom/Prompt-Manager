@@ -52,4 +52,8 @@
 }
 
 @layer utilities {
+  .clearfix {
+    display: table;
+    clear: both;
+  }
 }

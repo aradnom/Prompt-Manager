@@ -192,13 +192,14 @@ function HomeContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className={`sticky bottom-0 left-0 right-0 z-40 pb-8 ${
-              isMinimized ? "float-right" : ""
+              isMinimized ? "float-right after:content-['']" : ""
             }`}
           >
             <div className="container mx-auto">
               <StackOutputBlock />
             </div>
           </motion.div>
+          {isMinimized && <div className="clearfix" />}
         </StackContentProvider>
       ) : (
         <motion.div
