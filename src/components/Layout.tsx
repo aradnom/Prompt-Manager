@@ -5,6 +5,7 @@ import { ErrorBanner } from "./ErrorBanner";
 import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
 import { Scratchpad } from "./Scratchpad";
 import { FeedbackForm } from "./FeedbackForm";
+import { CuiPairDialog } from "./CuiPairDialog";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
@@ -68,6 +69,7 @@ function LayoutContent({ children }: LayoutProps) {
       <FadePresence show={isAuthenticated}>
         <FeedbackForm />
       </FadePresence>
+      {isAuthenticated && <CuiPairDialog />}
       <FadePresence show={isAuthenticated && location.pathname !== "/account"}>
         <TooltipProvider delayDuration={0}>
           <Tooltip>

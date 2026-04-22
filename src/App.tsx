@@ -3,6 +3,7 @@ import { ServerConfigProvider } from "./contexts/ServerConfigContext";
 import { LLMStatusProvider } from "./contexts/LLMStatusContext";
 import { ClientLLMProvider } from "./contexts/ClientLLMContext";
 import { SessionProvider } from "./contexts/SessionContext";
+import { UserEventsProvider } from "./contexts/UserEventsContext";
 import { UserStateProvider } from "./contexts/UserStateContext";
 import { ActiveStackProvider } from "./contexts/ActiveStackContext";
 import { TypesProvider } from "./contexts/TypesContext";
@@ -26,109 +27,111 @@ function App() {
     <BrowserRouter>
       <ServerConfigProvider>
         <SessionProvider>
-          <UserStateProvider>
-            <LLMStatusProvider>
-              <ClientLLMProvider>
-                <ErrorProvider>
-                  <TypesProvider>
-                    <ActiveStackProvider>
-                      <Layout>
-                        <Routes>
-                          <Route path="/" element={<Home />} />
-                          <Route
-                            path="/prompts"
-                            element={
-                              <ProtectedRoute>
-                                <Stacks />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/prompts/:displayId"
-                            element={
-                              <ProtectedRoute>
-                                <Stacks />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/snapshots"
-                            element={
-                              <ProtectedRoute>
-                                <Snapshots />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/templates"
-                            element={
-                              <ProtectedRoute>
-                                <Templates />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/templates/:id"
-                            element={
-                              <ProtectedRoute>
-                                <Templates />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/blocks"
-                            element={
-                              <ProtectedRoute>
-                                <Blocks />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/blocks/new"
-                            element={
-                              <ProtectedRoute>
-                                <Blocks />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/wildcards"
-                            element={
-                              <ProtectedRoute>
-                                <Wildcards />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route path="/features" element={<Features />} />
-                          <Route
-                            path="/account"
-                            element={
-                              <ProtectedRoute>
-                                <Account />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/lm-studio-cors"
-                            element={<LMStudioCors />}
-                          />
-                          <Route
-                            path="/developer-settings"
-                            element={
-                              <ProtectedRoute>
-                                <DeveloperSettings />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </Layout>
-                    </ActiveStackProvider>
-                  </TypesProvider>
-                </ErrorProvider>
-              </ClientLLMProvider>
-            </LLMStatusProvider>
-          </UserStateProvider>
+          <UserEventsProvider>
+            <UserStateProvider>
+              <LLMStatusProvider>
+                <ClientLLMProvider>
+                  <ErrorProvider>
+                    <TypesProvider>
+                      <ActiveStackProvider>
+                        <Layout>
+                          <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route
+                              path="/prompts"
+                              element={
+                                <ProtectedRoute>
+                                  <Stacks />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/prompts/:displayId"
+                              element={
+                                <ProtectedRoute>
+                                  <Stacks />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/snapshots"
+                              element={
+                                <ProtectedRoute>
+                                  <Snapshots />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/templates"
+                              element={
+                                <ProtectedRoute>
+                                  <Templates />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/templates/:id"
+                              element={
+                                <ProtectedRoute>
+                                  <Templates />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/blocks"
+                              element={
+                                <ProtectedRoute>
+                                  <Blocks />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/blocks/new"
+                              element={
+                                <ProtectedRoute>
+                                  <Blocks />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/wildcards"
+                              element={
+                                <ProtectedRoute>
+                                  <Wildcards />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route path="/features" element={<Features />} />
+                            <Route
+                              path="/account"
+                              element={
+                                <ProtectedRoute>
+                                  <Account />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/lm-studio-cors"
+                              element={<LMStudioCors />}
+                            />
+                            <Route
+                              path="/developer-settings"
+                              element={
+                                <ProtectedRoute>
+                                  <DeveloperSettings />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </Layout>
+                      </ActiveStackProvider>
+                    </TypesProvider>
+                  </ErrorProvider>
+                </ClientLLMProvider>
+              </LLMStatusProvider>
+            </UserStateProvider>
+          </UserEventsProvider>
         </SessionProvider>
       </ServerConfigProvider>
     </BrowserRouter>
