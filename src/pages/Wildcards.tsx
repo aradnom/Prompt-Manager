@@ -10,6 +10,7 @@ import {
   normalizeDisplayIdWithSuffix,
 } from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
+import { useSync } from "@/contexts/SyncContext";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useTransform } from "@/hooks/useTransform";
@@ -229,6 +230,7 @@ function WildcardForm({
 export default function Wildcards() {
   const { addError } = useErrors();
   const { isLLMConfigured } = useLLMStatus();
+  const { notifyUpsert, notifyDelete } = useSync();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -284,7 +286,8 @@ export default function Wildcards() {
   const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
 
   const createMutation = api.wildcards.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("wildcards", data as unknown as { id: number });
       refetch();
       setIsCreating(false);
     },
@@ -294,7 +297,8 @@ export default function Wildcards() {
   });
 
   const updateMutation = api.wildcards.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("wildcards", data as unknown as { id: number });
       refetch();
       setEditingId(null);
     },
@@ -304,13 +308,15 @@ export default function Wildcards() {
   });
 
   const renameMutation = api.wildcards.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("wildcards", data as unknown as { id: number });
       refetch();
     },
   });
 
   const deleteMutation = api.wildcards.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("wildcards", variables.id);
       refetch();
     },
     onError: (error) => {
