@@ -9,6 +9,7 @@ export const configRouter = router({
         allTargets: Array.from(LLM_TARGETS),
       },
       turnstileSiteKey: ctx.config.cfTurnstileSiteKey ?? null,
+      encryptionSalt: ctx.config.encryptionSalt,
     };
   }),
 });
