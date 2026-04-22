@@ -13,6 +13,7 @@ interface UserStateContextType {
   blockCount: number;
   activeLLMPlatform: string | null;
   setActiveLLMPlatform: (platform: string | null) => void;
+  accountToken: string | null;
   isLoading: boolean;
   accountDataLoaded: boolean;
   refetch: () => void;
@@ -29,6 +30,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
   const [activeLLMPlatform, setActiveLLMPlatform] = useState<string | null>(
     null,
   );
+  const [accountToken, setAccountToken] = useState<string | null>(null);
   const [accountDataLoaded, setAccountDataLoaded] = useState(false);
   const [isLoading] = useState(false);
 
@@ -46,6 +48,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) {
       setActiveLLMPlatform(null);
+      setAccountToken(null);
       setAccountDataLoaded(true); // No account data needed when not authenticated
       return;
     }
@@ -64,6 +67,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
 
         const data = await response.json();
         setActiveLLMPlatform(data.accountData?.activeLLMPlatform || null);
+        setAccountToken(data.accountData?.token ?? null);
         setAccountDataLoaded(true);
       } catch (error) {
         console.error("Error fetching account data:", error);
@@ -88,6 +92,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
       setStackCount(0);
       setBlockCount(0);
       setActiveLLMPlatform(null);
+      setAccountToken(null);
       setAccountDataLoaded(true);
     }
   }, [isAuthenticated]);
@@ -104,6 +109,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
         blockCount,
         activeLLMPlatform,
         setActiveLLMPlatform,
+        accountToken,
         accountDataLoaded,
         isLoading,
         refetch,

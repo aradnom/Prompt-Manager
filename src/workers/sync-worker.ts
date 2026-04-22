@@ -178,6 +178,10 @@ const stores: Record<SyncEntityType, EntityStore> = {
 };
 
 let db: IDBPDatabase | null = null;
+// Derived key lives only in worker memory for the session. Used to decrypt
+// envelope fields before they reach MiniSearch — not yet wired into the
+// indexing path (will swap in once write-side encryption lands).
+let derivedKey: Uint8Array | null = null;
 
 async function init(): Promise<void> {
   db = await openSyncDB();
@@ -243,6 +247,16 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
         case "init":
           await init();
           break;
+        case "setKey": {
+          const bin = atob(msg.key);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          derivedKey = bytes;
+          console.log(
+            `[sync worker] derived key delivered (${derivedKey.length} bytes)`,
+          );
+          break;
+        }
         case "applySync":
           await applySync(
             msg.entityType,
@@ -251,6 +265,12 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
             msg.serverTime,
           );
           break;
+        case "pushChange": {
+          if (!db) throw new Error("Worker not initialized");
+          await writeBatch(db, msg.entityType, msg.upserts, msg.deletedIds);
+          stores[msg.entityType].applyDelta(msg.upserts, msg.deletedIds);
+          break;
+        }
         case "search": {
           const hits = stores[msg.entityType].search(msg.query, msg.options);
           post({

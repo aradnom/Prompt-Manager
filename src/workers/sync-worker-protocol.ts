@@ -30,7 +30,22 @@ export interface ApplySyncPayload {
 
 export type MainToWorkerMessage =
   | { type: "init" }
+  | {
+      // Derived AES-256-GCM key, base64-encoded. Worker holds it in module
+      // scope and uses it to decrypt envelope fields before indexing.
+      type: "setKey";
+      key: string;
+    }
   | ({ type: "applySync"; entityType: SyncEntityType } & ApplySyncPayload)
+  | {
+      // Apply a locally-initiated mutation to the worker's cache without
+      // touching the lastSync cursor. The next delta sync will re-pull these
+      // rows (idempotent) but the cache + index reflect the change immediately.
+      type: "pushChange";
+      entityType: SyncEntityType;
+      upserts: Array<{ id: number; [key: string]: unknown }>;
+      deletedIds: number[];
+    }
   | {
       type: "search";
       requestId: string;

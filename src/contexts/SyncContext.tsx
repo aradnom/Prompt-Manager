@@ -8,7 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { useSession } from "@/contexts/SessionContext";
+import { useUserState } from "@/contexts/UserStateContext";
 import { trpcClient } from "@/lib/trpc";
+import { deriveEncryptionKey } from "@/lib/derive-key";
 import {
   ENTITY_TYPES,
   getMeta,
@@ -48,6 +50,11 @@ interface SyncContextValue {
     options?: SearchOptions,
   ) => Promise<SearchHit<T>[]>;
   resync: () => Promise<void>;
+  notifyUpsert: (
+    entityType: SyncEntityType,
+    row: { id: number; [key: string]: unknown },
+  ) => void;
+  notifyDelete: (entityType: SyncEntityType, id: number) => void;
 }
 
 const SyncContext = createContext<SyncContextValue | undefined>(undefined);
@@ -77,6 +84,7 @@ async function fetchEntityExport(
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useSession();
+  const { accountToken } = useUserState();
   const [ready, setReady] = useState(false);
   const [status, setStatus] =
     useState<Record<SyncEntityType, SyncEntityStatus>>(emptyStatus);
@@ -140,12 +148,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const msg = event.data;
       switch (msg.type) {
         case "ready":
+          // Worker has loaded whatever was in IDB from a previous session.
+          // Initial sync is kicked off by a separate effect once the account
+          // token (and derived key) are also available.
           setReady(true);
-          // Worker has loaded whatever was in IDB from a previous session;
-          // now pull deltas from the server.
-          runSync().catch((err) =>
-            console.error("[sync] initial sync failed:", err),
-          );
           break;
         case "synced":
           resyncRetriesRef.current[msg.entityType] = 0;
@@ -211,7 +217,39 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       }
       pendingSearchesRef.current.clear();
     };
-  }, [isAuthenticated, runSync]);
+  }, [isAuthenticated]);
+
+  // Once the worker is ready AND the account token is available, derive the
+  // encryption key, push it to the worker, then kick off the initial sync.
+  // Guarded so it only fires once per worker lifetime.
+  const initialSyncDoneRef = useRef(false);
+  useEffect(() => {
+    if (!ready || !accountToken) return;
+    if (initialSyncDoneRef.current) return;
+    initialSyncDoneRef.current = true;
+
+    (async () => {
+      try {
+        const { encryptionSalt } = await trpcClient.config.getSettings.query();
+        const key = await deriveEncryptionKey(accountToken, encryptionSalt);
+        // base64-encode for postMessage — Uint8Array transfer would work too
+        // but this keeps the protocol a plain JSON-serializable string.
+        let bin = "";
+        for (let i = 0; i < key.length; i++) bin += String.fromCharCode(key[i]);
+        postToWorker({ type: "setKey", key: btoa(bin) });
+      } catch (err) {
+        console.error("[sync] failed to derive/deliver encryption key:", err);
+      }
+      runSync().catch((err) =>
+        console.error("[sync] initial sync failed:", err),
+      );
+    })();
+  }, [ready, accountToken, postToWorker, runSync]);
+
+  // Reset the initial-sync guard whenever the worker is torn down.
+  useEffect(() => {
+    if (!isAuthenticated) initialSyncDoneRef.current = false;
+  }, [isAuthenticated]);
 
   const search = useCallback(
     <T,>(
@@ -241,8 +279,44 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     [postToWorker],
   );
 
+  const notifyUpsert = useCallback(
+    (
+      entityType: SyncEntityType,
+      row: { id: number; [key: string]: unknown },
+    ) => {
+      postToWorker({
+        type: "pushChange",
+        entityType,
+        upserts: [row],
+        deletedIds: [],
+      });
+    },
+    [postToWorker],
+  );
+
+  const notifyDelete = useCallback(
+    (entityType: SyncEntityType, id: number) => {
+      postToWorker({
+        type: "pushChange",
+        entityType,
+        upserts: [],
+        deletedIds: [id],
+      });
+    },
+    [postToWorker],
+  );
+
   return (
-    <SyncContext.Provider value={{ ready, status, search, resync: runSync }}>
+    <SyncContext.Provider
+      value={{
+        ready,
+        status,
+        search,
+        resync: runSync,
+        notifyUpsert,
+        notifyDelete,
+      }}
+    >
       {children}
     </SyncContext.Provider>
   );

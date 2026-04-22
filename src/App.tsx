@@ -29,8 +29,8 @@ function App() {
       <ServerConfigProvider>
         <SessionProvider>
           <UserEventsProvider>
-            <SyncProvider>
-              <UserStateProvider>
+            <UserStateProvider>
+              <SyncProvider>
                 <LLMStatusProvider>
                   <ClientLLMProvider>
                     <ErrorProvider>
@@ -132,8 +132,8 @@ function App() {
                     </ErrorProvider>
                   </ClientLLMProvider>
                 </LLMStatusProvider>
-              </UserStateProvider>
-            </SyncProvider>
+              </SyncProvider>
+            </UserStateProvider>
           </UserEventsProvider>
         </SessionProvider>
       </ServerConfigProvider>
