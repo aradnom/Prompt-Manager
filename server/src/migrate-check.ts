@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { checkPendingMigrations } from "@server/lib/migration-check";
 
 const databaseUrl =
