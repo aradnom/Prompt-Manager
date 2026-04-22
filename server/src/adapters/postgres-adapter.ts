@@ -45,6 +45,8 @@ import type {
   UpdateStackSnapshotInput,
   User,
   CreateUserInput,
+  SyncExportResult,
+  SyncStack,
 } from "@server/adapters/storage-adapter.interface";
 
 export class PostgresStorageAdapter implements IStorageAdapter {
@@ -3127,6 +3129,223 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       ...stack,
       blocks,
       revisions: stackRevisions,
+    };
+  }
+
+  // ==========================================================================
+  // Sync / bulk-export helpers for the client-side search cache.
+  //
+  // Each returns `items` (rows changed after `since`, or all if omitted) and
+  // `existingIds` (the full current id set) so the client can diff and evict
+  // anything that's been deleted. We don't track deletion tombstones — the id
+  // list acts as a cheap reconciliation substitute.
+  // ==========================================================================
+
+  async exportBlocksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Block>> {
+    let itemsQuery = this.db
+      .selectFrom("blocks")
+      .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
+      .selectAll("blocks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("block_revisions as active_rev")
+              .select("active_rev.text")
+              .whereRef("active_rev.id", "=", "blocks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("block_revisions")
+              .select("text")
+              .whereRef("block_revisions.block_id", "=", "blocks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("text"),
+      ])
+      .select([
+        "types.id as type_id_joined",
+        "types.name as type_name",
+        "types.description as type_description",
+        "block_folders.name as folder_name",
+      ])
+      .where("blocks.user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("blocks.updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("blocks")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    const items = itemRows.map((r) => {
+      const type = r.type_id_joined
+        ? {
+            id: r.type_id_joined,
+            name: r.type_name!,
+            description: r.type_description,
+          }
+        : null;
+      const block = this.mapBlock(r, type, r.folder_name ?? null);
+      block.text = r.text || "";
+      return block;
+    });
+
+    return { items, existingIds: idRows.map((r) => r.id) };
+  }
+
+  async exportStacksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<SyncStack>> {
+    let itemsQuery = this.db
+      .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
+      .selectAll("stacks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.rendered_content")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("rendered_content")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("rendered_content"),
+      ])
+      .select(["stack_folders.name as folder_name"])
+      .where("stacks.user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("stacks.updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("stacks")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    const items: SyncStack[] = itemRows.map((r) => {
+      const stack = this.mapStack(r, r.folder_name ?? null);
+      stack.blockIds = r.block_ids || [];
+      stack.disabledBlockIds = r.disabled_block_ids || [];
+      return { ...stack, renderedContent: r.rendered_content ?? null };
+    });
+
+    return { items, existingIds: idRows.map((r) => r.id) };
+  }
+
+  async exportStackSnapshotsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackSnapshot>> {
+    let itemsQuery = this.db
+      .selectFrom("stack_snapshots")
+      .leftJoin("stacks", "stack_snapshots.stack_id", "stacks.id")
+      .selectAll("stack_snapshots")
+      .select([
+        "stacks.display_id as stack_display_id",
+        "stacks.name as stack_name",
+      ])
+      .where("stack_snapshots.user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("stack_snapshots.updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("stack_snapshots")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    const items = itemRows.map((r) => ({
+      ...this.mapStackSnapshot(r),
+      stackDisplayId: r.stack_display_id ?? undefined,
+      stackName: r.stack_name ?? undefined,
+    }));
+
+    return { items, existingIds: idRows.map((r) => r.id) };
+  }
+
+  async exportWildcardsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Wildcard>> {
+    let itemsQuery = this.db
+      .selectFrom("wildcards")
+      .selectAll()
+      .where("user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("wildcards")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    return {
+      items: itemRows.map((r) => this.mapWildcard(r)),
+      existingIds: idRows.map((r) => r.id),
     };
   }
 

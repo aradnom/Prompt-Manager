@@ -224,6 +224,33 @@ export interface IStorageAdapter {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Wildcard>>;
   countWildcards(): Promise<number>;
+
+  // Sync / bulk-export — used by the client-side search cache.
+  // Returns rows changed since `since` plus the full id set for reconciliation.
+  exportBlocksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Block>>;
+  exportStacksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<SyncStack>>;
+  exportStackSnapshotsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackSnapshot>>;
+  exportWildcardsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Wildcard>>;
+}
+
+/** BlockStack with the active revision's rendered content embedded for search. */
+export type SyncStack = BlockStack & { renderedContent: string | null };
+
+export interface SyncExportResult<T> {
+  items: T[];
+  existingIds: number[];
 }
 
 export interface GetStackOptions {
