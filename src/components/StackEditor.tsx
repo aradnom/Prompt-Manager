@@ -121,11 +121,16 @@ export function StackEditor({ stack }: StackEditorProps) {
     setIsRenamingStack(false);
   };
 
-  const updateContentMutation = api.stacks.updateContent.useMutation();
   const utils = api.useUtils();
   const { notifyUpsert } = useSync();
+  const updateContentMutation = api.stacks.updateContent.useMutation({
+    onSuccess: (_data, variables) => {
+      notifyUpsert("stacks", { id: variables.stackId });
+    },
+  });
   const updateStackMutation = api.stacks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       utils.stacks.invalidate();
     },
   });
@@ -139,7 +144,8 @@ export function StackEditor({ stack }: StackEditorProps) {
   );
 
   const createSnapshotMutation = api.stacks.createSnapshot.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("snapshots", data as unknown as { id: number });
       snapshotDoneRef.current.mutation = true;
       if (snapshotDoneRef.current.flash) {
         setShowSnapshots(true);
@@ -219,7 +225,8 @@ export function StackEditor({ stack }: StackEditorProps) {
   ]);
 
   const addBlockMutation = api.stacks.addBlock.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       refetch();
     },
   });
@@ -237,20 +244,23 @@ export function StackEditor({ stack }: StackEditorProps) {
   });
 
   const removeBlockMutation = api.stacks.removeBlock.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       refetch();
     },
   });
 
   const reorderBlocksMutation = api.stacks.reorderBlocks.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       refetch();
     },
   });
 
   const toggleBlockDisabledMutation =
     api.stacks.toggleBlockDisabled.useMutation({
-      onSuccess: () => {
+      onSuccess: (data) => {
+        notifyUpsert("stacks", data as unknown as { id: number });
         refetch();
       },
     });

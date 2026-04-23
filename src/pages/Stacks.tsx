@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
+import { useWorkerSearch } from "@/hooks/useWorkerSearch";
+import { useSync } from "@/contexts/SyncContext";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FolderRow } from "@/components/FolderRow";
 import { SearchInput } from "@/components/ui/search-input";
@@ -83,11 +85,12 @@ function StackCard({
   const [editNameValue, setEditNameValue] = useState(stack.name ?? "");
   const utils = api.useUtils();
 
+  const { notifyUpsert } = useSync();
   const renameMutation = api.stacks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       utils.stacks.list.invalidate();
       utils.stacks.listWithFolders.invalidate();
-      utils.stacks.search.invalidate();
     },
   });
 
@@ -368,33 +371,32 @@ function StackList() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch search results when there's a search query
-  const { data: searchData, isLoading: isSearching } =
-    api.stacks.search.useQuery(
-      {
-        query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-        limit: PAGE_SIZE,
-        offset,
-      },
-      { enabled: isSearchMode },
-    );
+  // Client-side worker search when a query is active. Server-side `stacks.search`
+  // can't match ciphertext columns; the worker holds decrypted rows in memory.
+  const searchData = useWorkerSearch<Stack>("stacks", debouncedSearch, {
+    pageSize: PAGE_SIZE,
+    page,
+  });
 
   // Calculate totals for pagination
   const total = isSearchMode
-    ? (searchData?.total ?? 0)
+    ? searchData.total
     : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseStacks ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = isSearchMode ? isSearching : isLoading;
+  const showLoading = isSearchMode ? searchData.isLoading : isLoading;
 
+  const { notifyUpsert: listNotifyUpsert, notifyDelete } = useSync();
   const deleteMutation = api.stacks.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("stacks", variables.id);
       refetch();
       utils.stackFolders.getStacks.invalidate();
       navigate("/prompts");
     },
   });
   const duplicateMutation = api.stacks.duplicate.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      listNotifyUpsert("stacks", data as unknown as { id: number });
       refetch();
       utils.stackFolders.getStacks.invalidate();
     },
@@ -520,7 +522,7 @@ function StackList() {
         </div>
       ) : isSearchMode ? (
         // Search mode: flat list of stacks
-        searchData && searchData.items.length > 0 ? (
+        searchData.items.length > 0 ? (
           <>
             <div className="space-y-4">
               {searchData.items.map((stack, index) => (
@@ -843,8 +845,10 @@ function SinglePromptView({ displayId }: { displayId: string }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
 
+  const { notifyUpsert, notifyDelete } = useSync();
   const updateMutation = api.stacks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       utils.stacks.list.invalidate();
       utils.stacks.listWithFolders.invalidate();
       utils.stacks.getByDisplayId.invalidate();
@@ -853,7 +857,8 @@ function SinglePromptView({ displayId }: { displayId: string }) {
   });
 
   const deleteMutation = api.stacks.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("stacks", variables.id);
       utils.stacks.list.invalidate();
       utils.stacks.listWithFolders.invalidate();
       navigate("/prompts");

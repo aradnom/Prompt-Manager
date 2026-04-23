@@ -65,7 +65,8 @@ export function StackOutputBlock() {
         utils.stacks.get.setData({ id: variables.id }, context.previousStack);
       }
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       if (activeStack) {
         utils.stacks.get.invalidate({ id: variables.id });
       }
@@ -86,7 +87,10 @@ export function StackOutputBlock() {
     onSuccess: (data) =>
       notifyUpsert("blocks", data as unknown as { id: number }),
   });
-  const createStackMutation = api.stacks.create.useMutation();
+  const createStackMutation = api.stacks.create.useMutation({
+    onSuccess: (data) =>
+      notifyUpsert("stacks", data as unknown as { id: number }),
+  });
 
   const handleConvertToBlock = async () => {
     if (!renderedContent) return;

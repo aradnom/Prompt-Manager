@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api, RouterOutput } from "@/lib/api";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
+import { useSync } from "@/contexts/SyncContext";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -187,8 +188,10 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
     },
   });
 
+  const { notifyUpsert } = useSync();
   const createStackMutation = api.stacks.create.useMutation({
     onSuccess: (newStack) => {
+      notifyUpsert("stacks", newStack as unknown as { id: number });
       utils.stacks.list.invalidate();
       setActiveStack(newStack);
       navigate("/");

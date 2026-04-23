@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { SearchInput } from "@/components/ui/search-input";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
-import { api } from "@/lib/api";
+import { useWorkerSearch } from "@/hooks/useWorkerSearch";
 import type { BlockStack } from "@/types/schema";
 
 export function PromptSwitcher() {
@@ -18,11 +18,11 @@ export function PromptSwitcher() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: searchData } = api.stacks.search.useQuery(
-    { query: debouncedSearch.length > 0 ? debouncedSearch : undefined },
-    { enabled: debouncedSearch.length > 0 },
+  const { items: searchResults } = useWorkerSearch<BlockStack>(
+    "stacks",
+    debouncedSearch,
+    { pageSize: 50, page: 0 },
   );
-  const searchResults = searchData?.items;
 
   // Open dropdown when there are results
   useEffect(() => {

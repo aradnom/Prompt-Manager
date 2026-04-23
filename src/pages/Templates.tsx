@@ -6,6 +6,7 @@ import { api, RouterOutput } from "@/lib/api";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
+import { useSync } from "@/contexts/SyncContext";
 import { RasterIcon } from "@/components/RasterIcon";
 import { TemplateEditor } from "@/components/TemplateEditor";
 import { SearchInput } from "@/components/ui/search-input";
@@ -71,8 +72,10 @@ function TemplateCard({
     },
   });
 
+  const { notifyUpsert } = useSync();
   const createStackMutation = api.stacks.create.useMutation({
     onSuccess: (newStack) => {
+      notifyUpsert("stacks", newStack as unknown as { id: number });
       utils.stacks.list.invalidate();
       setActiveStack(newStack);
       navigate("/");
