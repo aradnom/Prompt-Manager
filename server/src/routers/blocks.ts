@@ -33,7 +33,7 @@ function encryptBlockFields<T extends Record<string, unknown>>(
   );
 }
 
-function decryptBlock(row: Block, key: Buffer): Block {
+export function decryptBlock(row: Block, key: Buffer): Block {
   return decryptMetaField(
     decryptStringFields(
       row as unknown as Record<string, unknown>,
@@ -55,7 +55,7 @@ function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
   ) as unknown as BlockRevision;
 }
 
-function decryptBlockWithRevisions(
+export function decryptBlockWithRevisions(
   row: BlockWithRevisions,
   key: Buffer,
 ): BlockWithRevisions {
