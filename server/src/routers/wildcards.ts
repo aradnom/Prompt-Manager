@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 import {
-  encrypt,
-  encryptJsonValue,
-  tryDecrypt,
-  tryDecryptJsonValue,
+  decryptMetaField,
+  decryptStringFields,
+  encryptMetaField,
+  encryptStringFields,
+  requireKey,
 } from "@server/lib/envelope";
 import type { Wildcard } from "@/types/schema";
 
@@ -21,46 +21,25 @@ const mutationRL = withRateLimit(
 // since the storage adapter serializes/deserializes it as an object.
 const ENCRYPTED_FIELDS = ["name", "format", "content"] as const;
 
-function requireKey(derivedKey: Buffer | undefined): Buffer {
-  if (!derivedKey) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Derived key unavailable for encrypted operation",
-    });
-  }
-  return derivedKey;
-}
-
-function encryptFields<
-  T extends Partial<Record<(typeof ENCRYPTED_FIELDS)[number], string>> & {
-    meta?: Record<string, unknown>;
-  },
->(input: T, key: Buffer): T {
-  const out: Record<string, unknown> = { ...input };
-  for (const field of ENCRYPTED_FIELDS) {
-    const val = out[field];
-    if (typeof val === "string") {
-      out[field] = encrypt(val, key);
-    }
-  }
-  if (out.meta && typeof out.meta === "object") {
-    out.meta = encryptJsonValue(out.meta, key);
-  }
-  return out as T;
+function encryptWildcardFields<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): T {
+  return encryptMetaField(
+    encryptStringFields(input, ENCRYPTED_FIELDS, key),
+    key,
+  );
 }
 
 function decryptWildcard(row: Wildcard, key: Buffer): Wildcard {
-  const out: Record<string, unknown> = { ...row };
-  for (const field of ENCRYPTED_FIELDS) {
-    const val = out[field];
-    if (typeof val === "string") {
-      out[field] = tryDecrypt(val, key);
-    }
-  }
-  if (out.meta != null) {
-    out.meta = tryDecryptJsonValue(out.meta, key);
-  }
-  return out as unknown as Wildcard;
+  return decryptMetaField(
+    decryptStringFields(
+      row as unknown as Record<string, unknown>,
+      ENCRYPTED_FIELDS,
+      key,
+    ),
+    key,
+  ) as unknown as Wildcard;
 }
 
 export const wildcardsRouter = router({
@@ -78,7 +57,7 @@ export const wildcardsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const key = requireKey(ctx.derivedKey);
-      const encrypted = encryptFields(input, key);
+      const encrypted = encryptWildcardFields(input, key);
       // Return encrypted so the client worker exercises its decrypt path via
       // notifyUpsert. The UI refresh goes through list/get, which decrypt.
       return ctx.storage.createWildcard({
@@ -143,7 +122,7 @@ export const wildcardsRouter = router({
       if (wildcard.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      const encrypted = encryptFields(updates, key);
+      const encrypted = encryptWildcardFields(updates, key);
       return ctx.storage.updateWildcard(id, encrypted);
     }),
 

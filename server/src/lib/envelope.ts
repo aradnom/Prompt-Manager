@@ -1,4 +1,20 @@
+import { TRPCError } from "@trpc/server";
 import { encrypt, decrypt } from "@server/lib/auth";
+
+/**
+ * Pulls the derived key off context and throws a clean tRPC error if it's
+ * missing. Every router that touches encrypted fields starts here, so the
+ * failure mode is uniform.
+ */
+export function requireKey(derivedKey: Buffer | undefined): Buffer {
+  if (!derivedKey) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Derived key unavailable for encrypted operation",
+    });
+  }
+  return derivedKey;
+}
 
 /**
  * Server-side envelope helpers.
@@ -81,3 +97,66 @@ export function tryDecryptJsonValue(value: unknown, key: Buffer): unknown {
 }
 
 export { encrypt };
+
+/**
+ * Encrypt a set of string fields in-place (returning a shallow copy). Non-
+ * string values (null/undefined/missing) pass through untouched, which lets
+ * callers use the same helper for optional fields without a pre-check.
+ */
+export function encryptStringFields<T extends Record<string, unknown>>(
+  input: T,
+  fields: readonly string[],
+  key: Buffer,
+): T {
+  const out: Record<string, unknown> = { ...input };
+  for (const f of fields) {
+    const v = out[f];
+    if (typeof v === "string") out[f] = encrypt(v, key);
+  }
+  return out as T;
+}
+
+/**
+ * Mirror of `encryptStringFields` on the read path. Uses the tolerant
+ * `tryDecrypt` so plaintext-legacy rows pass through.
+ */
+export function decryptStringFields<T extends Record<string, unknown>>(
+  row: T,
+  fields: readonly string[],
+  key: Buffer,
+): T {
+  const out: Record<string, unknown> = { ...row };
+  for (const f of fields) {
+    const v = out[f];
+    if (typeof v === "string") out[f] = tryDecrypt(v, key);
+  }
+  return out as T;
+}
+
+/**
+ * Encrypt a row's `meta` field (if present) via the object-envelope helper.
+ * `meta` is stored as JSON, so the envelope goes in as an object that the
+ * adapter JSON.stringifies into the column.
+ */
+export function encryptMetaField<T extends { meta?: unknown }>(
+  input: T,
+  key: Buffer,
+): T {
+  if (input.meta && typeof input.meta === "object") {
+    return { ...input, meta: encryptJsonValue(input.meta, key) };
+  }
+  return input;
+}
+
+/**
+ * Mirror of `encryptMetaField` on the read path.
+ */
+export function decryptMetaField<T extends { meta?: unknown }>(
+  row: T,
+  key: Buffer,
+): T {
+  if (row.meta != null) {
+    return { ...row, meta: tryDecryptJsonValue(row.meta, key) };
+  }
+  return row;
+}

@@ -1,12 +1,70 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
+import {
+  decryptMetaField,
+  decryptStringFields,
+  encryptMetaField,
+  encryptStringFields,
+  requireKey,
+} from "@server/lib/envelope";
+import type { Block, BlockRevision, BlockWithRevisions } from "@/types/schema";
 
 const mutationRL = withRateLimit(
   "blocks.create",
   RATE_LIMITS.mutation.windowMs,
   RATE_LIMITS.mutation.maxRequests,
 );
+
+// String-typed fields stored as ciphertext envelopes. `text` is written to
+// both `blocks` (derived column) and `block_revisions` inside one transaction,
+// so a single envelope covers both. `labels` is intentionally excluded for
+// now — see note in the labels migration task.
+const ENCRYPTED_BLOCK_FIELDS = ["name", "notes", "text"] as const;
+const ENCRYPTED_REVISION_FIELDS = ["text"] as const;
+
+function encryptBlockFields<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): T {
+  return encryptMetaField(
+    encryptStringFields(input, ENCRYPTED_BLOCK_FIELDS, key),
+    key,
+  );
+}
+
+function decryptBlock(row: Block, key: Buffer): Block {
+  return decryptMetaField(
+    decryptStringFields(
+      row as unknown as Record<string, unknown>,
+      ENCRYPTED_BLOCK_FIELDS,
+      key,
+    ),
+    key,
+  ) as unknown as Block;
+}
+
+function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
+  return decryptMetaField(
+    decryptStringFields(
+      row as unknown as Record<string, unknown>,
+      ENCRYPTED_REVISION_FIELDS,
+      key,
+    ),
+    key,
+  ) as unknown as BlockRevision;
+}
+
+function decryptBlockWithRevisions(
+  row: BlockWithRevisions,
+  key: Buffer,
+): BlockWithRevisions {
+  const block = decryptBlock(row, key);
+  return {
+    ...block,
+    revisions: row.revisions.map((r) => decryptRevision(r, key)),
+  };
+}
 
 export const blocksRouter = router({
   create: protectedProcedure
@@ -28,8 +86,10 @@ export const blocksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
+      const encrypted = encryptBlockFields(input, key);
       return ctx.storage.createBlock({
-        ...input,
+        ...encrypted,
         userId: ctx.userId,
       });
     }),
@@ -41,6 +101,7 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const block = await ctx.storage.getBlock(input.id);
       if (!block) {
         throw new Error("Block not found");
@@ -48,7 +109,7 @@ export const blocksRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return block;
+      return decryptBlock(block, key);
     }),
 
   getByUuid: protectedProcedure
@@ -58,6 +119,7 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const block = await ctx.storage.getBlockByUuid(input.uuid);
       if (!block) {
         throw new Error("Block not found");
@@ -65,7 +127,7 @@ export const blocksRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return block;
+      return decryptBlock(block, key);
     }),
 
   getWithRevisions: protectedProcedure
@@ -75,6 +137,7 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const blockWithRevisions = await ctx.storage.getBlockWithRevisions(
         input.id,
       );
@@ -84,7 +147,7 @@ export const blocksRouter = router({
       if (blockWithRevisions.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return blockWithRevisions;
+      return decryptBlockWithRevisions(blockWithRevisions, key);
     }),
 
   getRevisions: protectedProcedure
@@ -94,7 +157,7 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      // Check block ownership first
+      const key = requireKey(ctx.derivedKey);
       const block = await ctx.storage.getBlock(input.id);
       if (!block) {
         throw new Error("Block not found");
@@ -102,7 +165,8 @@ export const blocksRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.getRevisions(input.id);
+      const revisions = await ctx.storage.getRevisions(input.id);
+      return revisions.map((r) => decryptRevision(r, key));
     }),
 
   update: protectedProcedure
@@ -123,8 +187,8 @@ export const blocksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const { id, ...updates } = input;
-      // Check ownership first
       const block = await ctx.storage.getBlock(id);
       if (!block) {
         throw new Error("Block not found");
@@ -132,7 +196,8 @@ export const blocksRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.updateBlock(id, updates);
+      const encrypted = encryptBlockFields(updates, key);
+      return ctx.storage.updateBlock(id, encrypted);
     }),
 
   setActiveRevision: protectedProcedure
@@ -143,7 +208,7 @@ export const blocksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Check ownership first
+      const key = requireKey(ctx.derivedKey);
       const block = await ctx.storage.getBlock(input.blockId);
       if (!block) {
         throw new Error("Block not found");
@@ -151,7 +216,11 @@ export const blocksRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.setActiveRevision(input.blockId, input.revisionId);
+      const updated = await ctx.storage.setActiveRevision(
+        input.blockId,
+        input.revisionId,
+      );
+      return decryptBlock(updated, key);
     }),
 
   delete: protectedProcedure
@@ -161,7 +230,6 @@ export const blocksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Check ownership first
       const block = await ctx.storage.getBlock(input.id);
       if (!block) {
         throw new Error("Block not found");
@@ -180,8 +248,11 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const blocks = await ctx.storage.getBlocksByIds(input.ids);
-      return blocks.filter((b) => b.userId === ctx.userId);
+      return blocks
+        .filter((b) => b.userId === ctx.userId)
+        .map((b) => decryptBlock(b, key));
     }),
 
   list: protectedProcedure
@@ -194,16 +265,28 @@ export const blocksRouter = router({
         .optional(),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.listBlocks(
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.listBlocks(
         ctx.userId,
         input ? { limit: input.limit, offset: input.offset } : undefined,
       );
+      return {
+        ...result,
+        items: result.items.map((b) => decryptBlock(b, key)),
+      };
     }),
 
   count: protectedProcedure.query(async ({ ctx }) => {
     return { count: await ctx.storage.countBlocks(ctx.userId) };
   }),
 
+  // NOT CURRENTLY USED BY THE UI for text matching.
+  //
+  // Client-side search (via the sync worker's MiniSearch index) is the real
+  // entry point — server-side LIKE can't match encrypted `name`/`notes`/`text`.
+  // The `typeId` and `labels` filters still work (labels remain plaintext for
+  // now), and the endpoint is kept for plaintext-legacy rows and non-UI
+  // consumers.
   search: protectedProcedure
     .input(
       z.object({
@@ -218,7 +301,8 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.searchBlocks(
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.searchBlocks(
         {
           query: input.query,
           typeId: input.typeId,
@@ -227,6 +311,10 @@ export const blocksRouter = router({
         ctx.userId,
         { limit: input.limit, offset: input.offset },
       );
+      return {
+        ...result,
+        items: result.items.map((b) => decryptBlock(b, key)),
+      };
     }),
 
   listWithFolders: protectedProcedure
@@ -237,9 +325,16 @@ export const blocksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.listBlocksWithFolders(ctx.userId, {
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.listBlocksWithFolders(ctx.userId, {
         limit: input.limit,
         offset: input.offset,
       });
+      // Folder names are plaintext (folder entities aren't yet part of the
+      // encryption pass). Only the contained Block rows need decryption.
+      return {
+        ...result,
+        looseBlocks: result.looseBlocks.map((b) => decryptBlock(b, key)),
+      };
     }),
 });
