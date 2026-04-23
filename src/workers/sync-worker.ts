@@ -216,6 +216,10 @@ class EntityStore {
   count(): number {
     return this.rows.size;
   }
+
+  listAll(): Array<Record<string, unknown>> {
+    return Array.from(this.rows.values());
+  }
 }
 
 const stores: Record<SyncEntityType, EntityStore> = {
@@ -326,6 +330,15 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
             type: "searchResult",
             requestId: msg.requestId,
             hits,
+          });
+          break;
+        }
+        case "list": {
+          const items = stores[msg.entityType].listAll();
+          post({
+            type: "listResult",
+            requestId: msg.requestId,
+            items,
           });
           break;
         }

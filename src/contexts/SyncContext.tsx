@@ -49,6 +49,7 @@ interface SyncContextValue {
     query: string,
     options?: SearchOptions,
   ) => Promise<SearchHit<T>[]>;
+  list: <T = unknown>(entityType: SyncEntityType) => Promise<T[]>;
   resync: () => Promise<void>;
   notifyUpsert: (
     entityType: SyncEntityType,
@@ -95,6 +96,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const workerRef = useRef<Worker | null>(null);
   const pendingSearchesRef = useRef(
     new Map<string, (hits: SearchHit[]) => void>(),
+  );
+  const pendingListsRef = useRef(
+    new Map<string, (items: Array<Record<string, unknown>>) => void>(),
   );
   const searchIdRef = useRef(0);
   // Per-entity retry counter so a pathological server state (or a worker bug)
@@ -196,6 +200,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           }
           break;
         }
+        case "listResult": {
+          const resolver = pendingListsRef.current.get(msg.requestId);
+          if (resolver) {
+            pendingListsRef.current.delete(msg.requestId);
+            resolver(msg.items);
+          }
+          break;
+        }
         case "error":
           console.error(
             `[sync worker] ${msg.context ?? "error"}: ${msg.message}`,
@@ -238,11 +250,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       workerRef.current = null;
       setReady(false);
       setStatus(emptyStatus());
-      // Reject any in-flight searches to avoid leaks.
+      // Reject any in-flight searches/lists to avoid leaks.
       for (const [, resolver] of pendingSearchesRef.current) {
         resolver([]);
       }
       pendingSearchesRef.current.clear();
+      for (const [, resolver] of pendingListsRef.current) {
+        resolver([]);
+      }
+      pendingListsRef.current.clear();
     };
   }, [isAuthenticated, accountToken, runSync]);
 
@@ -269,6 +285,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           query,
           options,
         });
+      });
+    },
+    [postToWorker],
+  );
+
+  const list = useCallback(
+    <T,>(entityType: SyncEntityType): Promise<T[]> => {
+      return new Promise((resolve) => {
+        if (!workerRef.current) {
+          resolve([]);
+          return;
+        }
+        const requestId = String(++searchIdRef.current);
+        pendingListsRef.current.set(
+          requestId,
+          resolve as (items: Array<Record<string, unknown>>) => void,
+        );
+        postToWorker({ type: "list", requestId, entityType });
       });
     },
     [postToWorker],
@@ -307,6 +341,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         ready,
         status,
         search,
+        list,
         resync: runSync,
         notifyUpsert,
         notifyDelete,

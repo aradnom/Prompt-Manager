@@ -52,6 +52,15 @@ export type MainToWorkerMessage =
       entityType: SyncEntityType;
       query: string;
       options?: SearchOptions;
+    }
+  | {
+      // Return every cached row for an entity, decrypted. Used by UI surfaces
+      // that filter by structured fields (e.g. labels, typeId) rather than by
+      // text — server-side filtering on encrypted columns isn't possible, so
+      // the worker ships the whole decrypted set and the caller narrows it.
+      type: "list";
+      requestId: string;
+      entityType: SyncEntityType;
     };
 
 export type WorkerToMainMessage =
@@ -74,5 +83,10 @@ export type WorkerToMainMessage =
       type: "searchResult";
       requestId: string;
       hits: SearchHit[];
+    }
+  | {
+      type: "listResult";
+      requestId: string;
+      items: Array<Record<string, unknown>>;
     }
   | { type: "error"; message: string; context?: string };
