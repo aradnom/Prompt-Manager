@@ -12,7 +12,7 @@ import {
   writeBatch,
   type SyncEntityType,
 } from "@/lib/sync-idb";
-import { unwrapValue } from "@/lib/envelope";
+import { decryptEnvelope, isEnvelope, unwrapValue } from "@/lib/envelope";
 import type {
   MainToWorkerMessage,
   SearchHit,
@@ -75,8 +75,37 @@ interface IndexedDoc {
 }
 
 /**
- * Convert a raw sync row into the flattened shape MiniSearch expects. Handles
- * envelope unwrapping and array-to-string flattening for labels.
+ * Decrypt any envelope fields in a row using the module-scope derived key.
+ * Plaintext and non-string fields pass through. Without a key, envelope fields
+ * remain as ciphertext (they'll show up as opaque JSON to the indexer — that
+ * only happens in the degenerate case where encrypted data arrives before the
+ * key; the context is structured to send setKey first).
+ */
+async function decryptRow(
+  row: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const out: Record<string, unknown> = { ...row };
+  if (!derivedKey) return out;
+  for (const [k, v] of Object.entries(out)) {
+    if (typeof v === "string" && isEnvelope(v)) {
+      out[k] = await decryptEnvelope(v, derivedKey);
+    } else if (Array.isArray(v)) {
+      out[k] = await Promise.all(
+        v.map(async (item) => {
+          if (typeof item === "string" && isEnvelope(item)) {
+            return await decryptEnvelope(item, derivedKey!);
+          }
+          return item;
+        }),
+      );
+    }
+  }
+  return out;
+}
+
+/**
+ * Flatten a (decrypted) row into the shape MiniSearch expects. Pure shape
+ * mapping — any envelope unwrapping is already handled by `decryptRow`.
  */
 function toIndexedDoc(
   entityType: SyncEntityType,
@@ -87,16 +116,14 @@ function toIndexedDoc(
   for (const field of fields) {
     const raw = row[field];
     if (field === "labels" && Array.isArray(raw)) {
-      // Flatten the array so each label is its own token in the index.
       doc.labels = raw
-        .map((v) => unwrapValue(typeof v === "string" ? v : null))
-        .filter((v): v is string => v != null)
+        .filter((v): v is string => typeof v === "string")
         .join(" ");
       continue;
     }
-    const unwrapped = unwrapValue(typeof raw === "string" ? raw : null);
-    if (unwrapped != null) {
-      (doc as unknown as Record<string, unknown>)[field] = unwrapped;
+    const passed = unwrapValue(typeof raw === "string" ? raw : null);
+    if (passed != null) {
+      (doc as unknown as Record<string, unknown>)[field] = passed;
     }
   }
   return doc;
@@ -117,22 +144,23 @@ class EntityStore {
     });
   }
 
-  loadFromCache(rows: Record<string, unknown>[]): void {
+  async loadFromCache(rows: Record<string, unknown>[]): Promise<void> {
     this.rows.clear();
     this.index.removeAll();
     const docs: IndexedDoc[] = [];
     for (const row of rows) {
       const id = row.id as number;
-      this.rows.set(id, row);
-      docs.push(toIndexedDoc(this.entityType, row));
+      const decrypted = await decryptRow(row);
+      this.rows.set(id, decrypted);
+      docs.push(toIndexedDoc(this.entityType, decrypted));
     }
     this.index.addAll(docs);
   }
 
-  applyDelta(
+  async applyDelta(
     upserts: Array<Record<string, unknown>>,
     deletedIds: number[],
-  ): void {
+  ): Promise<void> {
     for (const id of deletedIds) {
       if (this.rows.has(id)) {
         this.rows.delete(id);
@@ -144,8 +172,9 @@ class EntityStore {
       if (this.rows.has(id)) {
         this.index.discard(id);
       }
-      this.rows.set(id, row);
-      this.index.add(toIndexedDoc(this.entityType, row));
+      const decrypted = await decryptRow(row);
+      this.rows.set(id, decrypted);
+      this.index.add(toIndexedDoc(this.entityType, decrypted));
     }
   }
 
@@ -187,7 +216,7 @@ async function init(): Promise<void> {
   db = await openSyncDB();
   for (const entityType of ENTITY_TYPES) {
     const rows = await readAll<Record<string, unknown>>(db, entityType);
-    stores[entityType].loadFromCache(rows);
+    await stores[entityType].loadFromCache(rows);
   }
   post({ type: "ready" });
 }
@@ -229,7 +258,7 @@ async function applySync(
   }
 
   await setMeta(db, entityType, { lastSync: serverTime });
-  stores[entityType].applyDelta(items, deletedIds);
+  await stores[entityType].applyDelta(items, deletedIds);
 
   post({
     type: "synced",
@@ -268,7 +297,7 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
         case "pushChange": {
           if (!db) throw new Error("Worker not initialized");
           await writeBatch(db, msg.entityType, msg.upserts, msg.deletedIds);
-          stores[msg.entityType].applyDelta(msg.upserts, msg.deletedIds);
+          await stores[msg.entityType].applyDelta(msg.upserts, msg.deletedIds);
           break;
         }
         case "search": {

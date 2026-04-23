@@ -136,7 +136,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [syncEntity]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    // Defer worker creation until both auth and the account token are in hand
+    // so we can deliver the derived key before `init` triggers the IDB cache
+    // load. Otherwise returning sessions would index pre-existing ciphertext
+    // rows as opaque blobs.
+    if (!isAuthenticated || !accountToken) return;
 
     const worker = new Worker(
       new URL("../workers/sync-worker.ts", import.meta.url),
@@ -148,10 +152,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const msg = event.data;
       switch (msg.type) {
         case "ready":
-          // Worker has loaded whatever was in IDB from a previous session.
-          // Initial sync is kicked off by a separate effect once the account
-          // token (and derived key) are also available.
           setReady(true);
+          runSync().catch((err) =>
+            console.error("[sync] initial sync failed:", err),
+          );
           break;
         case "synced":
           resyncRetriesRef.current[msg.entityType] = 0;
@@ -203,7 +207,25 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       snapshots: 0,
       wildcards: 0,
     };
-    worker.postMessage({ type: "init" } satisfies MainToWorkerMessage);
+
+    // Derive the key, push it to the worker, then post `init`. Messages are
+    // delivered in order, and `setKey` is a sync handler in the worker, so by
+    // the time `init`'s async loadFromCache runs, the key is in place.
+    (async () => {
+      try {
+        const { encryptionSalt } = await trpcClient.config.getSettings.query();
+        const key = await deriveEncryptionKey(accountToken, encryptionSalt);
+        let bin = "";
+        for (let i = 0; i < key.length; i++) bin += String.fromCharCode(key[i]);
+        worker.postMessage({
+          type: "setKey",
+          key: btoa(bin),
+        } satisfies MainToWorkerMessage);
+      } catch (err) {
+        console.error("[sync] failed to derive/deliver encryption key:", err);
+      }
+      worker.postMessage({ type: "init" } satisfies MainToWorkerMessage);
+    })();
 
     return () => {
       worker.removeEventListener("message", handleMessage);
@@ -217,39 +239,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       }
       pendingSearchesRef.current.clear();
     };
-  }, [isAuthenticated]);
-
-  // Once the worker is ready AND the account token is available, derive the
-  // encryption key, push it to the worker, then kick off the initial sync.
-  // Guarded so it only fires once per worker lifetime.
-  const initialSyncDoneRef = useRef(false);
-  useEffect(() => {
-    if (!ready || !accountToken) return;
-    if (initialSyncDoneRef.current) return;
-    initialSyncDoneRef.current = true;
-
-    (async () => {
-      try {
-        const { encryptionSalt } = await trpcClient.config.getSettings.query();
-        const key = await deriveEncryptionKey(accountToken, encryptionSalt);
-        // base64-encode for postMessage — Uint8Array transfer would work too
-        // but this keeps the protocol a plain JSON-serializable string.
-        let bin = "";
-        for (let i = 0; i < key.length; i++) bin += String.fromCharCode(key[i]);
-        postToWorker({ type: "setKey", key: btoa(bin) });
-      } catch (err) {
-        console.error("[sync] failed to derive/deliver encryption key:", err);
-      }
-      runSync().catch((err) =>
-        console.error("[sync] initial sync failed:", err),
-      );
-    })();
-  }, [ready, accountToken, postToWorker, runSync]);
-
-  // Reset the initial-sync guard whenever the worker is torn down.
-  useEffect(() => {
-    if (!isAuthenticated) initialSyncDoneRef.current = false;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accountToken, runSync]);
 
   const search = useCallback(
     <T,>(
