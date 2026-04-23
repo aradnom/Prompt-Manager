@@ -2,12 +2,36 @@ import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { generateDisplayId } from "@server/lib/generate-display-id";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
+import {
+  decryptStringFields,
+  encryptStringFields,
+  requireKey,
+  tryDecrypt,
+} from "@server/lib/envelope";
+import type { StackTemplate } from "@/types/schema";
 
 const mutationRL = withRateLimit(
   "stackTemplates.create",
   RATE_LIMITS.mutation.windowMs,
   RATE_LIMITS.mutation.maxRequests,
 );
+
+const ENCRYPTED_TEMPLATE_FIELDS = ["name", "notes"] as const;
+
+function encryptTemplateFields<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): T {
+  return encryptStringFields(input, ENCRYPTED_TEMPLATE_FIELDS, key);
+}
+
+function decryptTemplate(row: StackTemplate, key: Buffer): StackTemplate {
+  return decryptStringFields(
+    row as unknown as Record<string, unknown>,
+    ENCRYPTED_TEMPLATE_FIELDS,
+    key,
+  ) as unknown as StackTemplate;
+}
 
 export const stackTemplatesRouter = router({
   create: protectedProcedure
@@ -27,16 +51,20 @@ export const stackTemplatesRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      return ctx.storage.createStackTemplate({
+      const key = requireKey(ctx.derivedKey);
+      const encrypted = encryptTemplateFields(input, key);
+      const created = await ctx.storage.createStackTemplate({
         displayId: generateDisplayId(),
-        ...input,
+        ...encrypted,
         userId: ctx.userId,
       });
+      return decryptTemplate(created, key);
     }),
 
   get: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const template = await ctx.storage.getStackTemplate(input.id);
       if (!template) {
         throw new Error("Template not found");
@@ -44,7 +72,7 @@ export const stackTemplatesRouter = router({
       if (template.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return template;
+      return decryptTemplate(template, key);
     }),
 
   update: protectedProcedure
@@ -64,6 +92,7 @@ export const stackTemplatesRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const template = await ctx.storage.getStackTemplate(input.id);
       if (!template) {
         throw new Error("Template not found");
@@ -72,7 +101,9 @@ export const stackTemplatesRouter = router({
         throw new Error("Unauthorized");
       }
       const { id, ...updates } = input;
-      return ctx.storage.updateStackTemplate(id, updates);
+      const encrypted = encryptTemplateFields(updates, key);
+      const updated = await ctx.storage.updateStackTemplate(id, encrypted);
+      return decryptTemplate(updated, key);
     }),
 
   delete: protectedProcedure
@@ -97,12 +128,22 @@ export const stackTemplatesRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.listStackTemplates(ctx.userId, {
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.listStackTemplates(ctx.userId, {
         limit: input.limit,
         offset: input.offset,
       });
+      return {
+        ...result,
+        items: result.items.map((t) => decryptTemplate(t, key)),
+      };
     }),
 
+  // NOT CURRENTLY USED BY THE UI for text matching.
+  //
+  // Server-side ILIKE can't match encrypted `name`/`notes`. The Templates UI
+  // uses the sync worker's MiniSearch index. Endpoint kept for plaintext-legacy
+  // rows and non-UI consumers.
   search: protectedProcedure
     .input(
       z.object({
@@ -112,11 +153,16 @@ export const stackTemplatesRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.searchStackTemplates(
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.searchStackTemplates(
         { query: input.query },
         ctx.userId,
         { limit: input.limit, offset: input.offset },
       );
+      return {
+        ...result,
+        items: result.items.map((t) => decryptTemplate(t, key)),
+      };
     }),
 
   createFromStack: protectedProcedure
@@ -128,6 +174,7 @@ export const stackTemplatesRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const stack = await ctx.storage.getStack(input.stackId);
       if (!stack) {
         throw new Error("Stack not found");
@@ -135,9 +182,16 @@ export const stackTemplatesRouter = router({
       if (stack.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.createStackTemplate({
+      // Decrypt the parent stack name so the auto-generated "<name> Template"
+      // composes cleanly. Falls back to `null` if the row is still plaintext
+      // legacy (tryDecrypt returns the input if it isn't an envelope).
+      const stackName = stack.name != null ? tryDecrypt(stack.name, key) : null;
+      const composedName =
+        input.name ?? (stackName ? `${stackName} Template` : undefined);
+      const encrypted = encryptTemplateFields({ name: composedName }, key);
+      const created = await ctx.storage.createStackTemplate({
         displayId: generateDisplayId(),
-        name: input.name ?? (stack.name ? `${stack.name} Template` : undefined),
+        name: encrypted.name,
         blockIds: stack.blockIds,
         disabledBlockIds: stack.disabledBlockIds,
         commaSeparated: stack.commaSeparated,
@@ -145,5 +199,6 @@ export const stackTemplatesRouter = router({
         style: stack.style,
         userId: ctx.userId,
       });
+      return decryptTemplate(created, key);
     }),
 });
