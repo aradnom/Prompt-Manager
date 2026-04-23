@@ -15,6 +15,7 @@ import { useStackContent } from "@/contexts/StackContentContext";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { useStackOutput } from "@/contexts/StackOutputContext";
 import { useErrors } from "@/contexts/ErrorContext";
+import { useSync } from "@/contexts/SyncContext";
 import { api } from "@/lib/api";
 import { parseWildcards, buildWildcardMarker } from "@/lib/wildcard-parser";
 import { getRandomWildcardPath } from "@/lib/wildcard-random";
@@ -28,6 +29,7 @@ export function StackOutputBlock() {
   const { data: wildcardsData } = api.wildcards.list.useQuery();
   const wildcards = wildcardsData?.items;
   const { addError } = useErrors();
+  const { notifyUpsert } = useSync();
   const navigate = useNavigate();
   const utils = api.useUtils();
   const [isConverting, setIsConverting] = useState(false);
@@ -71,7 +73,8 @@ export function StackOutputBlock() {
   });
 
   const updateBlockMutation = api.blocks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("blocks", data as unknown as { id: number });
       // Refetch the stack to update the rendered content
       if (activeStack) {
         utils.stacks.get.invalidate({ id: activeStack.id });
@@ -79,7 +82,10 @@ export function StackOutputBlock() {
     },
   });
 
-  const createBlockMutation = api.blocks.create.useMutation();
+  const createBlockMutation = api.blocks.create.useMutation({
+    onSuccess: (data) =>
+      notifyUpsert("blocks", data as unknown as { id: number }),
+  });
   const createStackMutation = api.stacks.create.useMutation();
 
   const handleConvertToBlock = async () => {

@@ -44,6 +44,7 @@ import { GenerateBlockDialog } from "@/components/GenerateBlockDialog";
 import { LLMGuard } from "@/components/LLMGuard";
 import { InlineIconBadge } from "@/components/ui/inline-icon-badge";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
+import { useSync } from "@/contexts/SyncContext";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
@@ -122,6 +123,7 @@ export function StackEditor({ stack }: StackEditorProps) {
 
   const updateContentMutation = api.stacks.updateContent.useMutation();
   const utils = api.useUtils();
+  const { notifyUpsert } = useSync();
   const updateStackMutation = api.stacks.update.useMutation({
     onSuccess: () => {
       utils.stacks.invalidate();
@@ -222,10 +224,14 @@ export function StackEditor({ stack }: StackEditorProps) {
     },
   });
 
-  const createBlockMutation = api.blocks.create.useMutation();
+  const createBlockMutation = api.blocks.create.useMutation({
+    onSuccess: (data) =>
+      notifyUpsert("blocks", data as unknown as { id: number }),
+  });
 
   const updateBlockMutation = api.blocks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("blocks", data as unknown as { id: number });
       refetch();
     },
   });

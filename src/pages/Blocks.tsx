@@ -4,6 +4,9 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
+import { useSync } from "@/contexts/SyncContext";
+import { useWorkerSearch } from "@/hooks/useWorkerSearch";
+import type { Block } from "@/types/schema";
 
 import { TextBlock } from "@/components/TextBlock";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
@@ -125,9 +128,11 @@ function BlockFolderContent({
 function NewBlockView() {
   const navigate = useNavigate();
   const utils = api.useUtils();
+  const { notifyUpsert } = useSync();
 
   const createMutation = api.blocks.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("blocks", data as unknown as { id: number });
       utils.blocks.listWithFolders.invalidate();
       utils.blockFolders.getBlocks.invalidate();
       navigate("/blocks");
@@ -191,6 +196,7 @@ function BlockList() {
 
   const offset = page * PAGE_SIZE;
   const utils = api.useUtils();
+  const { notifyUpsert, notifyDelete } = useSync();
 
   // Use listWithFolders when not searching
   const {
@@ -215,24 +221,20 @@ function BlockList() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch search results when there's a search query
-  const { data: searchData, isLoading: isSearching } =
-    api.blocks.search.useQuery(
-      {
-        query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-        limit: PAGE_SIZE,
-        offset,
-      },
-      { enabled: debouncedSearch.length > 0 },
-    );
+  // Client-side worker search when a query is active. Server-side `blocks.search`
+  // can't match ciphertext columns; the worker holds decrypted rows in memory.
+  const searchData = useWorkerSearch<Block>("blocks", debouncedSearch, {
+    pageSize: PAGE_SIZE,
+    page,
+  });
 
   // Calculate totals for pagination
   const isSearchMode = debouncedSearch.length > 0;
   const total = isSearchMode
-    ? (searchData?.total ?? 0)
+    ? searchData.total
     : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseBlocks ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = isSearchMode ? isSearching : isLoading;
+  const showLoading = isSearchMode ? searchData.isLoading : isLoading;
 
   const toggleFolder = (folderId: number) => {
     setExpandedFolders((prev) => {
@@ -247,14 +249,16 @@ function BlockList() {
   };
 
   const updateMutation = api.blocks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("blocks", data as unknown as { id: number });
       refetch();
       utils.blockFolders.getBlocks.invalidate();
     },
   });
 
   const deleteMutation = api.blocks.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("blocks", variables.id);
       refetch();
       utils.blockFolders.getBlocks.invalidate();
     },
