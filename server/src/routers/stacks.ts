@@ -12,6 +12,7 @@ import { decryptBlockWithRevisions } from "@server/routers/blocks";
 import type {
   BlockStack,
   StackRevision,
+  StackSnapshot,
   StackWithBlocks,
 } from "@/types/schema";
 
@@ -61,6 +62,34 @@ function decryptStackRevision(row: StackRevision, key: Buffer): StackRevision {
     ["renderedContent"],
     key,
   ) as unknown as StackRevision;
+}
+
+// Snapshots are fully static — fields are captured at snapshot time and never
+// recomputed. All three user-visible strings encrypt cleanly.
+const ENCRYPTED_SNAPSHOT_FIELDS = ["name", "notes", "renderedContent"] as const;
+
+function encryptSnapshotFields<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): T {
+  return encryptStringFields(input, ENCRYPTED_SNAPSHOT_FIELDS, key);
+}
+
+function decryptSnapshot(row: StackSnapshot, key: Buffer): StackSnapshot {
+  const base = decryptStringFields(
+    row as unknown as Record<string, unknown>,
+    ENCRYPTED_SNAPSHOT_FIELDS,
+    key,
+  ) as unknown as StackSnapshot;
+  // `stackName` is joined from `stacks.name`, which is also ciphertext.
+  if (base.stackName != null) {
+    return decryptStringFields(
+      base as unknown as Record<string, unknown>,
+      ["stackName"],
+      key,
+    ) as unknown as StackSnapshot;
+  }
+  return base;
 }
 
 export const stacksRouter = router({
@@ -543,6 +572,7 @@ export const stacksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const stack = await ctx.storage.getStack(input.stackId);
       if (!stack) {
         throw new Error("Stack not found");
@@ -551,16 +581,25 @@ export const stacksRouter = router({
         throw new Error("Unauthorized");
       }
 
-      return ctx.storage.createStackSnapshot({
+      const encrypted = encryptSnapshotFields(
+        {
+          name: input.name,
+          notes: input.notes,
+          renderedContent: input.renderedContent,
+        },
+        key,
+      );
+      const created = await ctx.storage.createStackSnapshot({
         displayId: generateDisplayId(),
-        name: input.name,
-        notes: input.notes,
-        renderedContent: input.renderedContent,
+        name: encrypted.name,
+        notes: encrypted.notes,
+        renderedContent: encrypted.renderedContent,
         blockIds: stack.blockIds,
         disabledBlockIds: stack.disabledBlockIds,
         stackId: input.stackId,
         userId: ctx.userId,
       });
+      return decryptSnapshot(created, key);
     }),
 
   listSnapshots: protectedProcedure
@@ -570,6 +609,7 @@ export const stacksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const stack = await ctx.storage.getStack(input.stackId);
       if (!stack) {
         throw new Error("Stack not found");
@@ -577,7 +617,8 @@ export const stacksRouter = router({
       if (stack.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.listStackSnapshots(input.stackId);
+      const snapshots = await ctx.storage.listStackSnapshots(input.stackId);
+      return snapshots.map((s) => decryptSnapshot(s, key));
     }),
 
   updateSnapshot: protectedProcedure
@@ -590,6 +631,7 @@ export const stacksRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const stack = await ctx.storage.getStack(input.stackId);
       if (!stack) {
         throw new Error("Stack not found");
@@ -597,8 +639,14 @@ export const stacksRouter = router({
       if (stack.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      const { id, ...updates } = input;
-      return ctx.storage.updateStackSnapshot(id, updates);
+      const { id, stackId: _stackId, ...updates } = input;
+      const encrypted = encryptStringFields(
+        updates as Record<string, unknown>,
+        ["name", "notes"],
+        key,
+      );
+      const updated = await ctx.storage.updateStackSnapshot(id, encrypted);
+      return decryptSnapshot(updated, key);
     }),
 
   deleteSnapshot: protectedProcedure
@@ -628,12 +676,22 @@ export const stacksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.listAllSnapshots(ctx.userId, {
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.listAllSnapshots(ctx.userId, {
         limit: input.limit,
         offset: input.offset,
       });
+      return {
+        ...result,
+        items: result.items.map((s) => decryptSnapshot(s, key)),
+      };
     }),
 
+  // NOT CURRENTLY USED BY THE UI for text matching.
+  //
+  // Snapshot name/notes/renderedContent are all ciphertext, so server-side
+  // ILIKE can't match them. The Snapshots UI uses the sync worker's MiniSearch
+  // index instead. Endpoint kept for plaintext-legacy rows and non-UI consumers.
   searchSnapshots: protectedProcedure
     .input(
       z.object({
@@ -643,9 +701,18 @@ export const stacksRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.searchSnapshots({ query: input.query }, ctx.userId, {
-        limit: input.limit,
-        offset: input.offset,
-      });
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.searchSnapshots(
+        { query: input.query },
+        ctx.userId,
+        {
+          limit: input.limit,
+          offset: input.offset,
+        },
+      );
+      return {
+        ...result,
+        items: result.items.map((s) => decryptSnapshot(s, key)),
+      };
     }),
 });
