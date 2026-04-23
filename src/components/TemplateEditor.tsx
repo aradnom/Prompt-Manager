@@ -179,16 +179,16 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
   });
   formValuesRef.current = { editName, commaSeparated, negative, style };
 
+  const { notifyUpsert } = useSync();
   const updateMutation = api.stackTemplates.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("templates", data as unknown as { id: number });
       utils.stackTemplates.list.invalidate();
-      utils.stackTemplates.search.invalidate();
       utils.stackTemplates.get.invalidate();
       onUpdate?.();
     },
   });
 
-  const { notifyUpsert } = useSync();
   const createStackMutation = api.stacks.create.useMutation({
     onSuccess: (newStack) => {
       notifyUpsert("stacks", newStack as unknown as { id: number });

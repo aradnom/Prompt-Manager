@@ -138,6 +138,7 @@ export function StackEditor({ stack }: StackEditorProps) {
   const createTemplateMutation = api.stackTemplates.createFromStack.useMutation(
     {
       onSuccess: (template) => {
+        notifyUpsert("templates", template as unknown as { id: number });
         navigate(`/templates/${template.id}`);
       },
     },

@@ -7,6 +7,7 @@ import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { useSync } from "@/contexts/SyncContext";
+import { useWorkerSearch } from "@/hooks/useWorkerSearch";
 import { RasterIcon } from "@/components/RasterIcon";
 import { TemplateEditor } from "@/components/TemplateEditor";
 import { SearchInput } from "@/components/ui/search-input";
@@ -56,23 +57,23 @@ function TemplateCard({
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const utils = api.useUtils();
 
+  const { notifyUpsert, notifyDelete } = useSync();
   const updateMutation = api.stackTemplates.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("templates", data as unknown as { id: number });
       utils.stackTemplates.list.invalidate();
-      utils.stackTemplates.search.invalidate();
       onUpdate();
     },
   });
 
   const deleteMutation = api.stackTemplates.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("templates", variables.id);
       utils.stackTemplates.list.invalidate();
-      utils.stackTemplates.search.invalidate();
       onUpdate();
     },
   });
 
-  const { notifyUpsert } = useSync();
   const createStackMutation = api.stacks.create.useMutation({
     onSuccess: (newStack) => {
       notifyUpsert("stacks", newStack as unknown as { id: number });
@@ -258,8 +259,10 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
 
+  const { notifyUpsert, notifyDelete } = useSync();
   const updateMutation = api.stackTemplates.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("templates", data as unknown as { id: number });
       utils.stackTemplates.list.invalidate();
       utils.stackTemplates.get.invalidate();
       refetch();
@@ -267,7 +270,8 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
   });
 
   const deleteMutation = api.stackTemplates.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("templates", variables.id);
       utils.stackTemplates.list.invalidate();
       navigate("/templates");
     },
@@ -400,24 +404,17 @@ function TemplateList() {
     { enabled: !isSearchMode },
   );
 
-  const {
-    data: searchData,
-    isLoading: isSearchLoading,
-    refetch: refetchSearch,
-  } = api.stackTemplates.search.useQuery(
-    {
-      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-      limit: PAGE_SIZE,
-      offset,
-    },
-    { enabled: isSearchMode },
-  );
+  // Client-side worker search — server ILIKE can't match ciphertext columns.
+  const searchData = useWorkerSearch<Template>("templates", debouncedSearch, {
+    pageSize: PAGE_SIZE,
+    page,
+  });
 
   const data = isSearchMode ? searchData : listData;
-  const showLoading = isSearchMode ? isSearchLoading : isListLoading;
-  const total = data?.total ?? 0;
+  const showLoading = isSearchMode ? searchData.isLoading : isListLoading;
+  const total = isSearchMode ? searchData.total : (listData?.total ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const refetch = isSearchMode ? refetchSearch : refetchList;
+  const refetch = refetchList;
 
   return (
     <main className="standard-page-container">
