@@ -12,7 +12,12 @@ import {
   writeBatch,
   type SyncEntityType,
 } from "@/lib/sync-idb";
-import { decryptEnvelope, isEnvelope, unwrapValue } from "@/lib/envelope";
+import {
+  decryptEnvelope,
+  isEnvelope,
+  isEnvelopeObj,
+  unwrapValue,
+} from "@/lib/envelope";
 import type {
   MainToWorkerMessage,
   SearchHit,
@@ -89,6 +94,16 @@ async function decryptRow(
   for (const [k, v] of Object.entries(out)) {
     if (typeof v === "string" && isEnvelope(v)) {
       out[k] = await decryptEnvelope(v, derivedKey);
+    } else if (
+      v &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      isEnvelopeObj(v)
+    ) {
+      // Object-shaped envelope (e.g. `meta` — the storage adapter JSON.parses
+      // the column before it gets here, so the envelope arrives unwrapped).
+      const plaintext = await decryptEnvelope(JSON.stringify(v), derivedKey);
+      out[k] = plaintext != null ? JSON.parse(plaintext) : null;
     } else if (Array.isArray(v)) {
       out[k] = await Promise.all(
         v.map(async (item) => {

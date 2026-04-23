@@ -35,10 +35,19 @@ export function isEnvelope(value: unknown): value is Envelope {
   } catch {
     return false;
   }
-  if (!parsed || typeof parsed !== "object") return false;
-  const keys = Object.keys(parsed);
+  return isEnvelopeObj(parsed);
+}
+
+/**
+ * Envelope detection for already-parsed objects. The `meta` column passes
+ * through `JSON.parse` in the storage adapter, so ciphertext stored there
+ * arrives as `{iv, authTag, ciphertext}` rather than the stringified form.
+ */
+export function isEnvelopeObj(value: unknown): value is Envelope {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj);
   if (keys.length !== 3) return false;
-  const obj = parsed as Record<string, unknown>;
   return (
     typeof obj.iv === "string" &&
     typeof obj.authTag === "string" &&

@@ -11,6 +11,8 @@ import {
 } from "@/lib/generate-display-id";
 import { useErrors } from "@/contexts/ErrorContext";
 import { useSync } from "@/contexts/SyncContext";
+import { useWorkerSearch } from "@/hooks/useWorkerSearch";
+import type { Wildcard } from "@/types/schema";
 import { validateWildcardContent } from "@/lib/wildcard-validation";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useTransform } from "@/hooks/useTransform";
@@ -266,24 +268,28 @@ export default function Wildcards() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch search results when there's a search query
-  const { data: searchData, isLoading: isSearching } =
-    api.wildcards.search.useQuery(
-      {
-        query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
-      },
-      { enabled: debouncedSearch.length > 0 },
-    );
+  // Search runs against the local worker-side MiniSearch index (against
+  // decrypted in-memory content). Server-side LIKE search can't match
+  // encrypted name/content columns, so we pilot the local-search path here.
+  const searchResults = useWorkerSearch<Wildcard>(
+    "wildcards",
+    debouncedSearch,
+    {
+      pageSize: PAGE_SIZE,
+      page,
+    },
+  );
 
-  // Use search results if searching, otherwise use all wildcards
-  const activeData = debouncedSearch.length > 0 ? searchData : wildcardsData;
+  const activeData =
+    debouncedSearch.length > 0
+      ? { items: searchResults.items, total: searchResults.total }
+      : wildcardsData;
   const displayWildcards = activeData?.items;
   const total = activeData?.total ?? 0;
   const offset = page * PAGE_SIZE;
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = debouncedSearch.length > 0 ? isSearching : isLoading;
+  const showLoading =
+    debouncedSearch.length > 0 ? searchResults.isLoading : isLoading;
 
   const createMutation = api.wildcards.create.useMutation({
     onSuccess: (data) => {

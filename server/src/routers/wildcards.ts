@@ -2,7 +2,12 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
-import { encrypt, tryDecrypt } from "@server/lib/envelope";
+import {
+  encrypt,
+  encryptJsonValue,
+  tryDecrypt,
+  tryDecryptJsonValue,
+} from "@server/lib/envelope";
 import type { Wildcard } from "@/types/schema";
 
 const mutationRL = withRateLimit(
@@ -11,8 +16,9 @@ const mutationRL = withRateLimit(
   RATE_LIMITS.mutation.maxRequests,
 );
 
-// Fields stored as ciphertext envelopes. Excludes uuid/displayId (used for
-// lookups) and meta (JSON; not yet wrapped).
+// String-typed fields stored as ciphertext envelopes. Excludes uuid/displayId
+// (used for lookups). `meta` is handled separately via the JSON-value helpers
+// since the storage adapter serializes/deserializes it as an object.
 const ENCRYPTED_FIELDS = ["name", "format", "content"] as const;
 
 function requireKey(derivedKey: Buffer | undefined): Buffer {
@@ -26,7 +32,9 @@ function requireKey(derivedKey: Buffer | undefined): Buffer {
 }
 
 function encryptFields<
-  T extends Partial<Record<(typeof ENCRYPTED_FIELDS)[number], string>>,
+  T extends Partial<Record<(typeof ENCRYPTED_FIELDS)[number], string>> & {
+    meta?: Record<string, unknown>;
+  },
 >(input: T, key: Buffer): T {
   const out: Record<string, unknown> = { ...input };
   for (const field of ENCRYPTED_FIELDS) {
@@ -34,6 +42,9 @@ function encryptFields<
     if (typeof val === "string") {
       out[field] = encrypt(val, key);
     }
+  }
+  if (out.meta && typeof out.meta === "object") {
+    out.meta = encryptJsonValue(out.meta, key);
   }
   return out as T;
 }
@@ -45,6 +56,9 @@ function decryptWildcard(row: Wildcard, key: Buffer): Wildcard {
     if (typeof val === "string") {
       out[field] = tryDecrypt(val, key);
     }
+  }
+  if (out.meta != null) {
+    out.meta = tryDecryptJsonValue(out.meta, key);
   }
   return out as unknown as Wildcard;
 }
@@ -172,6 +186,14 @@ export const wildcardsRouter = router({
       };
     }),
 
+  // NOT CURRENTLY USED BY THE UI.
+  //
+  // Client-side search (via the sync worker's MiniSearch index) is the real
+  // entry point now — server-side LIKE can't match the encrypted `name` and
+  // `content` columns, and only the plaintext `uuid` / `display_id` would
+  // ever hit. Kept around because the endpoint is still well-defined for
+  // plaintext-legacy rows and may be useful for non-UI consumers (scripts,
+  // integrations) that don't have a derived key in scope.
   search: protectedProcedure
     .input(
       z.object({
@@ -182,10 +204,6 @@ export const wildcardsRouter = router({
     )
     .query(async ({ input, ctx }) => {
       const key = requireKey(ctx.derivedKey);
-      // NOTE: server-side LIKE search on name/content is effectively broken
-      // once those columns hold ciphertext. Migrate this page to local
-      // (worker-side) search before relying on this endpoint for encrypted
-      // rows. Plaintext legacy rows will still match.
       const result = await ctx.storage.searchWildcards(
         {
           query: input.query,
