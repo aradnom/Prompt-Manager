@@ -64,6 +64,7 @@ const emptyStatus = (): Record<SyncEntityType, SyncEntityStatus> => ({
   stacks: { lastSync: null, itemCount: 0 },
   snapshots: { lastSync: null, itemCount: 0 },
   wildcards: { lastSync: null, itemCount: 0 },
+  templates: { lastSync: null, itemCount: 0 },
 });
 
 async function fetchEntityExport(
@@ -79,6 +80,8 @@ async function fetchEntityExport(
       return trpcClient.sync.exportSnapshots.query({ since });
     case "wildcards":
       return trpcClient.sync.exportWildcards.query({ since });
+    case "templates":
+      return trpcClient.sync.exportTemplates.query({ since });
   }
 }
 
@@ -101,6 +104,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     stacks: 0,
     snapshots: 0,
     wildcards: 0,
+    templates: 0,
   });
   const MAX_RESYNC_RETRIES = 1;
 
@@ -206,6 +210,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       stacks: 0,
       snapshots: 0,
       wildcards: 0,
+      templates: 0,
     };
 
     // Derive the key, push it to the worker, then post `init`. Messages are

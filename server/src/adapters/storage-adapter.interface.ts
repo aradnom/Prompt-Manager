@@ -243,6 +243,10 @@ export interface IStorageAdapter {
     userId: number,
     since?: Date,
   ): Promise<SyncExportResult<Wildcard>>;
+  exportStackTemplatesForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackTemplate>>;
 }
 
 /** BlockStack with the active revision's rendered content embedded for search. */

@@ -14,15 +14,21 @@ import { openDB, type IDBPDatabase } from "idb";
  */
 
 export const SYNC_DB_NAME = "pm-sync";
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
-export type SyncEntityType = "blocks" | "stacks" | "snapshots" | "wildcards";
+export type SyncEntityType =
+  | "blocks"
+  | "stacks"
+  | "snapshots"
+  | "wildcards"
+  | "templates";
 
 export const ENTITY_TYPES: readonly SyncEntityType[] = [
   "blocks",
   "stacks",
   "snapshots",
   "wildcards",
+  "templates",
 ] as const;
 
 const META_STORE = "meta";

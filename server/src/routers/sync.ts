@@ -65,4 +65,15 @@ export const syncRouter = router({
       );
       return { ...result, serverTime };
     }),
+
+  exportTemplates: protectedProcedure
+    .input(SinceInput)
+    .query(async ({ input, ctx }) => {
+      const serverTime = new Date().toISOString();
+      const result = await ctx.storage.exportStackTemplatesForSync(
+        ctx.userId,
+        parseSince(input.since),
+      );
+      return { ...result, serverTime };
+    }),
 });

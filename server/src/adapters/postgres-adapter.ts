@@ -3349,6 +3349,34 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     };
   }
 
+  async exportStackTemplatesForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackTemplate>> {
+    let itemsQuery = this.db
+      .selectFrom("stack_templates")
+      .selectAll()
+      .where("user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("stack_templates")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    return {
+      items: itemRows.map((r) => this.mapStackTemplate(r)),
+      existingIds: idRows.map((r) => r.id),
+    };
+  }
+
   private mapBlock(
     row: Selectable<Database["blocks"]>,
     type: Type | null = null,

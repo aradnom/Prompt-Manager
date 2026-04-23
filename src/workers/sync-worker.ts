@@ -67,6 +67,10 @@ const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
     fields: ["name", "content"],
     storeFields: ["id"],
   },
+  templates: {
+    fields: ["name", "notes"],
+    storeFields: ["id"],
+  },
 };
 
 interface IndexedDoc {
@@ -219,6 +223,7 @@ const stores: Record<SyncEntityType, EntityStore> = {
   stacks: new EntityStore("stacks"),
   snapshots: new EntityStore("snapshots"),
   wildcards: new EntityStore("wildcards"),
+  templates: new EntityStore("templates"),
 };
 
 let db: IDBPDatabase | null = null;
