@@ -4,9 +4,11 @@ import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 import {
   decryptMetaField,
   decryptStringFields,
+  encrypt,
   encryptMetaField,
   encryptStringFields,
   requireKey,
+  tryDecrypt,
 } from "@server/lib/envelope";
 import type { Block, BlockRevision, BlockWithRevisions } from "@/types/schema";
 
@@ -18,8 +20,8 @@ const mutationRL = withRateLimit(
 
 // String-typed fields stored as ciphertext envelopes. `text` is written to
 // both `blocks` (derived column) and `block_revisions` inside one transaction,
-// so a single envelope covers both. `labels` is intentionally excluded for
-// now — see note in the labels migration task.
+// so a single envelope covers both. `labels` is an array: each element is
+// encrypted independently (handled below).
 const ENCRYPTED_BLOCK_FIELDS = ["name", "notes", "text"] as const;
 const ENCRYPTED_REVISION_FIELDS = ["text"] as const;
 
@@ -27,21 +29,37 @@ function encryptBlockFields<T extends Record<string, unknown>>(
   input: T,
   key: Buffer,
 ): T {
-  return encryptMetaField(
-    encryptStringFields(input, ENCRYPTED_BLOCK_FIELDS, key),
-    key,
-  );
+  const withStrings = encryptStringFields(input, ENCRYPTED_BLOCK_FIELDS, key);
+  const withMeta = encryptMetaField(withStrings, key);
+  const labels = (withMeta as { labels?: unknown }).labels;
+  if (Array.isArray(labels)) {
+    return {
+      ...withMeta,
+      labels: labels.map((l) => (typeof l === "string" ? encrypt(l, key) : l)),
+    } as T;
+  }
+  return withMeta;
 }
 
 export function decryptBlock(row: Block, key: Buffer): Block {
-  return decryptMetaField(
+  const base = decryptMetaField(
     decryptStringFields(
       row as unknown as Record<string, unknown>,
       ENCRYPTED_BLOCK_FIELDS,
       key,
     ),
     key,
-  ) as unknown as Block;
+  );
+  const labels = (base as { labels?: unknown }).labels;
+  if (Array.isArray(labels)) {
+    return {
+      ...base,
+      labels: labels.map((l) =>
+        typeof l === "string" ? tryDecrypt(l, key) : l,
+      ),
+    } as unknown as Block;
+  }
+  return base as unknown as Block;
 }
 
 function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
@@ -280,22 +298,18 @@ export const blocksRouter = router({
     return { count: await ctx.storage.countBlocks(ctx.userId) };
   }),
 
-  // NOT CURRENTLY USED BY THE UI for text matching.
+  // NOT CURRENTLY USED BY THE UI.
   //
   // Client-side search (via the sync worker's MiniSearch index) is the real
-  // entry point — server-side LIKE can't match encrypted `name`/`notes`/`text`.
-  // The `typeId` and `labels` filters still work (labels remain plaintext for
-  // now), and the endpoint is kept for plaintext-legacy rows and non-UI
-  // consumers.
+  // entry point — server-side LIKE can't match encrypted `name`/`notes`/`text`,
+  // and labels are now per-element ciphertext so `@>` can't match them either.
+  // The `typeId` filter still works. Endpoint kept for plaintext-legacy rows
+  // and non-UI consumers.
   search: protectedProcedure
     .input(
       z.object({
         query: z.string().max(LENGTH_LIMITS.searchQuery).optional(),
         typeId: z.number().optional(),
-        labels: z
-          .array(z.string().max(LENGTH_LIMITS.name))
-          .max(LENGTH_LIMITS.labels)
-          .optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
       }),
@@ -306,7 +320,6 @@ export const blocksRouter = router({
         {
           query: input.query,
           typeId: input.typeId,
-          labels: input.labels,
         },
         ctx.userId,
         { limit: input.limit, offset: input.offset },

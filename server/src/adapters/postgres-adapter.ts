@@ -756,25 +756,9 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       countQb = countQb.where("blocks.type_id", "=", options.typeId);
     }
 
-    // Label filter - match any of the provided labels
-    if (options.labels && options.labels.length > 0) {
-      qb = qb.where((eb) =>
-        eb.or(
-          options.labels!.map((label) =>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
-          ),
-        ),
-      );
-      countQb = countQb.where((eb) =>
-        eb.or(
-          options.labels!.map((label) =>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
-          ),
-        ),
-      );
-    }
+    // Label filter removed: labels are stored as per-element ciphertext
+    // envelopes, so `@>` can't match them. Label filtering is client-side via
+    // the sync worker.
 
     // User filter
     if (userId !== undefined) {

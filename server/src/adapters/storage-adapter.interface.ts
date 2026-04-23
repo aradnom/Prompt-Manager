@@ -265,7 +265,6 @@ export interface GetStackOptions {
 export interface SearchBlocksOptions {
   query?: string;
   typeId?: number;
-  labels?: string[];
 }
 
 export interface SearchStacksOptions {
