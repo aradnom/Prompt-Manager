@@ -1,12 +1,53 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
+import { encrypt, tryDecrypt } from "@server/lib/envelope";
+import type { Wildcard } from "@/types/schema";
 
 const mutationRL = withRateLimit(
   "wildcards.create",
   RATE_LIMITS.mutation.windowMs,
   RATE_LIMITS.mutation.maxRequests,
 );
+
+// Fields stored as ciphertext envelopes. Excludes uuid/displayId (used for
+// lookups) and meta (JSON; not yet wrapped).
+const ENCRYPTED_FIELDS = ["name", "format", "content"] as const;
+
+function requireKey(derivedKey: Buffer | undefined): Buffer {
+  if (!derivedKey) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Derived key unavailable for encrypted operation",
+    });
+  }
+  return derivedKey;
+}
+
+function encryptFields<
+  T extends Partial<Record<(typeof ENCRYPTED_FIELDS)[number], string>>,
+>(input: T, key: Buffer): T {
+  const out: Record<string, unknown> = { ...input };
+  for (const field of ENCRYPTED_FIELDS) {
+    const val = out[field];
+    if (typeof val === "string") {
+      out[field] = encrypt(val, key);
+    }
+  }
+  return out as T;
+}
+
+function decryptWildcard(row: Wildcard, key: Buffer): Wildcard {
+  const out: Record<string, unknown> = { ...row };
+  for (const field of ENCRYPTED_FIELDS) {
+    const val = out[field];
+    if (typeof val === "string") {
+      out[field] = tryDecrypt(val, key);
+    }
+  }
+  return out as unknown as Wildcard;
+}
 
 export const wildcardsRouter = router({
   create: protectedProcedure
@@ -22,8 +63,12 @@ export const wildcardsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
+      const encrypted = encryptFields(input, key);
+      // Return encrypted so the client worker exercises its decrypt path via
+      // notifyUpsert. The UI refresh goes through list/get, which decrypt.
       return ctx.storage.createWildcard({
-        ...input,
+        ...encrypted,
         userId: ctx.userId,
       });
     }),
@@ -35,6 +80,7 @@ export const wildcardsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const wildcard = await ctx.storage.getWildcard(input.id);
       if (!wildcard) {
         throw new Error("Wildcard not found");
@@ -42,7 +88,7 @@ export const wildcardsRouter = router({
       if (wildcard.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return wildcard;
+      return decryptWildcard(wildcard, key);
     }),
 
   getByUuid: protectedProcedure
@@ -52,6 +98,7 @@ export const wildcardsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const wildcard = await ctx.storage.getWildcardByUuid(input.uuid);
       if (!wildcard) {
         throw new Error("Wildcard not found");
@@ -59,7 +106,7 @@ export const wildcardsRouter = router({
       if (wildcard.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return wildcard;
+      return decryptWildcard(wildcard, key);
     }),
 
   update: protectedProcedure
@@ -73,8 +120,8 @@ export const wildcardsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const { id, ...updates } = input;
-      // Check ownership first
       const wildcard = await ctx.storage.getWildcard(id);
       if (!wildcard) {
         throw new Error("Wildcard not found");
@@ -82,7 +129,8 @@ export const wildcardsRouter = router({
       if (wildcard.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.updateWildcard(id, updates);
+      const encrypted = encryptFields(updates, key);
+      return ctx.storage.updateWildcard(id, encrypted);
     }),
 
   delete: protectedProcedure
@@ -92,7 +140,6 @@ export const wildcardsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Check ownership first
       const wildcard = await ctx.storage.getWildcard(input.id);
       if (!wildcard) {
         throw new Error("Wildcard not found");
@@ -114,10 +161,15 @@ export const wildcardsRouter = router({
         .optional(),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.listWildcards(
+      const key = requireKey(ctx.derivedKey);
+      const result = await ctx.storage.listWildcards(
         ctx.userId,
         input ? { limit: input.limit, offset: input.offset } : undefined,
       );
+      return {
+        ...result,
+        items: result.items.map((w) => decryptWildcard(w, key)),
+      };
     }),
 
   search: protectedProcedure
@@ -129,12 +181,21 @@ export const wildcardsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return ctx.storage.searchWildcards(
+      const key = requireKey(ctx.derivedKey);
+      // NOTE: server-side LIKE search on name/content is effectively broken
+      // once those columns hold ciphertext. Migrate this page to local
+      // (worker-side) search before relying on this endpoint for encrypted
+      // rows. Plaintext legacy rows will still match.
+      const result = await ctx.storage.searchWildcards(
         {
           query: input.query,
         },
         ctx.userId,
         { limit: input.limit, offset: input.offset },
       );
+      return {
+        ...result,
+        items: result.items.map((w) => decryptWildcard(w, key)),
+      };
     }),
 });
