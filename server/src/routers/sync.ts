@@ -11,6 +11,11 @@ import { router, protectedProcedure } from "@server/trpc";
  * `serverTime` is the authoritative cursor the client should send back as
  * `since` on its next call — using the client's clock instead would mean
  * drifting by however far the local clock is off from the DB.
+ *
+ * All content here is returned "as-is" (no server-side decryption takes place)
+ * to offload bulk decryption to the client and so stored IDB records only
+ * contain encrypted content. All other places resources are returned, content
+ * is decrypted on the server on the way out the door.
  */
 
 const SinceInput = z.object({
