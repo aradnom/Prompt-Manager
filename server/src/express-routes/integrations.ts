@@ -380,13 +380,46 @@ export function registerIntegrationRoutes(
 
   // SSE endpoint for ComfyUI integration
   app.get("/api/integrations/comfyui/events", async (req, res) => {
-    const userId = await authenticateComfyUI(
-      req,
-      res,
-      storage,
-      config.tokenSecret,
-    );
-    if (userId === null) return;
+    // Explicit auth handling (rather than delegating to authenticateComfyUI) so
+    // the failure response is unambiguous to the CUI side: a 401 with a
+    // WWW-Authenticate header, a machine-readable `code`, and no event-stream
+    // headers — so naive clients can't mistake this for a successfully-opened
+    // stream that just happens to have no events yet.
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+    if (!token && req.query.token) {
+      token = req.query.token as string;
+    }
+
+    const unauthorized = (code: string, message: string) => {
+      console.warn(`[SSE] auth rejected on /events (${code}): ${message}`);
+      res.setHeader("WWW-Authenticate", 'Bearer realm="comfyui-integration"');
+      res.status(401).json({ error: message, code });
+    };
+
+    if (!token) {
+      unauthorized(
+        "missing_token",
+        "Authentication required. Provide token via Authorization header or ?token query string.",
+      );
+      return;
+    }
+    if (!validateAPIKey(token)) {
+      unauthorized("invalid_token", "API key is malformed or invalid.");
+      return;
+    }
+    const keyHash = hashToken(token, config.tokenSecret);
+    const userId = await storage.getUserIdByApiKey(keyHash);
+    if (!userId) {
+      unauthorized(
+        "revoked_token",
+        "API key is not associated with any user (likely revoked or regenerated).",
+      );
+      return;
+    }
 
     // Set headers for SSE
     res.setHeader("Content-Type", "text/event-stream");
