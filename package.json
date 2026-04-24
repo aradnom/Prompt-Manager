@@ -16,6 +16,7 @@
     "migrate": "tsx server/src/migrate.ts",
     "migrate:down": "tsx server/src/migrate.ts down",
     "migrate:check": "tsx server/src/migrate-check.ts",
+    "migrate:user-content": "tsx server/src/scripts/migrate-user-content.ts",
     "deploy": "deploy/deploy.sh"
   },
   "dependencies": {
