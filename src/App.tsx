@@ -16,6 +16,7 @@ import Stacks from "./pages/Stacks";
 import Blocks from "./pages/Blocks";
 import Wildcards from "./pages/Wildcards";
 import Account from "./pages/Account";
+import Login from "./pages/Login";
 import DeveloperSettings from "./pages/DeveloperSettings";
 import LMStudioCors from "./pages/LMStudioCors";
 import Snapshots from "./pages/Snapshots";
@@ -39,6 +40,7 @@ function App() {
                           <Layout>
                             <Routes>
                               <Route path="/" element={<Home />} />
+                              <Route path="/login" element={<Login />} />
                               <Route
                                 path="/prompts"
                                 element={

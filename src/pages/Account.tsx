@@ -67,7 +67,6 @@ export default function Account() {
     null,
   );
   const [isLoadingAccount, setIsLoadingAccount] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [apiKeyInfo, setApiKeyInfo] = useState<
     Record<string, { configured: boolean; model?: string }>
   >({});
@@ -189,7 +188,7 @@ export default function Account() {
       }
     } catch (err) {
       console.error("Error fetching account data:", err);
-      setError("Failed to load account data");
+      addError("Failed to load account data.");
     } finally {
       if (!silent) setIsLoadingAccount(false);
     }
@@ -233,7 +232,7 @@ export default function Account() {
       }
     } catch (err) {
       console.error("Error saving API key:", err);
-      setError("Failed to save API key");
+      addError("Failed to save API key.");
     } finally {
       setIsSavingApiKey(false);
     }
@@ -275,7 +274,7 @@ export default function Account() {
       }
     } catch (err) {
       console.error("Error saving model:", err);
-      setError("Failed to save model");
+      addError("Failed to save model.");
     } finally {
       setIsSavingApiKey(false);
     }
@@ -337,7 +336,7 @@ export default function Account() {
       setGlobalActiveLLMPlatform(platform);
     } catch (err) {
       console.error("Error setting active platform:", err);
-      setError("Failed to set active platform");
+      addError("Failed to set active platform.");
     }
   };
 
@@ -377,7 +376,7 @@ export default function Account() {
       setHasIntegrationApiKey(true);
     } catch (err) {
       console.error("Error generating integration API key:", err);
-      setError("Failed to generate API key");
+      addError("Failed to generate API key.");
     } finally {
       setIsGeneratingApiKey(false);
     }
@@ -425,7 +424,7 @@ export default function Account() {
       setNewApiKey(null);
     } catch (err) {
       console.error("Error revoking integration API key:", err);
-      setError("Failed to revoke API key");
+      addError("Failed to revoke API key.");
     }
   };
 
@@ -963,8 +962,6 @@ export default function Account() {
         ) : (
           <CreateAccountOrLogin />
         )}
-
-        {error && <p className="text-red-500 mt-4">{error}</p>}
       </div>
     </main>
   );

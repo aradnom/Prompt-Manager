@@ -8,9 +8,13 @@ import { encrypt, decrypt } from "@server/lib/auth";
  */
 export function requireKey(derivedKey: Buffer | undefined): Buffer {
   if (!derivedKey) {
+    // UNAUTHORIZED (not INTERNAL_SERVER_ERROR): a missing derived key means the
+    // session cookie is absent/expired/invalid, not a server fault. Surfacing
+    // as 401 lets the client redirect to login instead of showing a generic
+    // failure.
     throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Derived key unavailable for encrypted operation",
+      code: "UNAUTHORIZED",
+      message: "Session expired or invalid; please log in again.",
     });
   }
   return derivedKey;
