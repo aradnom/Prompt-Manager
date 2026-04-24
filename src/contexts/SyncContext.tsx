@@ -15,6 +15,7 @@ import {
   ENTITY_TYPES,
   getMeta,
   openSyncDB,
+  SYNC_DB_NAME,
   type SyncEntityType,
 } from "@/lib/sync-idb";
 import type {
@@ -51,6 +52,7 @@ interface SyncContextValue {
   ) => Promise<SearchHit<T>[]>;
   list: <T = unknown>(entityType: SyncEntityType) => Promise<T[]>;
   resync: () => Promise<void>;
+  resetCache: () => Promise<void>;
   notifyUpsert: (
     entityType: SyncEntityType,
     row: { id: number; [key: string]: unknown },
@@ -323,6 +325,35 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     [postToWorker],
   );
 
+  const resetCache = useCallback(async (): Promise<void> => {
+    // Ask the worker to close its IDB handle so `deleteDatabase` doesn't block
+    // on an open connection. Then terminate the worker and wipe the DB. Caller
+    // is expected to reload the page right after — a fresh worker will spin
+    // up on next auth effect and repopulate from scratch.
+    const worker = workerRef.current;
+    if (worker) {
+      await new Promise<void>((resolve) => {
+        const onMsg = (e: MessageEvent<WorkerToMainMessage>) => {
+          if (e.data.type === "closed") {
+            worker.removeEventListener("message", onMsg);
+            resolve();
+          }
+        };
+        worker.addEventListener("message", onMsg);
+        worker.postMessage({ type: "close" } satisfies MainToWorkerMessage);
+      });
+      worker.terminate();
+      workerRef.current = null;
+    }
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(SYNC_DB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () =>
+        reject(new Error("deleteDatabase blocked — an open handle remains"));
+    });
+  }, []);
+
   const notifyDelete = useCallback(
     (entityType: SyncEntityType, id: number) => {
       postToWorker({
@@ -343,6 +374,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         search,
         list,
         resync: runSync,
+        resetCache,
         notifyUpsert,
         notifyDelete,
       }}

@@ -61,6 +61,12 @@ export type MainToWorkerMessage =
       type: "list";
       requestId: string;
       entityType: SyncEntityType;
+    }
+  | {
+      // Close the IDB connection so the main thread can `deleteDatabase`
+      // without getting blocked by an open handle. Worker replies with
+      // `closed` and is expected to be terminated shortly after.
+      type: "close";
     };
 
 export type WorkerToMainMessage =
@@ -89,4 +95,5 @@ export type WorkerToMainMessage =
       requestId: string;
       items: Array<Record<string, unknown>>;
     }
+  | { type: "closed" }
   | { type: "error"; message: string; context?: string };

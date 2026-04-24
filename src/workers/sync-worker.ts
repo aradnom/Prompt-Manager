@@ -342,6 +342,12 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
           });
           break;
         }
+        case "close": {
+          db?.close();
+          db = null;
+          post({ type: "closed" });
+          break;
+        }
       }
     } catch (err) {
       post({

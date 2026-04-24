@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSession } from "@/contexts/SessionContext";
+import { useSync } from "@/contexts/SyncContext";
 import { useUserState } from "@/contexts/UserStateContext";
 import { useErrors } from "@/contexts/ErrorContext";
 import { useLLMStatus, type LLMTarget } from "@/contexts/LLMStatusContext";
@@ -58,6 +59,8 @@ export default function Account() {
     setAuthenticated,
   } = useSession();
   const { addError } = useErrors();
+  const { resetCache } = useSync();
+  const [isResettingCache, setIsResettingCache] = useState(false);
   const { setActiveLLMPlatform: setGlobalActiveLLMPlatform } = useUserState();
   const { setActiveTarget, availableTargets, getTargetInfo } = useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
@@ -377,6 +380,25 @@ export default function Account() {
       setError("Failed to generate API key");
     } finally {
       setIsGeneratingApiKey(false);
+    }
+  };
+
+  const handleResetCache = async () => {
+    if (
+      !confirm(
+        "This will wipe the local search cache and reload the app. All of your content will be re-downloaded from the server on next load. Proceed?",
+      )
+    ) {
+      return;
+    }
+    setIsResettingCache(true);
+    try {
+      await resetCache();
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to reset local cache:", err);
+      addError("Failed to reset local cache. Try closing other tabs first.");
+      setIsResettingCache(false);
     }
   };
 
@@ -902,6 +924,38 @@ export default function Account() {
                       </p>
                     </div>
                   </CollapsibleSection>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card id="system">
+              <CardHeader>
+                <CardTitle>System</CardTitle>
+                <CardDescription>
+                  Low-level maintenance stuff you probably won't need. Useful if
+                  the local search cache has drifted out of sync with the
+                  server.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Reset local search cache
+                    </p>
+                    <p className="text-sm text-cyan-medium">
+                      Wipes the browser's local content cache and reloads the
+                      app. Your content on the server is untouched; it will be
+                      re-downloaded on next load.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline-magenta"
+                    onClick={handleResetCache}
+                    disabled={isResettingCache}
+                  >
+                    {isResettingCache ? "Resetting\u2026" : "Reset Local Cache"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
