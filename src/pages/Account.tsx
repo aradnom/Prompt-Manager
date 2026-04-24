@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import { Copy, Check, KeyRound, AlertTriangle, Info } from "lucide-react";
 import { RasterIcon } from "@/components/RasterIcon";
 import { CreateAccountOrLogin } from "@/components/CreateAccountOrLogin";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { trpc } from "@/lib/trpc";
 import {
   Card,
   CardContent,
@@ -60,7 +62,14 @@ export default function Account() {
   } = useSession();
   const { addError } = useErrors();
   const { resetCache } = useSync();
+  // Local onError suppresses the global "friendly error" banner so we can
+  // present a single, tailored message via addError() in the handler below.
+  const deleteAccountMutation = trpc.users.deleteAccount.useMutation({
+    onError: () => {},
+  });
   const [isResettingCache, setIsResettingCache] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { setActiveLLMPlatform: setGlobalActiveLLMPlatform } = useUserState();
   const { setActiveTarget, availableTargets, getTargetInfo } = useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
@@ -379,6 +388,33 @@ export default function Account() {
       addError("Failed to generate API key.");
     } finally {
       setIsGeneratingApiKey(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      // Wipe server-side first — if that fails, we haven't clobbered anything
+      // locally and the user can retry. Only after the server confirms do we
+      // nuke the local cache, drop the session, and bail to home.
+      await deleteAccountMutation.mutateAsync();
+      await resetCache();
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      setAuthenticated(false);
+      storage.clearActiveStackId();
+      // Stash a one-shot flag so the homepage can surface a confirmation
+      // notice after the hard reload below.
+      sessionStorage.setItem("account-deleted-notice", "1");
+      // Hard nav so every provider/cache starts fresh — same reasoning as the
+      // 401 redirect in Root.tsx.
+      window.location.assign("/");
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      addError("Failed to delete account. Please try again.");
+      setIsDeletingAccount(false);
     }
   };
 
@@ -926,6 +962,48 @@ export default function Account() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card id="delete-account">
+              <CardHeader>
+                <CardTitle>Delete Account</CardTitle>
+                <CardDescription>
+                  Permanently delete your account and every piece of content
+                  tied to it — prompts, blocks, snapshots, templates, wildcards,
+                  folders, the lot. This can't be undone and I can't recover any
+                  of it afterwards.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-yellow-500">
+                      Make sure you've exported anything you want to keep before
+                      doing this. Once the delete runs, your Account ID stops
+                      working and the data is gone from the database.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline-magenta"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isDeletingAccount}
+                  >
+                    {isDeletingAccount ? "Deleting\u2026" : "Delete Account"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <ConfirmDialog
+              open={showDeleteConfirm}
+              onOpenChange={setShowDeleteConfirm}
+              onConfirm={handleDeleteAccount}
+              title="Delete your account?"
+              description="This permanently deletes your account and every prompt, block, snapshot, template, wildcard, and folder you've created. It cannot be undone and there is no recovery."
+              confirmText="Yes, delete everything"
+              cancelText="Cancel"
+              variant="destructive"
+            />
 
             <Card id="system">
               <CardHeader>

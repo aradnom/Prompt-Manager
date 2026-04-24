@@ -6,6 +6,7 @@ import { verifyTurnstileToken } from "@server/lib/turnstile";
 import { encrypt, requireKey, tryDecrypt } from "@server/lib/envelope";
 
 const feedbackRL = withRateLimit("users.submitFeedback", 60_000, 3);
+const deleteAccountRL = withRateLimit("users.deleteAccount", 60_000, 3);
 
 export const usersRouter = router({
   getScratchpad: protectedProcedure.query(async ({ ctx }) => {
@@ -66,6 +67,13 @@ export const usersRouter = router({
         text: input.message,
       });
 
+      return { success: true };
+    }),
+
+  deleteAccount: protectedProcedure
+    .use(deleteAccountRL)
+    .mutation(async ({ ctx }) => {
+      await ctx.storage.deleteUserAccount(ctx.userId);
       return { success: true };
     }),
 });

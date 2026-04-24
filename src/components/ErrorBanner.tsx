@@ -41,7 +41,11 @@ export function ErrorBanner() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="pointer-events-auto bg-magenta-light text-foreground px-4 py-3 rounded-md shadow-lg border border-magenta-medium/50 flex items-start gap-3"
+            className={`pointer-events-auto text-foreground px-4 py-3 rounded-md shadow-lg flex items-start gap-3 ${
+              error.variant === "success"
+                ? "bg-cyan-dark border border-cyan-medium/50"
+                : "bg-magenta-light border border-magenta-medium/50"
+            }`}
           >
             <div className="flex-1 text-sm">
               {error.message}
@@ -61,7 +65,11 @@ export function ErrorBanner() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-magenta-light-foreground/10"
+              className={`h-6 w-6 p-0 ${
+                error.variant === "success"
+                  ? "hover:bg-foreground/10"
+                  : "hover:bg-magenta-light-foreground/10"
+              }`}
               onClick={() => removeError(error.id)}
             >
               ×

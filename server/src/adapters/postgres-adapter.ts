@@ -211,6 +211,63 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .execute();
   }
 
+  // Wipes every row that belongs to a user and then the user record itself.
+  // The schema uses ON DELETE SET NULL for most user-owned FKs (so an orphaned
+  // delete wouldn't cascade), and there are active_revision_id back-pointers
+  // that form cycles with revision tables. The transaction below breaks those
+  // cycles first, then deletes in dependency order. Everything runs atomically
+  // so a partial failure leaves the account intact.
+  async deleteUserAccount(userId: number): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      // Break cycles: users → stacks, blocks → block_revisions, stacks → stack_revisions.
+      await trx
+        .updateTable("users")
+        .set({ active_stack_id: null })
+        .where("id", "=", userId)
+        .execute();
+      await trx
+        .updateTable("blocks")
+        .set({ active_revision_id: null })
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .updateTable("stacks")
+        .set({ active_revision_id: null })
+        .where("user_id", "=", userId)
+        .execute();
+
+      // Leaf tables first, then intermediates, then roots.
+      await trx
+        .deleteFrom("stack_snapshots")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .deleteFrom("stack_templates")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .deleteFrom("stack_revisions")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx.deleteFrom("stacks").where("user_id", "=", userId).execute();
+      await trx
+        .deleteFrom("block_revisions")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx.deleteFrom("blocks").where("user_id", "=", userId).execute();
+      await trx
+        .deleteFrom("stack_folders")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .deleteFrom("block_folders")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx.deleteFrom("wildcards").where("user_id", "=", userId).execute();
+      await trx.deleteFrom("users").where("id", "=", userId).execute();
+    });
+  }
+
   async createBlock(input: CreateBlockInput): Promise<Block> {
     const now = new Date();
 

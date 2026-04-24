@@ -52,8 +52,16 @@ interface LayoutProps {
 function LayoutContent({ children }: LayoutProps) {
   const { isOpen } = useMenu();
   const { isAuthenticated } = useSession();
+  const { addNotice } = useErrors();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (sessionStorage.getItem("account-deleted-notice")) {
+      sessionStorage.removeItem("account-deleted-notice");
+      addNotice("Your account was successfully deleted.");
+    }
+  }, [addNotice]);
 
   return (
     <div

@@ -192,16 +192,38 @@ export default function Privacy() {
                 key needed to decrypt it, and the "Reset Local Cache" button on
                 the Account page wipes the cache outright.
               </li>
-              <li>
-                <strong>No account deletion endpoint yet.</strong> If you want
-                everything wiped from the server, drop me a line and I'll handle
-                it by hand. This is on the list to automate.
-              </li>
             </ul>
             <p>
               If you spot something in the code that doesn't match what's
               described here, or you think the approach could be stronger,
-              please open an issue on GitHub. I'd rather hear about it.
+              please open an issue on GitHub or send me a note via the feedback
+              button in the lower-right.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold gradient-heading mb-3">
+            Deleting Your Account
+          </h2>
+          <div className="space-y-3 text-foreground">
+            <p>
+              If you ever want out, there's a one-click self-service path: head
+              to the{" "}
+              <a
+                href="/account#delete-account"
+                className="text-cyan-light underline hover:text-foreground transition-colors"
+              >
+                Delete Account
+              </a>{" "}
+              section on your Account page. Confirming it wipes every block,
+              prompt, revision, snapshot, template, wildcard, folder, and
+              scratchpad tied to your account from the server in a single
+              transaction, clears the local cache on your device, destroys your
+              session, and drops you back at the homepage. There's no soft
+              delete, no 30-day grace period, no archival copy sitting on a
+              backup drive somewhere — when it's gone, it's gone. That's the
+              whole point.
             </p>
           </div>
         </section>

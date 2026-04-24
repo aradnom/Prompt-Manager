@@ -58,6 +58,7 @@ export interface IStorageAdapter {
   setUserScratchpad(userId: number, content: string): Promise<void>;
   countUsers(): Promise<number>;
   setUserActiveStackId(userId: number, stackId: number | null): Promise<void>;
+  deleteUserAccount(userId: number): Promise<void>;
   getSnapshotByDisplayId(
     displayId: string,
     userId: number,
