@@ -22,6 +22,7 @@ import LMStudioCors from "./pages/LMStudioCors";
 import Snapshots from "./pages/Snapshots";
 import Templates from "./pages/Templates";
 import Features from "./pages/Features";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -106,6 +107,7 @@ function App() {
                                 }
                               />
                               <Route path="/features" element={<Features />} />
+                              <Route path="/privacy" element={<Privacy />} />
                               <Route
                                 path="/account"
                                 element={
