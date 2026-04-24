@@ -9,6 +9,7 @@ import {
   requireKey,
 } from "@server/lib/envelope";
 import { decryptBlockWithRevisions } from "@server/routers/blocks";
+import { decryptStackFolder } from "@server/routers/stack-folders";
 import type {
   BlockStack,
   StackRevision,
@@ -332,10 +333,9 @@ export const stacksRouter = router({
         limit: input.limit,
         offset: input.offset,
       });
-      // Folder names remain plaintext until the folders pass. Only the
-      // contained stacks need decryption.
       return {
         ...result,
+        folders: result.folders.map((f) => decryptStackFolder(f, key)),
         looseStacks: result.looseStacks.map((s) => decryptStack(s, key)),
       };
     }),

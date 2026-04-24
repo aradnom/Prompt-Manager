@@ -10,6 +10,7 @@ import {
   requireKey,
   tryDecrypt,
 } from "@server/lib/envelope";
+import { decryptFolder } from "@server/routers/block-folders";
 import type { Block, BlockRevision, BlockWithRevisions } from "@/types/schema";
 
 const mutationRL = withRateLimit(
@@ -346,10 +347,9 @@ export const blocksRouter = router({
         limit: input.limit,
         offset: input.offset,
       });
-      // Folder names are plaintext (folder entities aren't yet part of the
-      // encryption pass). Only the contained Block rows need decryption.
       return {
         ...result,
+        folders: result.folders.map((f) => decryptFolder(f, key)),
         looseBlocks: result.looseBlocks.map((b) => decryptBlock(b, key)),
       };
     }),
