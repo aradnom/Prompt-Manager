@@ -56,11 +56,6 @@ export interface BlockRevisionsTable {
   text: string;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
-  meta: ColumnType<
-    Record<string, unknown> | null,
-    string | null,
-    string | null
-  >;
   user_id: number | null;
   block_id: number | null;
 }

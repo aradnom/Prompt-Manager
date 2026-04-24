@@ -57,7 +57,6 @@ CREATE TABLE block_revisions (
     text text,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
-    meta json,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     block_id integer REFERENCES blocks(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -99,7 +98,6 @@ CREATE TABLE stack_revisions (
     block_ids integer[] DEFAULT '{}'::integer[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     rendered_content text,
-    meta json,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
 );

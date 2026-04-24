@@ -2,9 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
 import {
-  decryptMetaField,
   decryptStringFields,
-  encryptMetaField,
   encryptStringFields,
   requireKey,
 } from "@server/lib/envelope";
@@ -22,19 +20,13 @@ function encryptRevisionFields<T extends Record<string, unknown>>(
   input: T,
   key: Buffer,
 ): T {
-  return encryptMetaField(
-    encryptStringFields(input, ENCRYPTED_REVISION_FIELDS, key),
-    key,
-  );
+  return encryptStringFields(input, ENCRYPTED_REVISION_FIELDS, key);
 }
 
 function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
-  return decryptMetaField(
-    decryptStringFields(
-      row as unknown as Record<string, unknown>,
-      ENCRYPTED_REVISION_FIELDS,
-      key,
-    ),
+  return decryptStringFields(
+    row as unknown as Record<string, unknown>,
+    ENCRYPTED_REVISION_FIELDS,
     key,
   ) as unknown as BlockRevision;
 }
@@ -46,7 +38,6 @@ export const revisionsRouter = router({
       z.object({
         blockId: z.number(),
         text: z.string().max(LENGTH_LIMITS.blockText),
-        meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {

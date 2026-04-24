@@ -63,12 +63,9 @@ export function decryptBlock(row: Block, key: Buffer): Block {
 }
 
 function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
-  return decryptMetaField(
-    decryptStringFields(
-      row as unknown as Record<string, unknown>,
-      ENCRYPTED_REVISION_FIELDS,
-      key,
-    ),
+  return decryptStringFields(
+    row as unknown as Record<string, unknown>,
+    ENCRYPTED_REVISION_FIELDS,
     key,
   ) as unknown as BlockRevision;
 }

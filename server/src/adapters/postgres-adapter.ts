@@ -241,7 +241,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           block_id: blockResult.id,
           text: input.text,
           user_id: input.userId ?? null,
-          meta: input.meta ? JSON.stringify(input.meta) : null,
           created_at: now,
           updated_at: now,
         })
@@ -463,7 +462,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
             block_id: id,
             text: updates.text,
             user_id: blockResult.user_id,
-            meta: updates.meta ? JSON.stringify(updates.meta) : null,
             created_at: now,
             updated_at: now,
           })
@@ -1281,7 +1279,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           block_id: input.blockId,
           text: input.text,
           user_id: input.userId ?? null,
-          meta: input.meta ? JSON.stringify(input.meta) : null,
           created_at: now,
           updated_at: now,
         })
@@ -3420,7 +3417,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       text: row.text,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
-      meta: typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta,
       userId: row.user_id,
       blockId: row.block_id,
     };
