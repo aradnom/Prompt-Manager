@@ -3,12 +3,15 @@ import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { LENGTH_LIMITS } from "@shared/limits";
 import { verifyTurnstileToken } from "@server/lib/turnstile";
+import { encrypt, requireKey, tryDecrypt } from "@server/lib/envelope";
 
 const feedbackRL = withRateLimit("users.submitFeedback", 60_000, 3);
 
 export const usersRouter = router({
   getScratchpad: protectedProcedure.query(async ({ ctx }) => {
-    const content = await ctx.storage.getUserScratchpad(ctx.userId);
+    const key = requireKey(ctx.derivedKey);
+    const stored = await ctx.storage.getUserScratchpad(ctx.userId);
+    const content = stored != null ? tryDecrypt(stored, key) : null;
     return { content };
   }),
 
@@ -19,7 +22,10 @@ export const usersRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await ctx.storage.setUserScratchpad(ctx.userId, input.content);
+      const key = requireKey(ctx.derivedKey);
+      const ciphertext =
+        input.content.length > 0 ? encrypt(input.content, key) : "";
+      await ctx.storage.setUserScratchpad(ctx.userId, ciphertext);
       return { success: true };
     }),
 
