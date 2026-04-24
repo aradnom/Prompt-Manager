@@ -34,13 +34,19 @@ function encryptStackFields<T extends Record<string, unknown>>(
   return encryptStringFields(input, ENCRYPTED_STACK_FIELDS, key);
 }
 
-function decryptStack<T extends BlockStack | StackWithBlocks>(
+export function decryptStack<T extends BlockStack | StackWithBlocks>(
   row: T,
   key: Buffer,
 ): T {
-  const base = decryptStringFields(
+  const withStrings = decryptStringFields(
     row as unknown as Record<string, unknown>,
     ENCRYPTED_STACK_FIELDS,
+    key,
+  );
+  // `folderName` is joined from `stack_folders.name`, which is ciphertext.
+  const base = decryptStringFields(
+    withStrings,
+    ["folderName"],
     key,
   ) as unknown as T;
 

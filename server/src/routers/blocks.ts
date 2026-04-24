@@ -50,16 +50,22 @@ export function decryptBlock(row: Block, key: Buffer): Block {
     ),
     key,
   );
-  const labels = (base as { labels?: unknown }).labels;
+  // `folderName` is joined from `block_folders.name`, which is ciphertext.
+  const withFolderName = decryptStringFields(
+    base as Record<string, unknown>,
+    ["folderName"],
+    key,
+  );
+  const labels = (withFolderName as { labels?: unknown }).labels;
   if (Array.isArray(labels)) {
     return {
-      ...base,
+      ...withFolderName,
       labels: labels.map((l) =>
         typeof l === "string" ? tryDecrypt(l, key) : l,
       ),
     } as unknown as Block;
   }
-  return base as unknown as Block;
+  return withFolderName as unknown as Block;
 }
 
 function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
