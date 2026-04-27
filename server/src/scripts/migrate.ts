@@ -28,7 +28,7 @@ async function run() {
     provider: new FileMigrationProvider({
       fs,
       path,
-      migrationFolder: path.join(__dirname, "migrations"),
+      migrationFolder: path.join(__dirname, "..", "migrations"),
     }),
   });
 
