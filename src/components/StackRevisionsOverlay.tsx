@@ -141,7 +141,7 @@ export function StackRevisionsOverlay({
 
   return (
     <motion.div
-      className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden"
+      className="absolute inset-0 min-h-96 bg-background z-20 rounded-lg overflow-hidden border-2 border-cyan-dark"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
