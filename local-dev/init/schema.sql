@@ -10,7 +10,7 @@ CREATE TABLE users (
     scratchpad text,
     active_stack_id integer,
     created_at timestamp with time zone,
-    updated_at timestamp with time zone,
+    updated_at timestamp with time zone
 );
 
 -- types
@@ -47,7 +47,7 @@ CREATE TABLE blocks (
     labels character varying(255)[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     meta json,
-    active_revision_id integer REFERENCES block_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
+    active_revision_id integer
 );
 
 -- block_revisions
@@ -87,7 +87,7 @@ CREATE TABLE stacks (
     updated_at timestamp with time zone,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     folder_id integer REFERENCES stack_folders(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    active_revision_id integer REFERENCES stack_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
+    active_revision_id integer
 );
 
 -- stack_revisions
@@ -155,4 +155,14 @@ CREATE TABLE wildcards (
 ALTER TABLE users
     ADD CONSTRAINT fk_users_active_stack
     FOREIGN KEY (active_stack_id) REFERENCES stacks(id)
+    ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE blocks
+    ADD CONSTRAINT fk_blocks_active_revision
+    FOREIGN KEY (active_revision_id) REFERENCES block_revisions(id)
+    ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE stacks
+    ADD CONSTRAINT fk_stacks_active_revision
+    FOREIGN KEY (active_revision_id) REFERENCES stack_revisions(id)
     ON DELETE SET NULL ON UPDATE CASCADE;
