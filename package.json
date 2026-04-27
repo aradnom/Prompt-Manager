@@ -13,9 +13,10 @@
     "server:build": "tsc -p server/tsconfig.json",
     "prepare": "husky",
     "test:llm": "vitest run --config server/vitest.config.ts",
-    "migrate": "tsx server/src/migrate.ts",
-    "migrate:down": "tsx server/src/migrate.ts down",
-    "migrate:check": "tsx server/src/migrate-check.ts",
+    "init-schema": "tsx server/src/scripts/init-schema.ts",
+    "migrate": "tsx server/src/scripts/migrate.ts",
+    "migrate:down": "tsx server/src/scripts/migrate.ts down",
+    "migrate:check": "tsx server/src/scripts/migrate-check.ts",
     "migrate:user-content": "tsx server/src/scripts/migrate-user-content.ts",
     "deploy": "deploy/deploy.sh"
   },
