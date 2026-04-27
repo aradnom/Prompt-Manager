@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
 import { cn } from "@/lib/utils";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
@@ -468,7 +469,7 @@ export function TextBlock({
     }
     inlineSaveTimeoutRef.current = setTimeout(() => {
       handleSaveInlineEdit(false);
-    }, 500);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   // Close active state when clicking outside

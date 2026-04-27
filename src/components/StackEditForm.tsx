@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { api, RouterOutput } from "@/lib/api";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
 import { useSync } from "@/contexts/SyncContext";
 import { applyCommaSeparation } from "@/lib/comma-separation";
 import {
@@ -100,7 +101,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     }
     saveTimeoutRef.current = setTimeout(() => {
       saveChanges();
-    }, 500);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   // Save pending changes on unmount
