@@ -96,6 +96,7 @@ CREATE TABLE stack_revisions (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     stack_id integer REFERENCES stacks(id) ON DELETE SET NULL ON UPDATE CASCADE,
     block_ids integer[] DEFAULT '{}'::integer[],
+    disabled_block_ids integer[] DEFAULT '{}'::integer[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     rendered_content text,
     created_at timestamp with time zone,
