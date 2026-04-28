@@ -39,6 +39,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
   const [negative, setNegative] = useState(stack.negative);
   const [style, setStyle] = useState<OutputStyle>(stack.style);
   const [notes, setNotes] = useState(stack.notes || "");
+  const [labels, setLabels] = useState((stack.labels ?? []).join(", "));
 
   const { data: wildcardsData } = api.wildcards.list.useQuery();
   const wildcards = wildcardsData?.items;
@@ -54,6 +55,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     negative,
     style,
     notes,
+    labels,
   });
   formValuesRef.current = {
     editName,
@@ -62,6 +64,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     negative,
     style,
     notes,
+    labels,
   };
 
   const { data: stackFolders } = api.stackFolders.list.useQuery();
@@ -91,6 +94,12 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
       negative: vals.negative,
       style: vals.style,
       notes: vals.notes.trim() || null,
+      labels: vals.labels.trim()
+        ? vals.labels
+            .split(",")
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0)
+        : [],
     });
   };
 
@@ -124,6 +133,12 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
             negative: vals.negative,
             style: vals.style,
             notes: vals.notes.trim() || null,
+            labels: vals.labels.trim()
+              ? vals.labels
+                  .split(",")
+                  .map((l) => l.trim())
+                  .filter((l) => l.length > 0)
+              : [],
           });
         }
       }
@@ -173,7 +188,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
           {formatDate(stack.updatedAt)}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="text-sm font-medium mb-2 block">
               Name (optional)
@@ -186,6 +201,24 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
               maxLength={LENGTH_LIMITS.name}
               onChange={(e) => {
                 setEditName(e.target.value);
+                debouncedSave();
+              }}
+              onBlur={saveChanges}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Labels (comma-separated)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., character, fantasy, dark"
+              className="w-full px-3 py-2 rounded-md border border-cyan-medium bg-background"
+              value={labels}
+              maxLength={LENGTH_LIMITS.labels * (LENGTH_LIMITS.name + 2)}
+              onChange={(e) => {
+                setLabels(e.target.value);
                 debouncedSave();
               }}
               onBlur={saveChanges}

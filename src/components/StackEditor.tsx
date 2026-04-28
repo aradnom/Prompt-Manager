@@ -608,6 +608,18 @@ export function StackEditor({ stack }: StackEditorProps) {
                     Negative
                   </span>
                 )}
+                {stack.labels && stack.labels.length > 0 && (
+                  <span className="ml-3 inline-flex gap-1 flex-wrap align-middle">
+                    {stack.labels.map((label) => (
+                      <span
+                        key={label}
+                        className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </span>
+                )}
               </CardTitle>
               {(stack.name || stack.folderName) && (
                 <CardDescription className="font-mono text-xs mt-1 flex items-center gap-1.5">

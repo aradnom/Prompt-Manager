@@ -190,6 +190,18 @@ function StackCard({
                     <TooltipContent>View prompt history</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                {stack.labels && stack.labels.length > 0 && (
+                  <div className="flex gap-1 flex-wrap">
+                    {stack.labels.map((label) => (
+                      <span
+                        key={label}
+                        className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <CardDescription className="text-xs mt-2">
                 {stack.blockIds.length} block
@@ -987,6 +999,18 @@ function SinglePromptView({ displayId }: { displayId: string }) {
           <h1 className="text-4xl font-bold flex items-center gap-3">
             <RasterIcon name="chat" size={36} />
             {stack.name || stack.displayId}
+            {stack.labels && stack.labels.length > 0 && (
+              <span className="flex gap-1 flex-wrap">
+                {stack.labels.map((label) => (
+                  <span
+                    key={label}
+                    className="text-sm px-3 py-1 rounded-md bg-cyan-dark text-cyan-medium font-normal"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </span>
+            )}
           </h1>
           <div className="flex items-center gap-2">
             {stack.folderName && (
