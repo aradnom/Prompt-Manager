@@ -1,4 +1,7 @@
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
 import { useMenu } from "@/contexts/MenuContext";
 import { useSession } from "@/contexts/SessionContext";
 import { AnimatedBorderButton } from "@/components/AnimatedBorderButton";
@@ -24,6 +27,26 @@ const navItems = [
 export function MiniMenu() {
   const { setIsOpen } = useMenu();
   const { isAuthenticated } = useSession();
+  const location = useLocation();
+  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicatorTop, setIndicatorTop] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const activeIndex = navItems.findIndex((item) =>
+      item.path === "/"
+        ? location.pathname === "/"
+        : location.pathname === item.path ||
+          location.pathname.startsWith(item.path + "/"),
+    );
+    setActiveIndex(activeIndex);
+    const el = activeIndex >= 0 ? itemRefs.current[activeIndex] : null;
+    if (el) {
+      setIndicatorTop(el.offsetTop + el.offsetHeight / 2 - 10);
+    } else {
+      setIndicatorTop(null);
+    }
+  }, [location.pathname, isAuthenticated]);
 
   return (
     <FadePresence show={isAuthenticated}>
@@ -39,14 +62,28 @@ export function MiniMenu() {
           dotColor="bg-magenta-medium/50"
           className="py-2"
         />
-        {navItems.map((item) =>
+        {indicatorTop !== null && (
+          <motion.div
+            className="absolute -left-2.5 w-0.5 h-5 bg-magenta-medium/60"
+            initial={false}
+            animate={{ top: indicatorTop }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          />
+        )}
+        {navItems.map((item, i) =>
           item.label ? (
             <TooltipProvider key={item.path} delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
+                    ref={(el) => {
+                      itemRefs.current[i] = el;
+                    }}
                     to={item.path}
-                    className="opacity-75 transition-opacity hover:opacity-100"
+                    className={cn(
+                      "opacity-75 transition-opacity hover:opacity-100",
+                      activeIndex === i && "opacity-100",
+                    )}
                   >
                     <RasterIcon name={item.icon} size={20} opacity={0.8} />
                   </Link>
@@ -57,8 +94,14 @@ export function MiniMenu() {
           ) : (
             <Link
               key={item.path}
+              ref={(el) => {
+                itemRefs.current[i] = el;
+              }}
               to={item.path}
-              className="opacity-75 transition-opacity hover:opacity-100"
+              className={cn(
+                "opacity-75 transition-opacity hover:opacity-100",
+                activeIndex === i && "opacity-100",
+              )}
             >
               <RasterIcon name={item.icon} size={20} opacity={0.8} />
             </Link>
