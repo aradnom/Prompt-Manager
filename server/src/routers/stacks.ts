@@ -111,6 +111,10 @@ export const stacksRouter = router({
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
         blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds).optional(),
+        disabledBlockIds: z
+          .array(z.number())
+          .max(LENGTH_LIMITS.blockIds)
+          .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {

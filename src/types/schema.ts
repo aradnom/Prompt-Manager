@@ -203,6 +203,7 @@ export interface CreateStackInput {
   style?: OutputStyle;
   userId?: number;
   blockIds?: number[];
+  disabledBlockIds?: number[];
   folderId?: number | null;
 }
 

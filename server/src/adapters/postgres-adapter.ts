@@ -1450,6 +1450,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .values({
           stack_id: stackResult.id,
           block_ids: input.blockIds ?? [],
+          disabled_block_ids: input.disabledBlockIds ?? [],
           created_at: now,
           updated_at: now,
           user_id: input.userId ?? null,
@@ -1470,7 +1471,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
       const stack = this.mapStack(updatedStackResult);
       stack.blockIds = input.blockIds ?? [];
-      stack.disabledBlockIds = [];
+      stack.disabledBlockIds = input.disabledBlockIds ?? [];
       return stack;
     });
   }
