@@ -1436,6 +1436,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           comma_separated: input.commaSeparated ?? false,
           negative: input.negative ?? false,
           style: input.style ?? null,
+          labels: input.labels ?? [],
           created_at: now,
           updated_at: now,
           user_id: input.userId ?? null,
@@ -1494,6 +1495,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     if (updates.notes !== undefined) updateData.notes = updates.notes;
     if (updates.folderId !== undefined)
       updateData.folder_id = updates.folderId ?? null;
+    if (updates.labels !== undefined) updateData.labels = updates.labels;
 
     const stackResult = await this.db
       .updateTable("stacks")
@@ -1632,6 +1634,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           comma_separated: originalStack.comma_separated,
           negative: originalStack.negative,
           style: originalStack.style,
+          labels: originalStack.labels ?? [],
           created_at: now,
           updated_at: now,
           user_id: originalStack.user_id,
@@ -3519,6 +3522,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       activeRevisionId: row.active_revision_id,
       blockIds: [], // To be filled by subquery
       disabledBlockIds: [], // To be filled by subquery
+      labels: row.labels ?? [],
     };
   }
 

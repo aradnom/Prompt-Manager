@@ -7,6 +7,7 @@ import {
   encrypt,
   encryptStringFields,
   requireKey,
+  tryDecrypt,
 } from "@server/lib/envelope";
 import { decryptBlockWithRevisions } from "@server/routers/blocks";
 import { decryptStackFolder } from "@server/routers/stack-folders";
@@ -32,7 +33,15 @@ function encryptStackFields<T extends Record<string, unknown>>(
   input: T,
   key: Buffer,
 ): T {
-  return encryptStringFields(input, ENCRYPTED_STACK_FIELDS, key);
+  const withStrings = encryptStringFields(input, ENCRYPTED_STACK_FIELDS, key);
+  const labels = (withStrings as { labels?: unknown }).labels;
+  if (Array.isArray(labels)) {
+    return {
+      ...withStrings,
+      labels: labels.map((l) => (typeof l === "string" ? encrypt(l, key) : l)),
+    } as T;
+  }
+  return withStrings;
 }
 
 export function decryptStack<T extends BlockStack | StackWithBlocks>(
@@ -45,11 +54,20 @@ export function decryptStack<T extends BlockStack | StackWithBlocks>(
     key,
   );
   // `folderName` is joined from `stack_folders.name`, which is ciphertext.
-  const base = decryptStringFields(
+  const withFolder = decryptStringFields(
     withStrings,
     ["folderName"],
     key,
-  ) as unknown as T;
+  ) as Record<string, unknown>;
+  const labels = (withFolder as { labels?: unknown }).labels;
+  const base = (Array.isArray(labels)
+    ? {
+        ...withFolder,
+        labels: labels.map((l) =>
+          typeof l === "string" ? tryDecrypt(l, key) : l,
+        ),
+      }
+    : withFolder) as unknown as T;
 
   if ("blocks" in base && Array.isArray((base as StackWithBlocks).blocks)) {
     const expanded = base as StackWithBlocks;
@@ -114,6 +132,10 @@ export const stacksRouter = router({
         disabledBlockIds: z
           .array(z.number())
           .max(LENGTH_LIMITS.blockIds)
+          .optional(),
+        labels: z
+          .array(z.string().max(LENGTH_LIMITS.name))
+          .max(LENGTH_LIMITS.labels)
           .optional(),
       }),
     )
@@ -207,6 +229,10 @@ export const stacksRouter = router({
         style: z.enum(["t5", "clip"]).nullable().optional(),
         notes: z.string().max(LENGTH_LIMITS.notes).nullable().optional(),
         folderId: z.number().nullish(),
+        labels: z
+          .array(z.string().max(LENGTH_LIMITS.name))
+          .max(LENGTH_LIMITS.labels)
+          .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
