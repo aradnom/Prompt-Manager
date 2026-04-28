@@ -84,6 +84,7 @@ export interface BlockStack {
   activeRevisionId: number | null;
   blockIds: number[];
   disabledBlockIds: number[];
+  labels: string[];
 }
 
 export interface StackRevision {
@@ -205,6 +206,7 @@ export interface CreateStackInput {
   blockIds?: number[];
   disabledBlockIds?: number[];
   folderId?: number | null;
+  labels?: string[];
 }
 
 export interface UpdateStackInput {
@@ -215,6 +217,7 @@ export interface UpdateStackInput {
   style?: OutputStyle;
   notes?: string | null;
   folderId?: number | null;
+  labels?: string[];
 }
 
 export interface CreateRevisionInput {
