@@ -315,6 +315,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       entityType: SyncEntityType,
       row: { id: number; [key: string]: unknown },
     ) => {
+      // IDB stores use keyPath: "id". Bail if a caller hands us a row without
+      // one (usually a mutation that returns `{ success: true }`) — pushing
+      // it would throw inside the worker and risks stub-replacing the row.
+      if (typeof row?.id !== "number") {
+        console.warn(
+          `[sync] notifyUpsert(${entityType}) skipped — row has no numeric id`,
+          row,
+        );
+        return;
+      }
       postToWorker({
         type: "pushChange",
         entityType,

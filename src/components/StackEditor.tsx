@@ -123,11 +123,7 @@ export function StackEditor({ stack }: StackEditorProps) {
 
   const utils = api.useUtils();
   const { notifyUpsert } = useSync();
-  const updateContentMutation = api.stacks.updateContent.useMutation({
-    onSuccess: (_data, variables) => {
-      notifyUpsert("stacks", { id: variables.stackId });
-    },
-  });
+  const updateContentMutation = api.stacks.updateContent.useMutation();
   const updateStackMutation = api.stacks.update.useMutation({
     onSuccess: (data) => {
       notifyUpsert("stacks", data as unknown as { id: number });
@@ -226,8 +222,7 @@ export function StackEditor({ stack }: StackEditorProps) {
   ]);
 
   const addBlockMutation = api.stacks.addBlock.useMutation({
-    onSuccess: (data) => {
-      notifyUpsert("stacks", data as unknown as { id: number });
+    onSuccess: () => {
       refetch();
     },
   });
@@ -245,23 +240,20 @@ export function StackEditor({ stack }: StackEditorProps) {
   });
 
   const removeBlockMutation = api.stacks.removeBlock.useMutation({
-    onSuccess: (data) => {
-      notifyUpsert("stacks", data as unknown as { id: number });
+    onSuccess: () => {
       refetch();
     },
   });
 
   const reorderBlocksMutation = api.stacks.reorderBlocks.useMutation({
-    onSuccess: (data) => {
-      notifyUpsert("stacks", data as unknown as { id: number });
+    onSuccess: () => {
       refetch();
     },
   });
 
   const toggleBlockDisabledMutation =
     api.stacks.toggleBlockDisabled.useMutation({
-      onSuccess: (data) => {
-        notifyUpsert("stacks", data as unknown as { id: number });
+      onSuccess: () => {
         refetch();
       },
     });
