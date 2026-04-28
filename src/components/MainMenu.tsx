@@ -30,10 +30,10 @@ export function MainMenu() {
     "divider",
     [
       { path: "/prompts", label: "Prompts", icon: "chat" },
-      { path: "/snapshots", label: "Prompt Snapshots", icon: "camera" },
-      { path: "/templates", label: "Prompt Templates", icon: "templates" },
       { path: "/blocks", label: "Blocks", icon: "blocks" },
       { path: "/wildcards", label: "Wildcards", icon: "dice" },
+      { path: "/templates", label: "Prompt Templates", icon: "templates" },
+      { path: "/snapshots", label: "Prompt Snapshots", icon: "camera" },
     ],
     "divider",
     [
