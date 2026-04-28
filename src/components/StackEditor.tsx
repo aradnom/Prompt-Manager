@@ -822,21 +822,21 @@ export function StackEditor({ stack }: StackEditorProps) {
           {!isCreatingNew && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2 w-full lg:[&>button]:min-w-48">
               <Button
-                onClick={() => setIsSearchOpen(true)}
-                variant="default"
-                disabled={blocksAtLimit}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Add Existing Block
-              </Button>
-              <Button
                 data-action="add-new-block"
                 onClick={() => setIsCreatingNew(true)}
-                variant="tertiary"
+                variant="default"
                 disabled={blocksAtLimit}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Block
+              </Button>
+              <Button
+                onClick={() => setIsSearchOpen(true)}
+                variant="tertiary"
+                disabled={blocksAtLimit}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Add Existing Block
               </Button>
               <LLMGuard>
                 <Button
