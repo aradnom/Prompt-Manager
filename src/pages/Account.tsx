@@ -70,7 +70,10 @@ export default function Account() {
   const [isResettingCache, setIsResettingCache] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const { setActiveLLMPlatform: setGlobalActiveLLMPlatform } = useUserState();
+  const {
+    setActiveLLMPlatform: setGlobalActiveLLMPlatform,
+    refetchAccountData,
+  } = useUserState();
   const { setActiveTarget, availableTargets, getTargetInfo } = useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
     null,
@@ -225,6 +228,10 @@ export default function Account() {
 
       // Refresh account data to get updated flags (silent to avoid scroll jump)
       await fetchAccountData(true);
+      // Also refresh global state — the server auto-sets activeLLMPlatform
+      // on the first API-key save, so other pages (StackEditor, Blocks,
+      // Wildcards) need to see the new value without a page refresh.
+      await refetchAccountData();
       // Clear the input fields after successful save
       if (provider === "vertex") {
         setVertexApiKey("");

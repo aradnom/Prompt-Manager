@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 import { api } from "@/lib/api";
@@ -17,6 +18,7 @@ interface UserStateContextType {
   isLoading: boolean;
   accountDataLoaded: boolean;
   refetch: () => void;
+  refetchAccountData: () => Promise<void>;
 }
 
 const UserStateContext = createContext<UserStateContextType | undefined>(
@@ -44,6 +46,28 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
     { enabled: isAuthenticated },
   );
 
+  const refetchAccountData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/account", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch account data");
+        setAccountDataLoaded(true); // Mark as loaded even on error
+        return;
+      }
+
+      const data = await response.json();
+      setActiveLLMPlatform(data.accountData?.activeLLMPlatform || null);
+      setAccountToken(data.accountData?.token ?? null);
+      setAccountDataLoaded(true);
+    } catch (error) {
+      console.error("Error fetching account data:", error);
+      setAccountDataLoaded(true); // Mark as loaded even on error
+    }
+  }, []);
+
   // Fetch user account data including active LLM platform
   useEffect(() => {
     if (!isAuthenticated) {
@@ -53,31 +77,9 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const fetchAccountData = async () => {
-      try {
-        const response = await fetch("/api/auth/account", {
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          console.error("Failed to fetch account data");
-          setAccountDataLoaded(true); // Mark as loaded even on error
-          return;
-        }
-
-        const data = await response.json();
-        setActiveLLMPlatform(data.accountData?.activeLLMPlatform || null);
-        setAccountToken(data.accountData?.token ?? null);
-        setAccountDataLoaded(true);
-      } catch (error) {
-        console.error("Error fetching account data:", error);
-        setAccountDataLoaded(true); // Mark as loaded even on error
-      }
-    };
-
     setAccountDataLoaded(false); // Reset when authentication changes
-    fetchAccountData();
-  }, [isAuthenticated]);
+    refetchAccountData();
+  }, [isAuthenticated, refetchAccountData]);
 
   useEffect(() => {
     setStackCount(stackData?.count ?? 0);
@@ -113,6 +115,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
         accountDataLoaded,
         isLoading,
         refetch,
+        refetchAccountData,
       }}
     >
       {children}
