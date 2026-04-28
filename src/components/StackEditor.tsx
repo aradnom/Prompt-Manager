@@ -9,6 +9,7 @@ import {
   Camera,
   Folder,
   LayoutTemplate,
+  StickyNote,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -69,6 +70,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LENGTH_LIMITS } from "@shared/limits";
+import { cn } from "@/lib/utils";
 
 interface StackEditorProps {
   stack: BlockStack;
@@ -621,39 +623,53 @@ export function StackEditor({ stack }: StackEditorProps) {
                 </CardDescription>
               )}
             </div>
-            <ButtonGroup>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsSelectMode(!isSelectMode);
-                  setSelectedBlockIndices(new Set());
-                }}
-              >
-                {isSelectMode ? "Cancel Select" : "Select Blocks"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsNotesOpen(true)}
-              >
-                Notes
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/prompts/${stack.displayId}`)}
-              >
-                Prompt Settings
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveStack(null)}
-              >
-                Close Prompt
-              </Button>
-            </ButtonGroup>
+            <div className="flex items-center gap-3">
+              <ButtonGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsSelectMode(!isSelectMode);
+                    setSelectedBlockIndices(new Set());
+                  }}
+                >
+                  {isSelectMode ? "Cancel Select" : "Select Blocks"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/prompts/${stack.displayId}`)}
+                >
+                  Prompt Settings
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveStack(null)}
+                >
+                  Close Prompt
+                </Button>
+              </ButtonGroup>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setIsNotesOpen(true)}
+                      className={cn(
+                        "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
+                        stackWithBlocks?.notes && "text-foreground",
+                      )}
+                      aria-label="Prompt notes"
+                    >
+                      <StickyNote className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {stackWithBlocks?.notes ? "Edit notes" : "Add notes"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
         </CardHeader>
         <AnimatePresence>
