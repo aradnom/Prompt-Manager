@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Folder, Trash2 } from "lucide-react";
 import {
@@ -18,6 +19,7 @@ interface FolderRowProps {
   onDelete: () => void;
   onRename: (id: number, name: string) => void;
   deleteTooltip?: string;
+  droppableId?: string;
   children: React.ReactNode;
 }
 
@@ -29,8 +31,13 @@ export function FolderRow({
   onDelete,
   onRename,
   deleteTooltip = "Delete folder.",
+  droppableId,
   children,
 }: FolderRowProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: droppableId ?? `folder-row-${folder.id}`,
+    disabled: !droppableId,
+  });
   const [isEditingName, setIsEditingName] = useState(false);
   const [folderName, setFolderName] = useState(folder.name);
 
@@ -55,8 +62,10 @@ export function FolderRow({
       )}
     >
       <div
+        ref={setNodeRef}
         className={cn(
-          "border-2 border-cyan-medium/30 rounded-lg overflow-hidden",
+          "border-2 border-cyan-medium/30 rounded-lg overflow-hidden transition-colors",
+          isOver && "border-magenta-medium bg-magenta-dark/20",
         )}
       >
         {/* Folder header */}

@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
@@ -9,6 +16,7 @@ import { useWorkerSearch } from "@/hooks/useWorkerSearch";
 import type { Block } from "@/types/schema";
 
 import { TextBlock } from "@/components/TextBlock";
+import { DraggableItem } from "@/components/DraggableItem";
 import { BlockForm, BlockFormValues } from "@/components/BlockForm";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FolderRow } from "@/components/FolderRow";
@@ -44,6 +52,7 @@ function BlockFolderContent({
   setEditingId,
   handleUpdate,
   handleDelete,
+  handleRemoveFromFolder,
   updateMutation,
   deleteMutation,
   refetch,
@@ -53,6 +62,7 @@ function BlockFolderContent({
   setEditingId: (id: number | null) => void;
   handleUpdate: (id: number, values: BlockFormValues) => void;
   handleDelete: (id: number) => void;
+  handleRemoveFromFolder: (id: number) => void;
   updateMutation: { isPending: boolean };
   deleteMutation: { isPending: boolean };
   refetch: () => void;
@@ -78,48 +88,56 @@ function BlockFolderContent({
   return (
     <>
       {folderBlocks.map((block) => (
-        <div key={block.id} className="border-standard-dark-cyan">
-          {editingId === block.id ? (
-            <BlockForm
-              mode="edit"
-              initialValues={{
-                name: block.name ?? undefined,
-                displayId: block.displayId,
-                text: block.text,
-                labels: block.labels,
-                typeId: block.typeId ?? undefined,
-                folderId: block.folderId ?? undefined,
-                notes: block.notes ?? undefined,
-              }}
-              onSubmit={(values) => {
-                handleUpdate(block.id, values);
-                refetch();
-              }}
-              onCancel={() => setEditingId(null)}
-              onDelete={() => handleDelete(block.id)}
-              isSubmitting={updateMutation.isPending}
-            />
-          ) : (
-            <TextBlock
-              block={block}
-              onEdit={() => setEditingId(block.id)}
-              onDelete={() => handleDelete(block.id)}
-              onTransform={(blockId, transformedText) => {
-                handleUpdate(blockId, {
+        <DraggableItem
+          key={block.id}
+          id={`block:${block.id}`}
+          inFolder
+          currentFolderId={block.folderId}
+        >
+          <div className="border-standard-dark-cyan">
+            {editingId === block.id ? (
+              <BlockForm
+                mode="edit"
+                initialValues={{
                   name: block.name ?? undefined,
                   displayId: block.displayId,
-                  text: transformedText,
+                  text: block.text,
                   labels: block.labels,
                   typeId: block.typeId ?? undefined,
                   folderId: block.folderId ?? undefined,
                   notes: block.notes ?? undefined,
-                });
-                refetch();
-              }}
-              isDeleting={deleteMutation.isPending}
-            />
-          )}
-        </div>
+                }}
+                onSubmit={(values) => {
+                  handleUpdate(block.id, values);
+                  refetch();
+                }}
+                onCancel={() => setEditingId(null)}
+                onDelete={() => handleDelete(block.id)}
+                isSubmitting={updateMutation.isPending}
+              />
+            ) : (
+              <TextBlock
+                block={block}
+                onEdit={() => setEditingId(block.id)}
+                onDelete={() => handleDelete(block.id)}
+                onRemoveFromFolder={() => handleRemoveFromFolder(block.id)}
+                onTransform={(blockId, transformedText) => {
+                  handleUpdate(blockId, {
+                    name: block.name ?? undefined,
+                    displayId: block.displayId,
+                    text: transformedText,
+                    labels: block.labels,
+                    typeId: block.typeId ?? undefined,
+                    folderId: block.folderId ?? undefined,
+                    notes: block.notes ?? undefined,
+                  });
+                  refetch();
+                }}
+                isDeleting={deleteMutation.isPending}
+              />
+            )}
+          </div>
+        </DraggableItem>
       ))}
     </>
   );
@@ -321,6 +339,31 @@ function BlockList() {
     }
   };
 
+  const moveBlockToFolder = (blockId: number, folderId: number | null) => {
+    updateMutation.mutate({ id: blockId, folderId });
+    utils.blockFolders.getBlocks.invalidate();
+  };
+
+  const handleRemoveFromFolder = (blockId: number) => {
+    moveBlockToFolder(blockId, null);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (!activeId.startsWith("block:") || !overId.startsWith("folder:")) return;
+    const blockId = Number(activeId.slice("block:".length));
+    const folderId = Number(overId.slice("folder:".length));
+    if (active.data.current?.currentFolderId === folderId) return;
+    moveBlockToFolder(blockId, folderId);
+  };
+
   return (
     <main className="standard-page-container">
       <div className="mb-8">
@@ -491,92 +534,97 @@ function BlockList() {
           foldersData.looseBlocks.length > 0) ? (
         // Folder mode: folders first, then loose blocks
         <>
-          <div className="space-y-4">
-            {/* Folders */}
-            {foldersData.folders.map((folder, index) => (
-              <FolderRow
-                key={folder.id}
-                folder={folder}
-                index={index}
-                isExpanded={expandedFolders.has(folder.id)}
-                onToggle={() => toggleFolder(folder.id)}
-                onDelete={() => handleDeleteFolder(folder.id)}
-                onRename={(id, name) =>
-                  renameFolderMutation.mutate({ id, name })
-                }
-                deleteTooltip="Delete folder. Will not delete blocks in the folder."
-              >
-                <BlockFolderContent
-                  folderId={folder.id}
-                  editingId={editingId}
-                  setEditingId={setEditingId}
-                  handleUpdate={handleUpdate}
-                  handleDelete={handleDelete}
-                  updateMutation={updateMutation}
-                  deleteMutation={deleteMutation}
-                  refetch={refetch}
-                />
-              </FolderRow>
-            ))}
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <div className="space-y-4">
+              {/* Folders */}
+              {foldersData.folders.map((folder, index) => (
+                <FolderRow
+                  key={folder.id}
+                  folder={folder}
+                  index={index}
+                  isExpanded={expandedFolders.has(folder.id)}
+                  onToggle={() => toggleFolder(folder.id)}
+                  onDelete={() => handleDeleteFolder(folder.id)}
+                  onRename={(id, name) =>
+                    renameFolderMutation.mutate({ id, name })
+                  }
+                  deleteTooltip="Delete folder. Will not delete blocks in the folder."
+                  droppableId={`folder:${folder.id}`}
+                >
+                  <BlockFolderContent
+                    folderId={folder.id}
+                    editingId={editingId}
+                    setEditingId={setEditingId}
+                    handleUpdate={handleUpdate}
+                    handleDelete={handleDelete}
+                    handleRemoveFromFolder={handleRemoveFromFolder}
+                    updateMutation={updateMutation}
+                    deleteMutation={deleteMutation}
+                    refetch={refetch}
+                  />
+                </FolderRow>
+              ))}
 
-            {/* Loose blocks */}
-            {foldersData.looseBlocks.map((block, index) => (
-              <motion.div
-                className={cn(
-                  "rounded",
-                  index === 0 &&
-                    page === 0 &&
-                    foldersData.folders.length === 0 &&
-                    "accent-border-gradient",
-                )}
-                key={block.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.3,
-                  delay: (foldersData.folders.length + index) * 0.05,
-                }}
-              >
-                {editingId === block.id ? (
-                  <BlockForm
-                    mode="edit"
-                    initialValues={{
-                      name: block.name ?? undefined,
-                      displayId: block.displayId,
-                      text: block.text,
-                      labels: block.labels,
-                      typeId: block.typeId ?? undefined,
-                      folderId: block.folderId ?? undefined,
-                      notes: block.notes ?? undefined,
+              {/* Loose blocks */}
+              {foldersData.looseBlocks.map((block, index) => (
+                <DraggableItem key={block.id} id={`block:${block.id}`}>
+                  <motion.div
+                    className={cn(
+                      "rounded",
+                      index === 0 &&
+                        page === 0 &&
+                        foldersData.folders.length === 0 &&
+                        "accent-border-gradient",
+                    )}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.3,
+                      delay: (foldersData.folders.length + index) * 0.05,
                     }}
-                    onSubmit={(values) => handleUpdate(block.id, values)}
-                    onCancel={() => setEditingId(null)}
-                    onDelete={() => handleDelete(block.id)}
-                    isSubmitting={updateMutation.isPending}
-                  />
-                ) : (
-                  <TextBlock
-                    block={block}
-                    onEdit={() => setEditingId(block.id)}
-                    onDelete={() => handleDelete(block.id)}
-                    onTransform={(blockId, transformedText) =>
-                      handleUpdate(blockId, {
-                        name: block.name ?? undefined,
-                        displayId: block.displayId,
-                        text: transformedText,
-                        labels: block.labels,
-                        typeId: block.typeId ?? undefined,
-                        folderId: block.folderId ?? undefined,
-                        notes: block.notes ?? undefined,
-                      })
-                    }
-                    isDeleting={deleteMutation.isPending}
-                    alwaysActive={true}
-                  />
-                )}
-              </motion.div>
-            ))}
-          </div>
+                  >
+                    {editingId === block.id ? (
+                      <BlockForm
+                        mode="edit"
+                        initialValues={{
+                          name: block.name ?? undefined,
+                          displayId: block.displayId,
+                          text: block.text,
+                          labels: block.labels,
+                          typeId: block.typeId ?? undefined,
+                          folderId: block.folderId ?? undefined,
+                          notes: block.notes ?? undefined,
+                        }}
+                        onSubmit={(values) => handleUpdate(block.id, values)}
+                        onCancel={() => setEditingId(null)}
+                        onDelete={() => handleDelete(block.id)}
+                        isSubmitting={updateMutation.isPending}
+                      />
+                    ) : (
+                      <TextBlock
+                        block={block}
+                        onEdit={() => setEditingId(block.id)}
+                        onDelete={() => handleDelete(block.id)}
+                        onTransform={(blockId, transformedText) =>
+                          handleUpdate(blockId, {
+                            name: block.name ?? undefined,
+                            displayId: block.displayId,
+                            text: transformedText,
+                            labels: block.labels,
+                            typeId: block.typeId ?? undefined,
+                            folderId: block.folderId ?? undefined,
+                            notes: block.notes ?? undefined,
+                          })
+                        }
+                        isDeleting={deleteMutation.isPending}
+                        alwaysActive={true}
+                      />
+                    )}
+                  </motion.div>
+                </DraggableItem>
+              ))}
+            </div>
+          </DndContext>
 
           {total > PAGE_SIZE && (
             <div className="flex items-center justify-between mt-6">

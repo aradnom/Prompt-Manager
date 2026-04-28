@@ -6,6 +6,7 @@ import {
   Clock,
   Copy,
   Folder,
+  FolderX,
   RefreshCw,
   Trash2,
   Eye,
@@ -144,6 +145,7 @@ interface TextBlockProps {
   block: Block;
   onEdit: () => void;
   onDelete: () => void;
+  onRemoveFromFolder?: () => void;
   onDuplicate?: () => void;
   onTransform?: (blockId: number, transformedText: string) => void;
   onSelectBlock?: (blockId: number) => void;
@@ -162,6 +164,7 @@ export function TextBlock({
   block,
   onEdit,
   onDelete,
+  onRemoveFromFolder,
   onDuplicate,
   onTransform,
   onSelectBlock,
@@ -895,6 +898,27 @@ export function TextBlock({
                     </Tooltip>
                   </TooltipProvider>
                 </ExpandingIcon>
+                {onRemoveFromFolder && block.folderId != null && (
+                  <ExpandingIcon active={isActive} origin="right">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveFromFolder();
+                            }}
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                            aria-label="Remove from folder"
+                          >
+                            <FolderX className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Remove from folder</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </ExpandingIcon>
+                )}
                 <ExpandingIcon active={isActive} origin="right">
                   <button
                     onClick={onDelete}

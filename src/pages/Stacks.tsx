@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
@@ -15,6 +22,7 @@ import {
   ArrowLeft,
   Clock,
   Folder,
+  FolderX,
   Trash2,
   StickyNote,
   ChevronLeft,
@@ -23,6 +31,7 @@ import {
   Camera,
   LayoutTemplate,
 } from "lucide-react";
+import { DraggableItem } from "@/components/DraggableItem";
 
 type Stack = RouterOutput["stacks"]["list"]["items"][number];
 import { Button } from "@/components/ui/button";
@@ -61,6 +70,7 @@ interface StackCardProps {
   onMakeActive: (stack: Stack) => void;
   onDuplicate: (id: number) => void;
   onDelete: (id: number) => void;
+  onRemoveFromFolder?: (id: number) => void;
   onShowRevisions: (stackId: number) => void;
   onCloseRevisions: () => void;
   duplicateIsPending: boolean;
@@ -75,6 +85,7 @@ function StackCard({
   onMakeActive,
   onDuplicate,
   onDelete,
+  onRemoveFromFolder,
   onShowRevisions,
   onCloseRevisions,
   duplicateIsPending,
@@ -232,6 +243,25 @@ function StackCard({
               >
                 Make Active
               </Button>
+              {onRemoveFromFolder && stack.folderId != null && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveFromFolder(stack.id);
+                        }}
+                        className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                        aria-label="Remove from folder"
+                      >
+                        <FolderX className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Remove from folder</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -268,6 +298,7 @@ function StackFolderContent({
   onMakeActive,
   onDuplicate,
   onDeleteStack,
+  onRemoveFromFolder,
   onShowRevisions,
   onCloseRevisions,
   duplicateIsPending,
@@ -278,6 +309,7 @@ function StackFolderContent({
   onMakeActive: (stack: Stack) => void;
   onDuplicate: (id: number) => void;
   onDeleteStack: (id: number) => void;
+  onRemoveFromFolder: (id: number) => void;
   onShowRevisions: (stackId: number) => void;
   onCloseRevisions: () => void;
   duplicateIsPending: boolean;
@@ -305,20 +337,27 @@ function StackFolderContent({
   return (
     <>
       {folderStacks.map((stack, stackIndex) => (
-        <StackCard
+        <DraggableItem
           key={stack.id}
-          stack={stack}
-          showRevisionsForStack={showRevisionsForStack}
-          onStackClick={onStackClick}
-          onMakeActive={onMakeActive}
-          onDuplicate={onDuplicate}
-          onDelete={onDeleteStack}
-          onShowRevisions={onShowRevisions}
-          onCloseRevisions={onCloseRevisions}
-          duplicateIsPending={duplicateIsPending}
-          index={stackIndex}
-          isFirst={false}
-        />
+          id={`stack:${stack.id}`}
+          inFolder
+          currentFolderId={stack.folderId}
+        >
+          <StackCard
+            stack={stack}
+            showRevisionsForStack={showRevisionsForStack}
+            onStackClick={onStackClick}
+            onMakeActive={onMakeActive}
+            onDuplicate={onDuplicate}
+            onDelete={onDeleteStack}
+            onRemoveFromFolder={onRemoveFromFolder}
+            onShowRevisions={onShowRevisions}
+            onCloseRevisions={onCloseRevisions}
+            duplicateIsPending={duplicateIsPending}
+            index={stackIndex}
+            isFirst={false}
+          />
+        </DraggableItem>
       ))}
     </>
   );
@@ -386,6 +425,14 @@ function StackList() {
   const showLoading = isSearchMode ? searchData.isLoading : isLoading;
 
   const { notifyUpsert: listNotifyUpsert, notifyDelete } = useSync();
+  const moveStackMutation = api.stacks.update.useMutation({
+    onSuccess: (data) => {
+      listNotifyUpsert("stacks", data as unknown as { id: number });
+      utils.stacks.list.invalidate();
+      utils.stacks.listWithFolders.invalidate();
+      utils.stackFolders.getStacks.invalidate();
+    },
+  });
   const deleteMutation = api.stacks.delete.useMutation({
     onSuccess: (_data, variables) => {
       notifyDelete("stacks", variables.id);
@@ -469,6 +516,30 @@ function StackList() {
 
   const handleStackClick = (_stackId: number, stack: Stack) => {
     navigate(`/prompts/${stack.displayId}`);
+  };
+
+  const moveStackToFolder = (stackId: number, folderId: number | null) => {
+    moveStackMutation.mutate({ id: stackId, folderId });
+  };
+
+  const handleRemoveStackFromFolder = (stackId: number) => {
+    moveStackToFolder(stackId, null);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (!activeId.startsWith("stack:") || !overId.startsWith("folder:")) return;
+    const stackId = Number(activeId.slice("stack:".length));
+    const folderId = Number(overId.slice("folder:".length));
+    if (active.data.current?.currentFolderId === folderId) return;
+    moveStackToFolder(stackId, folderId);
   };
 
   return (
@@ -612,55 +683,62 @@ function StackList() {
           foldersData.looseStacks.length > 0) ? (
         // Folder mode: folders first, then loose stacks
         <>
-          <div className="space-y-4">
-            {/* Folders */}
-            {foldersData.folders.map((folder, index) => (
-              <FolderRow
-                key={folder.id}
-                folder={folder}
-                index={index}
-                isExpanded={expandedFolders.has(folder.id)}
-                onToggle={() => toggleFolder(folder.id)}
-                onDelete={() => handleDeleteFolder(folder.id)}
-                onRename={(id, name) =>
-                  renameFolderMutation.mutate({ id, name })
-                }
-                deleteTooltip="Delete folder. Will not delete prompts in the folder."
-              >
-                <StackFolderContent
-                  folderId={folder.id}
-                  showRevisionsForStack={showRevisionsForStack}
-                  onStackClick={handleStackClick}
-                  onMakeActive={handleMakeActive}
-                  onDuplicate={handleDuplicate}
-                  onDeleteStack={handleDelete}
-                  onShowRevisions={setShowRevisionsForStack}
-                  onCloseRevisions={() => setShowRevisionsForStack(null)}
-                  duplicateIsPending={duplicateMutation.isPending}
-                />
-              </FolderRow>
-            ))}
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <div className="space-y-4">
+              {/* Folders */}
+              {foldersData.folders.map((folder, index) => (
+                <FolderRow
+                  key={folder.id}
+                  folder={folder}
+                  index={index}
+                  isExpanded={expandedFolders.has(folder.id)}
+                  onToggle={() => toggleFolder(folder.id)}
+                  onDelete={() => handleDeleteFolder(folder.id)}
+                  onRename={(id, name) =>
+                    renameFolderMutation.mutate({ id, name })
+                  }
+                  deleteTooltip="Delete folder. Will not delete prompts in the folder."
+                  droppableId={`folder:${folder.id}`}
+                >
+                  <StackFolderContent
+                    folderId={folder.id}
+                    showRevisionsForStack={showRevisionsForStack}
+                    onStackClick={handleStackClick}
+                    onMakeActive={handleMakeActive}
+                    onDuplicate={handleDuplicate}
+                    onDeleteStack={handleDelete}
+                    onRemoveFromFolder={handleRemoveStackFromFolder}
+                    onShowRevisions={setShowRevisionsForStack}
+                    onCloseRevisions={() => setShowRevisionsForStack(null)}
+                    duplicateIsPending={duplicateMutation.isPending}
+                  />
+                </FolderRow>
+              ))}
 
-            {/* Loose stacks */}
-            {foldersData.looseStacks.map((stack, index) => (
-              <StackCard
-                key={stack.id}
-                stack={stack}
-                showRevisionsForStack={showRevisionsForStack}
-                onStackClick={handleStackClick}
-                onMakeActive={handleMakeActive}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onShowRevisions={setShowRevisionsForStack}
-                onCloseRevisions={() => setShowRevisionsForStack(null)}
-                duplicateIsPending={duplicateMutation.isPending}
-                index={foldersData.folders.length + index}
-                isFirst={
-                  index === 0 && page === 0 && foldersData.folders.length === 0
-                }
-              />
-            ))}
-          </div>
+              {/* Loose stacks */}
+              {foldersData.looseStacks.map((stack, index) => (
+                <DraggableItem key={stack.id} id={`stack:${stack.id}`}>
+                  <StackCard
+                    stack={stack}
+                    showRevisionsForStack={showRevisionsForStack}
+                    onStackClick={handleStackClick}
+                    onMakeActive={handleMakeActive}
+                    onDuplicate={handleDuplicate}
+                    onDelete={handleDelete}
+                    onShowRevisions={setShowRevisionsForStack}
+                    onCloseRevisions={() => setShowRevisionsForStack(null)}
+                    duplicateIsPending={duplicateMutation.isPending}
+                    index={foldersData.folders.length + index}
+                    isFirst={
+                      index === 0 &&
+                      page === 0 &&
+                      foldersData.folders.length === 0
+                    }
+                  />
+                </DraggableItem>
+              ))}
+            </div>
+          </DndContext>
 
           {total > PAGE_SIZE && (
             <div className="flex items-center justify-between mt-6">
