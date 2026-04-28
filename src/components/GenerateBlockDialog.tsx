@@ -6,6 +6,7 @@ import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { useTransform } from "@/hooks/useTransform";
+import { useSync } from "@/contexts/SyncContext";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
@@ -35,8 +36,12 @@ export function GenerateBlockDialog({
   const [isEditingConcept, setIsEditingConcept] = useState(false);
 
   const generateMutation = useTransform();
+  const { notifyUpsert } = useSync();
 
-  const createBlockMutation = api.blocks.create.useMutation();
+  const createBlockMutation = api.blocks.create.useMutation({
+    onSuccess: (data) =>
+      notifyUpsert("blocks", data as unknown as { id: number }),
+  });
 
   const generatePositions = useMemo(() => {
     if (generateResults.length === 0) return [];

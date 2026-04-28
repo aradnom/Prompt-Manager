@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
 
 interface NotesDialogProps {
   title?: string;
@@ -42,7 +43,7 @@ export function NotesDialog({
 
     saveTimeoutRef.current = setTimeout(() => {
       onSave(newNotes.trim() || null);
-    }, 500);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   // Cleanup timeout on unmount

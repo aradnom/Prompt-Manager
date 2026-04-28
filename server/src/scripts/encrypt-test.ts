@@ -22,7 +22,7 @@ function generateKey() {
   return Buffer.concat([iv, encrypted, tag]).toString("base64");
 }
 
-function validateKey(key) {
+function validateKey(key: string) {
   try {
     const buf = Buffer.from(key, "base64");
     const iv = buf.slice(0, 12);

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
 import { cn } from "@/lib/utils";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
@@ -62,6 +63,7 @@ import {
 
 import { useTransform } from "@/hooks/useTransform";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
+import { useSync } from "@/contexts/SyncContext";
 import type { OutputStyle } from "@/types/schema";
 import { LENGTH_LIMITS } from "@shared/limits";
 
@@ -206,6 +208,7 @@ export function TextBlock({
   const inlineTextRef = useRef(block.text);
   const utils = api.useUtils();
   const { isLLMConfigured } = useLLMStatus();
+  const { notifyUpsert } = useSync();
   const transformMutation = useTransform();
   const exploreMutation = useTransform();
   const { data: wildcardsData } = api.wildcards.list.useQuery();
@@ -215,14 +218,18 @@ export function TextBlock({
     utils.blockFolders.invalidate();
     utils.stacks.invalidate();
   };
+  const onBlockMutated = (data: { id: number }) => {
+    notifyUpsert("blocks", data);
+    invalidateBlocks();
+  };
   const setActiveRevisionMutation = api.blocks.setActiveRevision.useMutation({
-    onSuccess: invalidateBlocks,
+    onSuccess: onBlockMutated,
   });
   const updateNotesMutation = api.blocks.update.useMutation({
-    onSuccess: invalidateBlocks,
+    onSuccess: onBlockMutated,
   });
   const renameMutation = api.blocks.update.useMutation({
-    onSuccess: invalidateBlocks,
+    onSuccess: onBlockMutated,
   });
 
   const saveBlockName = () => {
@@ -462,7 +469,7 @@ export function TextBlock({
     }
     inlineSaveTimeoutRef.current = setTimeout(() => {
       handleSaveInlineEdit(false);
-    }, 500);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   // Close active state when clicking outside

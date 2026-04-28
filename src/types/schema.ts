@@ -41,7 +41,6 @@ export interface BlockRevision {
   text: string;
   createdAt: Date;
   updatedAt: Date;
-  meta: Record<string, unknown> | null;
   userId: number | null;
   blockId: number | null;
 }
@@ -221,7 +220,6 @@ export interface CreateRevisionInput {
   blockId: number;
   text: string;
   userId?: number;
-  meta?: Record<string, unknown>;
 }
 
 export interface Wildcard {

@@ -17,11 +17,14 @@ interface ErrorLink {
   href: string;
 }
 
+type NoticeVariant = "error" | "success";
+
 interface ErrorMessage {
   id: string;
   message: string;
   link?: ErrorLink;
   timestamp: number;
+  variant: NoticeVariant;
 }
 
 interface ProgressMessage {
@@ -33,6 +36,7 @@ interface ProgressMessage {
 interface ErrorContextType {
   errors: ErrorMessage[];
   addError: (message: string, link?: ErrorLink) => void;
+  addNotice: (message: string, link?: ErrorLink) => void;
   removeError: (id: string) => void;
   clearErrors: () => void;
   progressMessages: ProgressMessage[];
@@ -48,16 +52,33 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const addError = useCallback((message: string, link?: ErrorLink) => {
-    const id = generateUUID();
-    const timestamp = Date.now();
-    setErrors((prev) => [...prev, { id, message, link, timestamp }]);
+  const pushMessage = useCallback(
+    (variant: NoticeVariant, message: string, link?: ErrorLink) => {
+      const id = generateUUID();
+      const timestamp = Date.now();
+      setErrors((prev) => [...prev, { id, message, link, timestamp, variant }]);
 
-    // Auto-remove after 8 seconds
-    setTimeout(() => {
-      setErrors((prev) => prev.filter((e) => e.id !== id));
-    }, 8000);
-  }, []);
+      // Auto-remove after 8 seconds
+      setTimeout(() => {
+        setErrors((prev) => prev.filter((e) => e.id !== id));
+      }, 8000);
+    },
+    [],
+  );
+
+  const addError = useCallback(
+    (message: string, link?: ErrorLink) => {
+      pushMessage("error", message, link);
+    },
+    [pushMessage],
+  );
+
+  const addNotice = useCallback(
+    (message: string, link?: ErrorLink) => {
+      pushMessage("success", message, link);
+    },
+    [pushMessage],
+  );
 
   const removeError = useCallback((id: string) => {
     setErrors((prev) => prev.filter((e) => e.id !== id));
@@ -98,6 +119,7 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
       value={{
         errors,
         addError,
+        addNotice,
         removeError,
         clearErrors,
         progressMessages,

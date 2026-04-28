@@ -24,6 +24,7 @@ import {
 import { registerSystemRoutes } from "@server/express-routes/system";
 import { createRateLimitMiddleware } from "@server/middleware/rate-limit";
 import { checkPendingMigrations } from "@server/lib/migration-check";
+import { attachWebSocketServer } from "@server/lib/websocket";
 
 // Re-export notifyStackUpdate for use by other modules (e.g., stacks router)
 export const notifyStackUpdate = _notifyStackUpdate;
@@ -85,20 +86,19 @@ async function main() {
   });
 
   // Configure session middleware
-  app.use(
-    session({
-      store: redisStore,
-      secret: config.sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: config.nodeEnv !== "development",
-        httpOnly: true,
-        sameSite: "strict",
-        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
-      },
-    }),
-  );
+  const sessionMiddleware = session({
+    store: redisStore,
+    secret: config.sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: config.nodeEnv !== "development",
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    },
+  });
+  app.use(sessionMiddleware);
 
   const storage = new PostgresStorageAdapter(config.databaseUrl);
   const llmService = new LLMService(config.llm);
@@ -134,7 +134,7 @@ async function main() {
     windowMs: config.rateLimitWindowMs,
     maxRequests: config.rateLimitMaxRequests,
   });
-  registerIntegrationRoutes(app, storage, config);
+  registerIntegrationRoutes(app, storage, config, rateLimiter);
   registerAuthRoutes(app, storage, config, rateLimiter);
   registerSystemRoutes(app);
 
@@ -182,10 +182,13 @@ async function main() {
 
   await watchdog.start();
 
-  app.listen(config.port, () => {
+  const httpServer = app.listen(config.port, () => {
     console.debug(`✓ Server listening on port ${config.port}`);
     console.debug(`✓ tRPC endpoint available at /trpc`);
   });
+
+  attachWebSocketServer(httpServer, sessionMiddleware);
+  console.debug(`✓ WebSocket endpoint available at /api/events`);
 }
 
 main().catch((error) => {

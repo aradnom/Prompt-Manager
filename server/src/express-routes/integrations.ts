@@ -1,7 +1,13 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, RequestHandler, Response } from "express";
+import { randomUUID } from "crypto";
 import type { PostgresStorageAdapter } from "@server/adapters/postgres-adapter";
 import { validateAPIKey, hashToken } from "@server/lib/auth";
 import type { ServerConfig } from "@server/config";
+import { userEventBus } from "@server/lib/user-event-bus";
+import { awaitPairConfirmation } from "@server/lib/cui-pair";
+
+const PAIR_TIMEOUT_MS = 60_000;
+const PAIR_FINGERPRINT_MAX = 200;
 
 // SSE connection manager
 const sseClients = new Map<number, Set<Response>>();
@@ -94,7 +100,7 @@ async function authenticateComfyUI(
 export function registerIntegrationCors(app: Express) {
   app.use("/api/integrations", (_req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Authorization, Content-Type",
@@ -113,7 +119,12 @@ export function registerIntegrationRoutes(
   app: Express,
   storage: PostgresStorageAdapter,
   config: ServerConfig,
+  rateLimitMiddleware?: RequestHandler,
 ) {
+  const rateLimited: RequestHandler[] = rateLimitMiddleware
+    ? [rateLimitMiddleware]
+    : [];
+
   // ============================================================================
   // ComfyUI Integration Endpoints
   // ============================================================================
@@ -249,6 +260,62 @@ export function registerIntegrationRoutes(
   });
 
   // ============================================================================
+  // Pairing (key-transfer handshake)
+  // ============================================================================
+
+  // CUI hits this with its API key when it wants the derived key. Server
+  // checks whether a browser session is currently connected for that user;
+  // if so, emits a pair-request event to the browser and hangs waiting for
+  // the user to confirm or deny. Always returns 200 with a stable { ok, ... }
+  // shape so the caller can distinguish retry-worthy states (no-session,
+  // timeout) from terminal states (denied) without parsing HTTP codes.
+  app.post(
+    "/api/integrations/comfyui/pair",
+    ...rateLimited,
+    async (req, res) => {
+      try {
+        const userId = await authenticateComfyUI(
+          req,
+          res,
+          storage,
+          config.tokenSecret,
+        );
+        if (userId === null) return;
+
+        if (!userEventBus.hasSubscribers(userId)) {
+          return res.json({ ok: false, reason: "no-session" });
+        }
+
+        const rawFingerprint =
+          typeof req.body?.fingerprint === "string" ? req.body.fingerprint : "";
+        const fingerprint = rawFingerprint.slice(0, PAIR_FINGERPRINT_MAX);
+
+        const requestId = randomUUID();
+
+        // Register the resolver BEFORE emitting the event so a fast browser
+        // response can't arrive before the resolver is in place.
+        const resultPromise = awaitPairConfirmation(
+          requestId,
+          userId,
+          PAIR_TIMEOUT_MS,
+        );
+
+        userEventBus.sendToUser(userId, {
+          type: "cui-pair-request",
+          requestId,
+          fingerprint,
+        });
+
+        const result = await resultPromise;
+        res.json(result);
+      } catch (error) {
+        console.error("Error in CUI pair handshake:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
+  // ============================================================================
   // Snapshot Endpoints
   // ============================================================================
 
@@ -313,13 +380,46 @@ export function registerIntegrationRoutes(
 
   // SSE endpoint for ComfyUI integration
   app.get("/api/integrations/comfyui/events", async (req, res) => {
-    const userId = await authenticateComfyUI(
-      req,
-      res,
-      storage,
-      config.tokenSecret,
-    );
-    if (userId === null) return;
+    // Explicit auth handling (rather than delegating to authenticateComfyUI) so
+    // the failure response is unambiguous to the CUI side: a 401 with a
+    // WWW-Authenticate header, a machine-readable `code`, and no event-stream
+    // headers — so naive clients can't mistake this for a successfully-opened
+    // stream that just happens to have no events yet.
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+    if (!token && req.query.token) {
+      token = req.query.token as string;
+    }
+
+    const unauthorized = (code: string, message: string) => {
+      console.warn(`[SSE] auth rejected on /events (${code}): ${message}`);
+      res.setHeader("WWW-Authenticate", 'Bearer realm="comfyui-integration"');
+      res.status(401).json({ error: message, code });
+    };
+
+    if (!token) {
+      unauthorized(
+        "missing_token",
+        "Authentication required. Provide token via Authorization header or ?token query string.",
+      );
+      return;
+    }
+    if (!validateAPIKey(token)) {
+      unauthorized("invalid_token", "API key is malformed or invalid.");
+      return;
+    }
+    const keyHash = hashToken(token, config.tokenSecret);
+    const userId = await storage.getUserIdByApiKey(keyHash);
+    if (!userId) {
+      unauthorized(
+        "revoked_token",
+        "API key is not associated with any user (likely revoked or regenerated).",
+      );
+      return;
+    }
 
     // Set headers for SSE
     res.setHeader("Content-Type", "text/event-stream");

@@ -13,9 +13,11 @@
     "server:build": "tsc -p server/tsconfig.json",
     "prepare": "husky",
     "test:llm": "vitest run --config server/vitest.config.ts",
-    "migrate": "tsx server/src/migrate.ts",
-    "migrate:down": "tsx server/src/migrate.ts down",
-    "migrate:check": "tsx server/src/migrate-check.ts",
+    "init-schema": "tsx server/src/scripts/init-schema.ts",
+    "migrate": "tsx server/src/scripts/migrate.ts",
+    "migrate:down": "tsx server/src/scripts/migrate.ts down",
+    "migrate:check": "tsx server/src/scripts/migrate-check.ts",
+    "migrate:user-content": "tsx server/src/scripts/migrate-user-content.ts",
     "deploy": "deploy/deploy.sh"
   },
   "dependencies": {
@@ -48,6 +50,7 @@
     "@trpc/client": "^11.8.0",
     "@trpc/react-query": "^11.8.0",
     "@trpc/server": "^11.8.0",
+    "@types/ws": "^8.18.1",
     "@uiw/codemirror-theme-vscode": "^4.25.4",
     "@uiw/react-codemirror": "^4.25.4",
     "class-variance-authority": "^0.7.1",
@@ -64,6 +67,7 @@
     "js-yaml": "^4.1.1",
     "kysely": "^0.28.9",
     "lucide-react": "^0.562.0",
+    "minisearch": "^7.2.0",
     "motion": "^12.23.26",
     "openai": "^6.16.0",
     "pg": "^8.16.3",
@@ -76,6 +80,7 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "unique-names-generator": "^4.7.1",
+    "ws": "^8.20.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {

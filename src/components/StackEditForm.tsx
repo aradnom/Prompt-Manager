@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { api, RouterOutput } from "@/lib/api";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
+import { useSync } from "@/contexts/SyncContext";
 import { applyCommaSeparation } from "@/lib/comma-separation";
 import {
   resolveWildcardsInText,
@@ -64,8 +66,10 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
 
   const { data: stackFolders } = api.stackFolders.list.useQuery();
 
+  const { notifyUpsert } = useSync();
   const updateMutation = api.stacks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       utils.stacks.list.invalidate();
       utils.stacks.get.invalidate();
       utils.stacks.getByDisplayId.invalidate();
@@ -97,7 +101,7 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
     }
     saveTimeoutRef.current = setTimeout(() => {
       saveChanges();
-    }, 500);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   // Save pending changes on unmount

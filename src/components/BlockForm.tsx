@@ -6,6 +6,7 @@ import {
 import { useTypes } from "@/contexts/TypesContext";
 import { insertWildcard } from "@/lib/wildcard-parser";
 import { api } from "@/lib/api";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
@@ -127,7 +128,7 @@ export function BlockForm({
     }
     saveTimeoutRef.current = setTimeout(() => {
       handleSubmit();
-    }, 500);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   // Save pending changes on unmount (edit mode only)

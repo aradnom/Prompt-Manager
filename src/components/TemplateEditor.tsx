@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import { api, RouterOutput } from "@/lib/api";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
+import { useSync } from "@/contexts/SyncContext";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -178,10 +179,11 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
   });
   formValuesRef.current = { editName, commaSeparated, negative, style };
 
+  const { notifyUpsert } = useSync();
   const updateMutation = api.stackTemplates.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("templates", data as unknown as { id: number });
       utils.stackTemplates.list.invalidate();
-      utils.stackTemplates.search.invalidate();
       utils.stackTemplates.get.invalidate();
       onUpdate?.();
     },
@@ -189,6 +191,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
 
   const createStackMutation = api.stacks.create.useMutation({
     onSuccess: (newStack) => {
+      notifyUpsert("stacks", newStack as unknown as { id: number });
       utils.stacks.list.invalidate();
       setActiveStack(newStack);
       navigate("/");

@@ -45,6 +45,8 @@ import type {
   UpdateStackSnapshotInput,
   User,
   CreateUserInput,
+  SyncExportResult,
+  SyncStack,
 } from "@server/adapters/storage-adapter.interface";
 
 export class PostgresStorageAdapter implements IStorageAdapter {
@@ -209,6 +211,63 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       .execute();
   }
 
+  // Wipes every row that belongs to a user and then the user record itself.
+  // The schema uses ON DELETE SET NULL for most user-owned FKs (so an orphaned
+  // delete wouldn't cascade), and there are active_revision_id back-pointers
+  // that form cycles with revision tables. The transaction below breaks those
+  // cycles first, then deletes in dependency order. Everything runs atomically
+  // so a partial failure leaves the account intact.
+  async deleteUserAccount(userId: number): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      // Break cycles: users → stacks, blocks → block_revisions, stacks → stack_revisions.
+      await trx
+        .updateTable("users")
+        .set({ active_stack_id: null })
+        .where("id", "=", userId)
+        .execute();
+      await trx
+        .updateTable("blocks")
+        .set({ active_revision_id: null })
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .updateTable("stacks")
+        .set({ active_revision_id: null })
+        .where("user_id", "=", userId)
+        .execute();
+
+      // Leaf tables first, then intermediates, then roots.
+      await trx
+        .deleteFrom("stack_snapshots")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .deleteFrom("stack_templates")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .deleteFrom("stack_revisions")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx.deleteFrom("stacks").where("user_id", "=", userId).execute();
+      await trx
+        .deleteFrom("block_revisions")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx.deleteFrom("blocks").where("user_id", "=", userId).execute();
+      await trx
+        .deleteFrom("stack_folders")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx
+        .deleteFrom("block_folders")
+        .where("user_id", "=", userId)
+        .execute();
+      await trx.deleteFrom("wildcards").where("user_id", "=", userId).execute();
+      await trx.deleteFrom("users").where("id", "=", userId).execute();
+    });
+  }
+
   async createBlock(input: CreateBlockInput): Promise<Block> {
     const now = new Date();
 
@@ -239,7 +298,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           block_id: blockResult.id,
           text: input.text,
           user_id: input.userId ?? null,
-          meta: input.meta ? JSON.stringify(input.meta) : null,
           created_at: now,
           updated_at: now,
         })
@@ -461,7 +519,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
             block_id: id,
             text: updates.text,
             user_id: blockResult.user_id,
-            meta: updates.meta ? JSON.stringify(updates.meta) : null,
             created_at: now,
             updated_at: now,
           })
@@ -754,25 +811,9 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       countQb = countQb.where("blocks.type_id", "=", options.typeId);
     }
 
-    // Label filter - match any of the provided labels
-    if (options.labels && options.labels.length > 0) {
-      qb = qb.where((eb) =>
-        eb.or(
-          options.labels!.map((label) =>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
-          ),
-        ),
-      );
-      countQb = countQb.where((eb) =>
-        eb.or(
-          options.labels!.map((label) =>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            eb("blocks.labels", "@>", sql`ARRAY[${label}]::varchar[]` as any),
-          ),
-        ),
-      );
-    }
+    // Label filter removed: labels are stored as per-element ciphertext
+    // envelopes, so `@>` can't match them. Label filtering is client-side via
+    // the sync worker.
 
     // User filter
     if (userId !== undefined) {
@@ -1295,7 +1336,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           block_id: input.blockId,
           text: input.text,
           user_id: input.userId ?? null,
-          meta: input.meta ? JSON.stringify(input.meta) : null,
           created_at: now,
           updated_at: now,
         })
@@ -3130,6 +3170,251 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     };
   }
 
+  // ==========================================================================
+  // Sync / bulk-export helpers for the client-side search cache.
+  //
+  // Each returns `items` (rows changed after `since`, or all if omitted) and
+  // `existingIds` (the full current id set) so the client can diff and evict
+  // anything that's been deleted. We don't track deletion tombstones — the id
+  // list acts as a cheap reconciliation substitute.
+  // ==========================================================================
+
+  async exportBlocksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Block>> {
+    let itemsQuery = this.db
+      .selectFrom("blocks")
+      .leftJoin("types", "blocks.type_id", "types.id")
+      .leftJoin("block_folders", "blocks.folder_id", "block_folders.id")
+      .selectAll("blocks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("block_revisions as active_rev")
+              .select("active_rev.text")
+              .whereRef("active_rev.id", "=", "blocks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("block_revisions")
+              .select("text")
+              .whereRef("block_revisions.block_id", "=", "blocks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("text"),
+      ])
+      .select([
+        "types.id as type_id_joined",
+        "types.name as type_name",
+        "types.description as type_description",
+        "block_folders.name as folder_name",
+      ])
+      .where("blocks.user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("blocks.updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("blocks")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    const items = itemRows.map((r) => {
+      const type = r.type_id_joined
+        ? {
+            id: r.type_id_joined,
+            name: r.type_name!,
+            description: r.type_description,
+          }
+        : null;
+      const block = this.mapBlock(r, type, r.folder_name ?? null);
+      block.text = r.text || "";
+      return block;
+    });
+
+    return { items, existingIds: idRows.map((r) => r.id) };
+  }
+
+  async exportStacksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<SyncStack>> {
+    let itemsQuery = this.db
+      .selectFrom("stacks")
+      .leftJoin("stack_folders", "stacks.folder_id", "stack_folders.id")
+      .selectAll("stacks")
+      .select((eb) => [
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.disabled_block_ids")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("disabled_block_ids")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.rendered_content")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("rendered_content")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("rendered_content"),
+      ])
+      .select(["stack_folders.name as folder_name"])
+      .where("stacks.user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("stacks.updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("stacks")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    const items: SyncStack[] = itemRows.map((r) => {
+      const stack = this.mapStack(r, r.folder_name ?? null);
+      stack.blockIds = r.block_ids || [];
+      stack.disabledBlockIds = r.disabled_block_ids || [];
+      return { ...stack, renderedContent: r.rendered_content ?? null };
+    });
+
+    return { items, existingIds: idRows.map((r) => r.id) };
+  }
+
+  async exportStackSnapshotsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackSnapshot>> {
+    let itemsQuery = this.db
+      .selectFrom("stack_snapshots")
+      .leftJoin("stacks", "stack_snapshots.stack_id", "stacks.id")
+      .selectAll("stack_snapshots")
+      .select([
+        "stacks.display_id as stack_display_id",
+        "stacks.name as stack_name",
+      ])
+      .where("stack_snapshots.user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("stack_snapshots.updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("stack_snapshots")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    const items = itemRows.map((r) => ({
+      ...this.mapStackSnapshot(r),
+      stackDisplayId: r.stack_display_id ?? undefined,
+      stackName: r.stack_name ?? undefined,
+    }));
+
+    return { items, existingIds: idRows.map((r) => r.id) };
+  }
+
+  async exportWildcardsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Wildcard>> {
+    let itemsQuery = this.db
+      .selectFrom("wildcards")
+      .selectAll()
+      .where("user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("wildcards")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    return {
+      items: itemRows.map((r) => this.mapWildcard(r)),
+      existingIds: idRows.map((r) => r.id),
+    };
+  }
+
+  async exportStackTemplatesForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackTemplate>> {
+    let itemsQuery = this.db
+      .selectFrom("stack_templates")
+      .selectAll()
+      .where("user_id", "=", userId);
+
+    if (since) {
+      itemsQuery = itemsQuery.where("updated_at", ">", since);
+    }
+
+    const [itemRows, idRows] = await Promise.all([
+      itemsQuery.execute(),
+      this.db
+        .selectFrom("stack_templates")
+        .select("id")
+        .where("user_id", "=", userId)
+        .execute(),
+    ]);
+
+    return {
+      items: itemRows.map((r) => this.mapStackTemplate(r)),
+      existingIds: idRows.map((r) => r.id),
+    };
+  }
+
   private mapBlock(
     row: Selectable<Database["blocks"]>,
     type: Type | null = null,
@@ -3189,7 +3474,6 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       text: row.text,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
-      meta: typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta,
       userId: row.user_id,
       blockId: row.block_id,
     };

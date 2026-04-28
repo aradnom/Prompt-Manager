@@ -5,6 +5,7 @@ import {
 } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { api, RouterOutput } from "@/lib/api";
+import { useSync } from "@/contexts/SyncContext";
 import { LENGTH_LIMITS } from "@shared/limits";
 import { Button } from "@/components/ui/button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
@@ -30,8 +31,10 @@ export function CreatePromptForm({
   const [name, setName] = useState("");
   const [displayId, setDisplayId] = useState(generateDisplayId());
 
+  const { notifyUpsert } = useSync();
   const createMutation = api.stacks.create.useMutation({
     onSuccess: (newStack) => {
+      notifyUpsert("stacks", newStack as unknown as { id: number });
       onCreated(newStack);
     },
   });

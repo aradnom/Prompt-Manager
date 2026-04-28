@@ -15,6 +15,8 @@ import {
 const navItems = [
   { path: "/", icon: "home", label: null },
   { path: "/prompts", icon: "chat", label: "Prompts" },
+  { path: "/snapshots", icon: "camera", label: "Prompt Snapshots" },
+  { path: "/templates", icon: "templates", label: "Prompt Templates" },
   { path: "/blocks", icon: "blocks", label: "Blocks" },
   { path: "/wildcards", icon: "dice", label: "Wildcards" },
 ];

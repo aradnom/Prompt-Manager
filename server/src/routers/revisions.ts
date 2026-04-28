@@ -1,12 +1,35 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
+import {
+  decryptStringFields,
+  encryptStringFields,
+  requireKey,
+} from "@server/lib/envelope";
+import type { BlockRevision } from "@/types/schema";
 
 const mutationRL = withRateLimit(
   "revisions.create",
   RATE_LIMITS.mutation.windowMs,
   RATE_LIMITS.mutation.maxRequests,
 );
+
+const ENCRYPTED_REVISION_FIELDS = ["text"] as const;
+
+function encryptRevisionFields<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): T {
+  return encryptStringFields(input, ENCRYPTED_REVISION_FIELDS, key);
+}
+
+function decryptRevision(row: BlockRevision, key: Buffer): BlockRevision {
+  return decryptStringFields(
+    row as unknown as Record<string, unknown>,
+    ENCRYPTED_REVISION_FIELDS,
+    key,
+  ) as unknown as BlockRevision;
+}
 
 export const revisionsRouter = router({
   create: protectedProcedure
@@ -15,12 +38,13 @@ export const revisionsRouter = router({
       z.object({
         blockId: z.number(),
         text: z.string().max(LENGTH_LIMITS.blockText),
-        meta: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
+      const encrypted = encryptRevisionFields(input, key);
       return ctx.storage.createRevision({
-        ...input,
+        ...encrypted,
         userId: ctx.userId,
       });
     }),
@@ -32,7 +56,7 @@ export const revisionsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      // Check block ownership first
+      const key = requireKey(ctx.derivedKey);
       const block = await ctx.storage.getBlock(input.blockId);
       if (!block) {
         throw new Error("Block not found");
@@ -40,6 +64,7 @@ export const revisionsRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.getRevisions(input.blockId);
+      const revisions = await ctx.storage.getRevisions(input.blockId);
+      return revisions.map((r) => decryptRevision(r, key));
     }),
 });

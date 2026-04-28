@@ -10,7 +10,7 @@ CREATE TABLE users (
     scratchpad text,
     active_stack_id integer,
     created_at timestamp with time zone,
-    updated_at timestamp with time zone,
+    updated_at timestamp with time zone
 );
 
 -- types
@@ -25,8 +25,8 @@ CREATE TABLE types (
 
 CREATE TABLE block_folders (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name character varying(255),
-    description character varying(512),
+    name text,
+    description text,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
@@ -38,8 +38,8 @@ CREATE TABLE blocks (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     uuid character varying(255) UNIQUE,
     display_id character varying(255) UNIQUE,
-    name character varying(255),
-    notes character varying(4000),
+    name text,
+    notes text,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     type_id integer REFERENCES types(id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -47,7 +47,7 @@ CREATE TABLE blocks (
     labels character varying(255)[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     meta json,
-    active_revision_id integer REFERENCES block_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
+    active_revision_id integer
 );
 
 -- block_revisions
@@ -57,7 +57,6 @@ CREATE TABLE block_revisions (
     text text,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
-    meta json,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     block_id integer REFERENCES blocks(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -66,8 +65,8 @@ CREATE TABLE block_revisions (
 
 CREATE TABLE stack_folders (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name character varying(255),
-    description character varying(512),
+    name text,
+    description text,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
@@ -79,16 +78,16 @@ CREATE TABLE stacks (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     uuid character varying(255) UNIQUE,
     display_id character varying(255) UNIQUE,
-    name character varying(255),
+    name text,
     comma_separated boolean DEFAULT true,
     negative boolean DEFAULT false,
     style character varying(32),
-    notes character varying(4000),
+    notes text,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     folder_id integer REFERENCES stack_folders(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    active_revision_id integer REFERENCES stack_revisions(id) ON DELETE SET NULL ON UPDATE CASCADE
+    active_revision_id integer
 );
 
 -- stack_revisions
@@ -97,9 +96,9 @@ CREATE TABLE stack_revisions (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     stack_id integer REFERENCES stacks(id) ON DELETE SET NULL ON UPDATE CASCADE,
     block_ids integer[] DEFAULT '{}'::integer[],
+    disabled_block_ids integer[] DEFAULT '{}'::integer[],
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     rendered_content text,
-    meta json,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
 );
@@ -109,8 +108,8 @@ CREATE TABLE stack_revisions (
 CREATE TABLE stack_snapshots (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     display_id character varying(255) NOT NULL,
-    name character varying(255),
-    notes character varying(4000),
+    name text,
+    notes text,
     rendered_content text NOT NULL,
     block_ids integer[] DEFAULT '{}'::integer[],
     disabled_block_ids integer[] DEFAULT '{}'::integer[],
@@ -125,13 +124,13 @@ CREATE TABLE stack_snapshots (
 CREATE TABLE stack_templates (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     display_id character varying(255) NOT NULL,
-    name character varying(255),
+    name text,
     block_ids integer[] DEFAULT '{}'::integer[],
     disabled_block_ids integer[] DEFAULT '{}'::integer[],
     comma_separated boolean DEFAULT true,
     negative boolean DEFAULT false,
     style character varying(32),
-    notes character varying(4000),
+    notes text,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
@@ -143,8 +142,8 @@ CREATE TABLE wildcards (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     uuid character varying(255) UNIQUE,
     display_id character varying(255) UNIQUE,
-    name character varying(255),
-    format character varying(50),
+    name text,
+    format text,
     content text,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
@@ -157,4 +156,14 @@ CREATE TABLE wildcards (
 ALTER TABLE users
     ADD CONSTRAINT fk_users_active_stack
     FOREIGN KEY (active_stack_id) REFERENCES stacks(id)
+    ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE blocks
+    ADD CONSTRAINT fk_blocks_active_revision
+    FOREIGN KEY (active_revision_id) REFERENCES block_revisions(id)
+    ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE stacks
+    ADD CONSTRAINT fk_stacks_active_revision
+    FOREIGN KEY (active_revision_id) REFERENCES stack_revisions(id)
     ON DELETE SET NULL ON UPDATE CASCADE;

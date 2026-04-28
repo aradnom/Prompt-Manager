@@ -10,6 +10,8 @@ import { llmRouter } from "@server/routers/llm";
 import { configRouter } from "@server/routers/config";
 import { wildcardsRouter } from "@server/routers/wildcards";
 import { usersRouter } from "@server/routers/users";
+import { integrationsRouter } from "@server/routers/integrations";
+import { syncRouter } from "@server/routers/sync";
 
 export const appRouter = router({
   blocks: blocksRouter,
@@ -23,6 +25,8 @@ export const appRouter = router({
   config: configRouter,
   wildcards: wildcardsRouter,
   users: usersRouter,
+  integrations: integrationsRouter,
+  sync: syncRouter,
 });
 
 export type AppRouter = typeof appRouter;

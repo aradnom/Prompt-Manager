@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { extractWildcardValues } from "@/lib/wildcard-value-extractor";
 import { Button } from "@/components/ui/button";
@@ -155,7 +156,14 @@ export function WildcardBrowser({
               })
             ) : (
               <div className="text-center py-8 text-cyan-medium">
-                {searchQuery ? "No wildcards found" : "No wildcards available"}
+                {searchQuery ? (
+                  "No wildcards found"
+                ) : (
+                  <span>
+                    No wildcards available.{" "}
+                    <Link to="/wildcards">Create one</Link>
+                  </span>
+                )}
               </div>
             )}
           </div>

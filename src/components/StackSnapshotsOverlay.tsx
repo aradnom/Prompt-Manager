@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { X, Trash2, StickyNote, Copy } from "lucide-react";
 import { api, RouterOutput } from "@/lib/api";
+import { useSync } from "@/contexts/SyncContext";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { LENGTH_LIMITS } from "@shared/limits";
@@ -27,14 +28,17 @@ function SnapshotCard({ snapshot, stackId }: SnapshotCardProps) {
   const [showCopied, setShowCopied] = useState(false);
   const utils = api.useUtils();
 
+  const { notifyUpsert, notifyDelete } = useSync();
   const updateMutation = api.stacks.updateSnapshot.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("snapshots", data as unknown as { id: number });
       utils.stacks.listSnapshots.invalidate({ stackId });
     },
   });
 
   const deleteMutation = api.stacks.deleteSnapshot.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("snapshots", variables.id);
       utils.stacks.listSnapshots.invalidate({ stackId });
     },
   });

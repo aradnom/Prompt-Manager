@@ -58,6 +58,7 @@ export interface IStorageAdapter {
   setUserScratchpad(userId: number, content: string): Promise<void>;
   countUsers(): Promise<number>;
   setUserActiveStackId(userId: number, stackId: number | null): Promise<void>;
+  deleteUserAccount(userId: number): Promise<void>;
   getSnapshotByDisplayId(
     displayId: string,
     userId: number,
@@ -224,6 +225,37 @@ export interface IStorageAdapter {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Wildcard>>;
   countWildcards(): Promise<number>;
+
+  // Sync / bulk-export — used by the client-side search cache.
+  // Returns rows changed since `since` plus the full id set for reconciliation.
+  exportBlocksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Block>>;
+  exportStacksForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<SyncStack>>;
+  exportStackSnapshotsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackSnapshot>>;
+  exportWildcardsForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<Wildcard>>;
+  exportStackTemplatesForSync(
+    userId: number,
+    since?: Date,
+  ): Promise<SyncExportResult<StackTemplate>>;
+}
+
+/** BlockStack with the active revision's rendered content embedded for search. */
+export type SyncStack = BlockStack & { renderedContent: string | null };
+
+export interface SyncExportResult<T> {
+  items: T[];
+  existingIds: number[];
 }
 
 export interface GetStackOptions {
@@ -234,7 +266,6 @@ export interface GetStackOptions {
 export interface SearchBlocksOptions {
   query?: string;
   typeId?: number;
-  labels?: string[];
 }
 
 export interface SearchStacksOptions {

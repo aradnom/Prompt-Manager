@@ -1,12 +1,36 @@
 import { z } from "zod";
 import { router, protectedProcedure, withRateLimit } from "@server/trpc";
 import { RATE_LIMITS, LENGTH_LIMITS } from "@shared/limits";
+import {
+  decryptStringFields,
+  encryptStringFields,
+  requireKey,
+} from "@server/lib/envelope";
+import { decryptStack } from "@server/routers/stacks";
+import type { StackFolder } from "@/types/schema";
 
 const mutationRL = withRateLimit(
   "stackFolders.create",
   RATE_LIMITS.mutation.windowMs,
   RATE_LIMITS.mutation.maxRequests,
 );
+
+const ENCRYPTED_FOLDER_FIELDS = ["name", "description"] as const;
+
+function encryptFolderFields<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): T {
+  return encryptStringFields(input, ENCRYPTED_FOLDER_FIELDS, key);
+}
+
+export function decryptStackFolder(row: StackFolder, key: Buffer): StackFolder {
+  return decryptStringFields(
+    row as unknown as Record<string, unknown>,
+    ENCRYPTED_FOLDER_FIELDS,
+    key,
+  ) as unknown as StackFolder;
+}
 
 export const stackFoldersRouter = router({
   create: protectedProcedure
@@ -18,15 +42,19 @@ export const stackFoldersRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      return ctx.storage.createStackFolder({
-        ...input,
+      const key = requireKey(ctx.derivedKey);
+      const encrypted = encryptFolderFields(input, key);
+      const created = await ctx.storage.createStackFolder({
+        ...encrypted,
         userId: ctx.userId,
       });
+      return decryptStackFolder(created, key);
     }),
 
   get: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const folder = await ctx.storage.getStackFolder(input.id);
       if (!folder) {
         throw new Error("Folder not found");
@@ -34,7 +62,7 @@ export const stackFoldersRouter = router({
       if (folder.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return folder;
+      return decryptStackFolder(folder, key);
     }),
 
   update: protectedProcedure
@@ -46,6 +74,7 @@ export const stackFoldersRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const { id, ...updates } = input;
       const folder = await ctx.storage.getStackFolder(id);
       if (!folder) {
@@ -54,7 +83,9 @@ export const stackFoldersRouter = router({
       if (folder.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.updateStackFolder(id, updates);
+      const encrypted = encryptFolderFields(updates, key);
+      const updated = await ctx.storage.updateStackFolder(id, encrypted);
+      return decryptStackFolder(updated, key);
     }),
 
   delete: protectedProcedure
@@ -72,12 +103,15 @@ export const stackFoldersRouter = router({
     }),
 
   list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.storage.listStackFolders(ctx.userId);
+    const key = requireKey(ctx.derivedKey);
+    const folders = await ctx.storage.listStackFolders(ctx.userId);
+    return folders.map((f) => decryptStackFolder(f, key));
   }),
 
   getStacks: protectedProcedure
     .input(z.object({ folderId: z.number() }))
     .query(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
       const folder = await ctx.storage.getStackFolder(input.folderId);
       if (!folder) {
         throw new Error("Folder not found");
@@ -85,6 +119,7 @@ export const stackFoldersRouter = router({
       if (folder.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      return ctx.storage.getFolderStacks(input.folderId);
+      const stacks = await ctx.storage.getFolderStacks(input.folderId);
+      return stacks.map((s) => decryptStack(s, key));
     }),
 });

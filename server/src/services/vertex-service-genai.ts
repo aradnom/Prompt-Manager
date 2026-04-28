@@ -146,8 +146,16 @@ export class VertexServiceGenAI {
         target: "vertex",
       };
     } catch (error: unknown) {
-      if (error && typeof error === "object" && "message" in error) {
-        console.error("GenAI SDK Error:", JSON.stringify(error, null, 2));
+      // Log only diagnostic fields — SDK errors embed the full request body
+      // (including user prompt text) and must not be serialized wholesale.
+      if (error && typeof error === "object") {
+        const e = error as Record<string, unknown>;
+        console.error("GenAI SDK Error:", {
+          name: e.name,
+          status: e.status,
+          code: e.code,
+          message: e.message,
+        });
       }
 
       if (error instanceof Error) {

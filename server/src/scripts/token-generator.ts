@@ -8,7 +8,7 @@ export function generateToken() {
   // Rejection sampling to eliminate modulo bias.
   // Discard any byte >= maxValid (largest multiple of chars.length that fits in a byte).
   const maxValid = Math.floor(256 / chars.length) * chars.length; // 248 for 31 chars
-  const selected = [];
+  const selected: number[] = [];
   while (selected.length < length) {
     const buf = randomBytes(length - selected.length + 4);
     for (let i = 0; i < buf.length && selected.length < length; i++) {

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { api, RouterOutput } from "@/lib/api";
+import { useWorkerSearch } from "@/hooks/useWorkerSearch";
+import { useSync } from "@/contexts/SyncContext";
 import { RasterIcon } from "@/components/RasterIcon";
 import { SearchInput } from "@/components/ui/search-input";
 import { DotDivider } from "@/components/ui/dot-divider";
@@ -51,18 +53,19 @@ function SnapshotCard({
   const [showCopied, setShowCopied] = useState(false);
   const utils = api.useUtils();
 
+  const { notifyUpsert, notifyDelete } = useSync();
   const updateMutation = api.stacks.updateSnapshot.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("snapshots", data as unknown as { id: number });
       utils.stacks.listAllSnapshots.invalidate();
-      utils.stacks.searchSnapshots.invalidate();
       onUpdate();
     },
   });
 
   const deleteMutation = api.stacks.deleteSnapshot.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      notifyDelete("snapshots", variables.id);
       utils.stacks.listAllSnapshots.invalidate();
-      utils.stacks.searchSnapshots.invalidate();
       onUpdate();
     },
   });
@@ -281,24 +284,17 @@ export default function Snapshots() {
     { enabled: !isSearchMode },
   );
 
-  const {
-    data: searchData,
-    isLoading: isSearchLoading,
-    refetch: refetchSearch,
-  } = api.stacks.searchSnapshots.useQuery(
-    {
-      query: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-      limit: PAGE_SIZE,
-      offset,
-    },
-    { enabled: isSearchMode },
-  );
+  // Client-side worker search — server ILIKE can't match ciphertext columns.
+  const searchData = useWorkerSearch<Snapshot>("snapshots", debouncedSearch, {
+    pageSize: PAGE_SIZE,
+    page,
+  });
 
   const data = isSearchMode ? searchData : listData;
-  const showLoading = isSearchMode ? isSearchLoading : isListLoading;
-  const total = data?.total ?? 0;
+  const showLoading = isSearchMode ? searchData.isLoading : isListLoading;
+  const total = isSearchMode ? searchData.total : (listData?.total ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const refetch = isSearchMode ? refetchSearch : refetchList;
+  const refetch = refetchList;
 
   return (
     <main className="standard-page-container">

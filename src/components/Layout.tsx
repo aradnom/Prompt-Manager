@@ -5,6 +5,7 @@ import { ErrorBanner } from "./ErrorBanner";
 import { LMStudioCorsWarning } from "./LMStudioCorsWarning";
 import { Scratchpad } from "./Scratchpad";
 import { FeedbackForm } from "./FeedbackForm";
+import { CuiPairDialog } from "./CuiPairDialog";
 import { MenuProvider, useMenu } from "@/contexts/MenuContext";
 import { ScrollProvider } from "@/contexts/ScrollContext";
 import { useClientLLM } from "@/contexts/ClientLLMContext";
@@ -51,8 +52,16 @@ interface LayoutProps {
 function LayoutContent({ children }: LayoutProps) {
   const { isOpen } = useMenu();
   const { isAuthenticated } = useSession();
+  const { addNotice } = useErrors();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (sessionStorage.getItem("account-deleted-notice")) {
+      sessionStorage.removeItem("account-deleted-notice");
+      addNotice("Your account was successfully deleted.");
+    }
+  }, [addNotice]);
 
   return (
     <div
@@ -68,6 +77,7 @@ function LayoutContent({ children }: LayoutProps) {
       <FadePresence show={isAuthenticated}>
         <FeedbackForm />
       </FadePresence>
+      {isAuthenticated && <CuiPairDialog />}
       <FadePresence show={isAuthenticated && location.pathname !== "/account"}>
         <TooltipProvider delayDuration={0}>
           <Tooltip>

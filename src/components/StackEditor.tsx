@@ -44,6 +44,7 @@ import { GenerateBlockDialog } from "@/components/GenerateBlockDialog";
 import { LLMGuard } from "@/components/LLMGuard";
 import { InlineIconBadge } from "@/components/ui/inline-icon-badge";
 import { useLLMStatus } from "@/contexts/LLMStatusContext";
+import { useSync } from "@/contexts/SyncContext";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
@@ -120,10 +121,16 @@ export function StackEditor({ stack }: StackEditorProps) {
     setIsRenamingStack(false);
   };
 
-  const updateContentMutation = api.stacks.updateContent.useMutation();
   const utils = api.useUtils();
+  const { notifyUpsert } = useSync();
+  const updateContentMutation = api.stacks.updateContent.useMutation({
+    onSuccess: (_data, variables) => {
+      notifyUpsert("stacks", { id: variables.stackId });
+    },
+  });
   const updateStackMutation = api.stacks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       utils.stacks.invalidate();
     },
   });
@@ -131,13 +138,15 @@ export function StackEditor({ stack }: StackEditorProps) {
   const createTemplateMutation = api.stackTemplates.createFromStack.useMutation(
     {
       onSuccess: (template) => {
+        notifyUpsert("templates", template as unknown as { id: number });
         navigate(`/templates/${template.id}`);
       },
     },
   );
 
   const createSnapshotMutation = api.stacks.createSnapshot.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("snapshots", data as unknown as { id: number });
       snapshotDoneRef.current.mutation = true;
       if (snapshotDoneRef.current.flash) {
         setShowSnapshots(true);
@@ -217,34 +226,42 @@ export function StackEditor({ stack }: StackEditorProps) {
   ]);
 
   const addBlockMutation = api.stacks.addBlock.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       refetch();
     },
   });
 
-  const createBlockMutation = api.blocks.create.useMutation();
+  const createBlockMutation = api.blocks.create.useMutation({
+    onSuccess: (data) =>
+      notifyUpsert("blocks", data as unknown as { id: number }),
+  });
 
   const updateBlockMutation = api.blocks.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("blocks", data as unknown as { id: number });
       refetch();
     },
   });
 
   const removeBlockMutation = api.stacks.removeBlock.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       refetch();
     },
   });
 
   const reorderBlocksMutation = api.stacks.reorderBlocks.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       refetch();
     },
   });
 
   const toggleBlockDisabledMutation =
     api.stacks.toggleBlockDisabled.useMutation({
-      onSuccess: () => {
+      onSuccess: (data) => {
+        notifyUpsert("stacks", data as unknown as { id: number });
         refetch();
       },
     });

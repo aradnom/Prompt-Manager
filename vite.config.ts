@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target: serverUrl,
           changeOrigin: true,
+          ws: true,
         },
       },
       allowedHosts: [new URL("http://prompt-manager:3001").hostname],

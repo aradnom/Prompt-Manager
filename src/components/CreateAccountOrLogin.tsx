@@ -9,11 +9,13 @@ import { cn } from "@/lib/utils";
 interface CreateAccountOrLoginProps {
   onAccountCreated?: (token: string) => void;
   bordered?: boolean;
+  loginOnly?: boolean;
 }
 
 export function CreateAccountOrLogin({
   onAccountCreated,
   bordered = false,
+  loginOnly = false,
 }: CreateAccountOrLoginProps) {
   const [token, setToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -91,30 +93,36 @@ export function CreateAccountOrLogin({
         bordered && "border-2 border-cyan-dark rounded-lg p-5",
       )}
     >
-      {/* Create Account Section */}
-      <div className="flex justify-center">
-        <Button
-          onClick={handleCreateAccount}
-          variant="hero"
-          size="hero"
-          className="w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? "Creating Account..." : "Create an Account (it's free!)"}
-        </Button>
-      </div>
+      {!loginOnly && (
+        <>
+          {/* Create Account Section */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleCreateAccount}
+              variant="hero"
+              size="hero"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading
+                ? "Creating Account..."
+                : "Create an Account (it's free!)"}
+            </Button>
+          </div>
 
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-cyan-medium/50"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-background text-cyan-medium font-bold">
-            or
-          </span>
-        </div>
-      </div>
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-cyan-medium/50"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-background text-cyan-medium font-bold">
+                or
+              </span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Login Section */}
       <form onSubmit={handleLogin} className="space-y-4">

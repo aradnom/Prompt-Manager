@@ -39,6 +39,7 @@ export function MainMenu() {
     [
       { path: "/account", label: "Account", icon: "user" },
       { path: "/features", label: "Features", icon: "lightning" },
+      { path: "/privacy", label: "A Note About Privacy", icon: "privacy" },
       ...(isAdmin
         ? [
             {

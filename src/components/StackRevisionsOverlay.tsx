@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
+import { useSync } from "@/contexts/SyncContext";
 interface StackRevisionsOverlayProps {
   stackId: number;
   activeRevisionId: number | null;
@@ -113,8 +114,10 @@ export function StackRevisionsOverlay({
 
   const revisionsQuery = api.stacks.getRevisions.useQuery({ stackId });
 
+  const { notifyUpsert } = useSync();
   const setActiveRevisionMutation = api.stacks.setActiveRevision.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      notifyUpsert("stacks", data as unknown as { id: number });
       utils.stacks.list.invalidate();
       utils.stacks.get.invalidate();
     },
@@ -138,7 +141,7 @@ export function StackRevisionsOverlay({
 
   return (
     <motion.div
-      className="absolute inset-0 bg-background z-20 rounded-lg overflow-hidden"
+      className="absolute inset-0 min-h-96 bg-background z-20 rounded-lg overflow-hidden border-2 border-cyan-dark"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
