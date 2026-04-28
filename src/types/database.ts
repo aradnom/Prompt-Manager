@@ -82,6 +82,7 @@ export interface BlockStacksTable {
     "t5" | "clip" | null
   >;
   notes: ColumnType<string | null, string | null, string | null>;
+  labels: ColumnType<string[], string[] | undefined, string[] | undefined>;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
   user_id: number | null;

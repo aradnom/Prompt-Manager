@@ -94,6 +94,7 @@ CREATE TABLE stacks (
     negative boolean DEFAULT false,
     style character varying(32),
     notes text,
+    labels character varying(1024)[] DEFAULT '{}'::character varying(1024)[],
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     user_id integer REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
