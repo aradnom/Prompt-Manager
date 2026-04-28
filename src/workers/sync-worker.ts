@@ -305,7 +305,7 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
           const bytes = new Uint8Array(bin.length);
           for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
           derivedKey = bytes;
-          console.log(
+          console.debug(
             `[sync worker] derived key delivered (${derivedKey.length} bytes)`,
           );
           break;

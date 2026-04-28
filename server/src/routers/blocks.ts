@@ -218,6 +218,15 @@ export const blocksRouter = router({
       if (block.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
+      // Skip creating a new revision if the text hasn't actually changed.
+      // Clients often resend the full form (text included) when updating
+      // metadata-only fields like displayId, folderId, labels, or notes.
+      if (updates.text !== undefined) {
+        const currentText = tryDecrypt(block.text, key);
+        if (currentText === updates.text) {
+          delete updates.text;
+        }
+      }
       const encrypted = encryptBlockFields(updates, key);
       return ctx.storage.updateBlock(id, encrypted);
     }),
