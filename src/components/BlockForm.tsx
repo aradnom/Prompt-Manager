@@ -55,6 +55,10 @@ export function BlockForm({
   isSubmitting = false,
   mode = "create",
 }: BlockFormProps) {
+  // In edit mode, autosave makes isSubmitting flip while the user is typing.
+  // Disabling inputs on each save would blur the focused field, so only treat
+  // isSubmitting as input-disabling during creation.
+  const inputsDisabled = isSubmitting && mode === "create";
   const { types } = useTypes();
   const { data: folders } = api.blockFolders.list.useQuery();
   const [name, setName] = useState(initialValues?.name || "");
@@ -236,7 +240,7 @@ export function BlockForm({
                 setText(e.target.value);
                 debouncedSave();
               }}
-              disabled={isSubmitting}
+              disabled={inputsDisabled}
               autoFocus
             />
             <Button
@@ -245,7 +249,7 @@ export function BlockForm({
               size="sm"
               className="mt-2"
               onClick={() => setWildcardBrowserOpen(true)}
-              disabled={isSubmitting}
+              disabled={inputsDisabled}
             >
               Insert Wildcard
             </Button>
@@ -268,7 +272,7 @@ export function BlockForm({
                   debouncedSave();
                 }
               }}
-              disabled={isSubmitting}
+              disabled={inputsDisabled}
             />
           </div>
           <div>
@@ -283,7 +287,7 @@ export function BlockForm({
                   setDisplayId(value);
                   debouncedSave();
                 }}
-                disabled={isSubmitting}
+                disabled={inputsDisabled}
               />
               <Button
                 variant="outline"
@@ -292,7 +296,7 @@ export function BlockForm({
                   debouncedSave();
                 }}
                 type="button"
-                disabled={isSubmitting}
+                disabled={inputsDisabled}
               >
                 Regenerate
               </Button>
@@ -303,7 +307,7 @@ export function BlockForm({
             <Select
               value={folderId?.toString() || "none"}
               onValueChange={handleFolderChange}
-              disabled={isSubmitting}
+              disabled={inputsDisabled}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -325,7 +329,7 @@ export function BlockForm({
                 <Select
                   value={typeId?.toString() || "none"}
                   onValueChange={handleTypeChange}
-                  disabled={isSubmitting}
+                  disabled={inputsDisabled}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -354,7 +358,7 @@ export function BlockForm({
                     setLabels(e.target.value);
                     debouncedSave();
                   }}
-                  disabled={isSubmitting}
+                  disabled={inputsDisabled}
                 />
               </div>
               <div>
@@ -368,7 +372,7 @@ export function BlockForm({
                     setNotes(e.target.value);
                     debouncedSave();
                   }}
-                  disabled={isSubmitting}
+                  disabled={inputsDisabled}
                 />
                 <div className="text-xs text-cyan-medium mt-1 text-right">
                   {notes.length}/4000
