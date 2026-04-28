@@ -347,10 +347,11 @@ export function StackEditor({ stack }: StackEditorProps) {
     }
   };
 
-  const handleRemoveBlock = (blockId: number) => {
+  const handleRemoveBlock = (blockId: number, position: number) => {
     removeBlockMutation.mutate({
       stackId: stack.id,
       blockId,
+      position,
     });
   };
 
@@ -409,16 +410,19 @@ export function StackEditor({ stack }: StackEditorProps) {
   const handleRemoveSelectedBlocks = async () => {
     if (!stackWithBlocks?.blocks) return;
 
-    // Get block IDs from selected indices
-    const blockIdsToRemove = Array.from(selectedBlockIndices).map(
-      (index) => stackWithBlocks.blocks[index].id,
+    // Remove from highest index downwards so each splice on the server
+    // doesn't shift the positions of the not-yet-removed entries.
+    const sortedDescending = Array.from(selectedBlockIndices).sort(
+      (a, b) => b - a,
     );
 
-    // Remove each block
-    for (const blockId of blockIdsToRemove) {
+    for (const index of sortedDescending) {
+      const block = stackWithBlocks.blocks[index];
+      if (!block) continue;
       await removeBlockMutation.mutateAsync({
         stackId: stack.id,
-        blockId,
+        blockId: block.id,
+        position: index,
       });
     }
 
@@ -750,7 +754,9 @@ export function StackEditor({ stack }: StackEditorProps) {
                                   handleToggleBlockDisabled(block.id)
                                 }
                                 onEdit={() => setEditingBlockId(block.id)}
-                                onDelete={() => handleRemoveBlock(block.id)}
+                                onDelete={() =>
+                                  handleRemoveBlock(block.id, index)
+                                }
                                 onDuplicate={() => handleDuplicateBlock(index)}
                                 onTransform={(blockId, transformedText) =>
                                   handleUpdateBlock(blockId, {

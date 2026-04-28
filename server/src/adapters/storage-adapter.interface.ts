@@ -160,6 +160,7 @@ export interface IStorageAdapter {
     stackId: number,
     blockId: number,
     renderedContent?: string,
+    position?: number,
   ): Promise<void>;
   reorderStackBlocks(
     stackId: number,

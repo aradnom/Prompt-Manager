@@ -55,10 +55,11 @@ export function BlockSearchDialog({
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Load every block into memory when the dialog opens with a structured
-  // filter (typeId or labels). The set is bounded per-user, so this is cheap.
+  // Load every block into memory when the dialog opens. Used both for
+  // structured filters (typeId/labels) and for the default "recent blocks"
+  // view shown when no query is entered. The set is bounded per-user.
   useEffect(() => {
-    if (!open || !hasStructuredFilter) return;
+    if (!open) return;
     let cancelled = false;
     setIsLoading(true);
     list<Block>("blocks")
@@ -75,7 +76,7 @@ export function BlockSearchDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, hasStructuredFilter, list]);
+  }, [open, list]);
 
   // Text-search path: ask the worker for ranked hits.
   useEffect(() => {
@@ -122,7 +123,13 @@ export function BlockSearchDialog({
         return true;
       });
     }
-    return queryHits;
+    if (debouncedQuery) return queryHits;
+    return [...allBlocks]
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
+      .slice(0, 20);
   }, [
     hasStructuredFilter,
     allBlocks,
@@ -184,13 +191,9 @@ export function BlockSearchDialog({
                 </span>
               </div>
             ))
-          ) : hasAnyFilter ? (
-            <div className="text-center py-6 text-sm text-cyan-medium">
-              No blocks found.
-            </div>
           ) : (
             <div className="text-center py-6 text-sm text-cyan-medium">
-              Start typing to search blocks...
+              {hasAnyFilter ? "No blocks found." : "No blocks yet."}
             </div>
           )}
         </div>
