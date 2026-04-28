@@ -120,7 +120,7 @@ export function FolderRow({
               </TooltipProvider>
             )}
           </div>
-          <TooltipProvider>
+          <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

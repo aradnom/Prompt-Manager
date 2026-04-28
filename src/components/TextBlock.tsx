@@ -920,14 +920,21 @@ export function TextBlock({
                   </ExpandingIcon>
                 )}
                 <ExpandingIcon active={isActive} origin="right">
-                  <button
-                    onClick={onDelete}
-                    disabled={isDeleting}
-                    className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-                    aria-label="Delete block"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={onDelete}
+                          disabled={isDeleting}
+                          className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                          aria-label="Delete block"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete block</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </ExpandingIcon>
               </>
             )}

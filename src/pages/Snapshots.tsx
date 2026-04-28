@@ -201,13 +201,20 @@ function SnapshotCard({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <button
-              onClick={() => setDeleteDialogOpen(true)}
-              className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
-              aria-label="Delete snapshot"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                    aria-label="Delete snapshot"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Delete snapshot</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 

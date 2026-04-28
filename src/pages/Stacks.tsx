@@ -262,16 +262,23 @@ function StackCard({
                   </Tooltip>
                 </TooltipProvider>
               )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(stack.id);
-                }}
-                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                aria-label="Delete stack"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(stack.id);
+                      }}
+                      className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                      aria-label="Delete prompt"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete prompt</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardHeader>
@@ -1009,13 +1016,20 @@ function SinglePromptView({ displayId }: { displayId: string }) {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <button
-              onClick={() => setDeleteDialogOpen(true)}
-              className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
-              aria-label="Delete prompt"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
+                    aria-label="Delete prompt"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Delete prompt</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
         {stack.name && (
