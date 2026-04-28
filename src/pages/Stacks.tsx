@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import {
+  useNavigate,
+  useParams,
+  useSearchParams,
+  Link,
+} from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DndContext,
@@ -13,6 +18,7 @@ import { api, RouterOutput } from "@/lib/api";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { StackEditForm } from "@/components/StackEditForm";
 import { useWorkerSearch } from "@/hooks/useWorkerSearch";
+import { useWorkerLabel } from "@/hooks/useWorkerLabel";
 import { useSync } from "@/contexts/SyncContext";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FolderRow } from "@/components/FolderRow";
@@ -73,6 +79,7 @@ interface StackCardProps {
   onRemoveFromFolder?: (id: number) => void;
   onShowRevisions: (stackId: number) => void;
   onCloseRevisions: () => void;
+  onLabelClick?: (label: string) => void;
   duplicateIsPending: boolean;
   index: number;
   isFirst: boolean;
@@ -88,6 +95,7 @@ function StackCard({
   onRemoveFromFolder,
   onShowRevisions,
   onCloseRevisions,
+  onLabelClick,
   duplicateIsPending,
   index,
   isFirst,
@@ -192,14 +200,27 @@ function StackCard({
                 </TooltipProvider>
                 {stack.labels && stack.labels.length > 0 && (
                   <div className="flex gap-1 flex-wrap">
-                    {stack.labels.map((label) => (
-                      <span
-                        key={label}
-                        className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium"
-                      >
-                        {label}
-                      </span>
-                    ))}
+                    {stack.labels.map((label) =>
+                      onLabelClick ? (
+                        <button
+                          key={label}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLabelClick(label);
+                          }}
+                          className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                        >
+                          {label}
+                        </button>
+                      ) : (
+                        <span
+                          key={label}
+                          className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium"
+                        >
+                          {label}
+                        </span>
+                      ),
+                    )}
                   </div>
                 )}
               </div>
@@ -320,6 +341,7 @@ function StackFolderContent({
   onRemoveFromFolder,
   onShowRevisions,
   onCloseRevisions,
+  onLabelClick,
   duplicateIsPending,
 }: {
   folderId: number;
@@ -331,6 +353,7 @@ function StackFolderContent({
   onRemoveFromFolder: (id: number) => void;
   onShowRevisions: (stackId: number) => void;
   onCloseRevisions: () => void;
+  onLabelClick?: (label: string) => void;
   duplicateIsPending: boolean;
 }) {
   const { data: folderStacks, isLoading } = api.stackFolders.getStacks.useQuery(
@@ -372,6 +395,7 @@ function StackFolderContent({
             onRemoveFromFolder={onRemoveFromFolder}
             onShowRevisions={onShowRevisions}
             onCloseRevisions={onCloseRevisions}
+            onLabelClick={onLabelClick}
             duplicateIsPending={duplicateIsPending}
             index={stackIndex}
             isFirst={false}
@@ -399,14 +423,17 @@ function StackList() {
   const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const labelFilter = searchParams.get("label") ?? "";
   const { setActiveStack } = useActiveStack();
   const utils = api.useUtils();
 
   const offset = page * PAGE_SIZE;
 
-  const isSearchMode = debouncedSearch.length > 0;
+  const isLabelMode = labelFilter.length > 0;
+  const isSearchMode = !isLabelMode && debouncedSearch.length > 0;
 
-  // Use listWithFolders when not searching
+  // Use listWithFolders when neither searching nor filtering by label.
   const {
     data: foldersData,
     isLoading,
@@ -416,18 +443,47 @@ function StackList() {
       limit: PAGE_SIZE,
       offset,
     },
-    { enabled: !isSearchMode },
+    { enabled: !isSearchMode && !isLabelMode },
   );
 
-  // Debounce search input
+  const setLabelFilter = (label: string | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (label) next.set("label", label);
+        else next.delete("label");
+        return next;
+      },
+      { replace: false },
+    );
+    setPage(0);
+  };
+
+  // Reset pagination when label changes (e.g. from another page).
+  useEffect(() => {
+    setPage(0);
+  }, [labelFilter]);
+
+  // Debounce search input. Typing in the search box clears any active
+  // label filter — they're mutually exclusive view modes.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(0);
+      if (search && labelFilter) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("label");
+            return next;
+          },
+          { replace: true },
+        );
+      }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, labelFilter, setSearchParams]);
 
   // Client-side worker search when a query is active. Server-side `stacks.search`
   // can't match ciphertext columns; the worker holds decrypted rows in memory.
@@ -436,12 +492,23 @@ function StackList() {
     page,
   });
 
+  const labelData = useWorkerLabel<Stack>("stacks", labelFilter, {
+    pageSize: PAGE_SIZE,
+    page,
+  });
+
   // Calculate totals for pagination
-  const total = isSearchMode
-    ? searchData.total
-    : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseStacks ?? 0);
+  const total = isLabelMode
+    ? labelData.total
+    : isSearchMode
+      ? searchData.total
+      : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseStacks ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = isSearchMode ? searchData.isLoading : isLoading;
+  const showLoading = isLabelMode
+    ? labelData.isLoading
+    : isSearchMode
+      ? searchData.isLoading
+      : isLoading;
 
   const { notifyUpsert: listNotifyUpsert, notifyDelete } = useSync();
   const moveStackMutation = api.stacks.update.useMutation({
@@ -604,12 +671,118 @@ function StackList() {
         />
       </div>
 
+      {isLabelMode && (
+        <div className="mb-2 flex items-center gap-2 text-sm text-cyan-medium">
+          <span>Filtered by label:</span>
+          <span className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium">
+            {labelFilter}
+          </span>
+          <button
+            onClick={() => setLabelFilter(null)}
+            className="text-xs underline hover:text-foreground transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       <DotDivider className="mb-2" />
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          {isSearchMode ? "Searching..." : "Loading prompts..."}
+          {isLabelMode
+            ? "Filtering..."
+            : isSearchMode
+              ? "Searching..."
+              : "Loading prompts..."}
         </div>
+      ) : isLabelMode ? (
+        labelData.items.length > 0 ? (
+          <>
+            <div className="space-y-4">
+              {labelData.items.map((stack, index) => (
+                <StackCard
+                  key={stack.id}
+                  stack={stack}
+                  showRevisionsForStack={showRevisionsForStack}
+                  onStackClick={handleStackClick}
+                  onMakeActive={handleMakeActive}
+                  onDuplicate={handleDuplicate}
+                  onDelete={handleDelete}
+                  onShowRevisions={setShowRevisionsForStack}
+                  onCloseRevisions={() => setShowRevisionsForStack(null)}
+                  onLabelClick={setLabelFilter}
+                  duplicateIsPending={duplicateMutation.isPending}
+                  index={index}
+                  isFirst={index === 0 && page === 0}
+                />
+              ))}
+            </div>
+
+            {labelData.total > PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-6">
+                <span className="text-sm text-cyan-medium">
+                  Showing {offset + 1}&ndash;
+                  {Math.min(offset + PAGE_SIZE, labelData.total)} of{" "}
+                  {labelData.total}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage(0)}
+                  >
+                    First
+                  </Button>
+                  <ButtonGroup>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page >= lastPage}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage(lastPage)}
+                  >
+                    Last
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card>
+            <CardContent className="py-12 border-standard-dark-cyan">
+              <div className="text-center text-cyan-medium">
+                <p className="mb-4">
+                  No prompts found with label "{labelFilter}"
+                </p>
+                <Button onClick={() => setLabelFilter(null)} variant="outline">
+                  Clear Filter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
       ) : isSearchMode ? (
         // Search mode: flat list of stacks
         searchData.items.length > 0 ? (
@@ -626,6 +799,7 @@ function StackList() {
                   onDelete={handleDelete}
                   onShowRevisions={setShowRevisionsForStack}
                   onCloseRevisions={() => setShowRevisionsForStack(null)}
+                  onLabelClick={setLabelFilter}
                   duplicateIsPending={duplicateMutation.isPending}
                   index={index}
                   isFirst={index === 0 && page === 0}
@@ -729,6 +903,7 @@ function StackList() {
                     onRemoveFromFolder={handleRemoveStackFromFolder}
                     onShowRevisions={setShowRevisionsForStack}
                     onCloseRevisions={() => setShowRevisionsForStack(null)}
+                    onLabelClick={setLabelFilter}
                     duplicateIsPending={duplicateMutation.isPending}
                   />
                 </FolderRow>
@@ -746,6 +921,7 @@ function StackList() {
                     onDelete={handleDelete}
                     onShowRevisions={setShowRevisionsForStack}
                     onCloseRevisions={() => setShowRevisionsForStack(null)}
+                    onLabelClick={setLabelFilter}
                     duplicateIsPending={duplicateMutation.isPending}
                     index={foldersData.folders.length + index}
                     isFirst={
@@ -1002,12 +1178,15 @@ function SinglePromptView({ displayId }: { displayId: string }) {
             {stack.labels && stack.labels.length > 0 && (
               <span className="flex gap-1 flex-wrap">
                 {stack.labels.map((label) => (
-                  <span
+                  <button
                     key={label}
-                    className="text-sm px-3 py-1 rounded-md bg-cyan-dark text-cyan-medium font-normal"
+                    onClick={() =>
+                      navigate(`/prompts?label=${encodeURIComponent(label)}`)
+                    }
+                    className="text-sm px-3 py-1 rounded-md bg-cyan-dark text-cyan-medium font-normal hover:bg-cyan-dark/80 transition-colors cursor-pointer"
                   >
                     {label}
-                  </span>
+                  </button>
                 ))}
               </span>
             )}

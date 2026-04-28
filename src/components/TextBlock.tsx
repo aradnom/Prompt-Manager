@@ -158,6 +158,13 @@ interface TextBlockProps {
   defaultActive?: boolean;
   alwaysActive?: boolean;
   style?: OutputStyle;
+  /**
+   * Override the default label-click behavior. When provided, clicking a
+   * label calls this instead of opening the inline block-search modal.
+   * Used by the Blocks listing page to drive a URL-based filter rather than
+   * a popup browser.
+   */
+  onLabelClick?: (label: string) => void;
 }
 
 export function TextBlock({
@@ -177,6 +184,7 @@ export function TextBlock({
   defaultActive = false,
   alwaysActive = false,
   style,
+  onLabelClick,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
   const [isRenamingBlock, setIsRenamingBlock] = useState(false);
@@ -789,6 +797,10 @@ export function TextBlock({
                   <button
                     key={label}
                     onClick={() => {
+                      if (onLabelClick) {
+                        onLabelClick(label);
+                        return;
+                      }
                       setSelectedLabel(label);
                       setIsLabelSearchOpen(true);
                     }}

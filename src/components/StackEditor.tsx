@@ -611,12 +611,17 @@ export function StackEditor({ stack }: StackEditorProps) {
                 {stack.labels && stack.labels.length > 0 && (
                   <span className="ml-3 inline-flex gap-1 flex-wrap align-middle">
                     {stack.labels.map((label) => (
-                      <span
+                      <button
                         key={label}
-                        className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium"
+                        onClick={() =>
+                          navigate(
+                            `/prompts?label=${encodeURIComponent(label)}`,
+                          )
+                        }
+                        className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
                       >
                         {label}
-                      </span>
+                      </button>
                     ))}
                   </span>
                 )}

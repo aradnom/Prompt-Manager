@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { motion } from "motion/react";
 import {
   DndContext,
@@ -13,6 +18,7 @@ import { api } from "@/lib/api";
 import { generateUUID } from "@/lib/uuid";
 import { useSync } from "@/contexts/SyncContext";
 import { useWorkerSearch } from "@/hooks/useWorkerSearch";
+import { useWorkerLabel } from "@/hooks/useWorkerLabel";
 import type { Block } from "@/types/schema";
 
 import { TextBlock } from "@/components/TextBlock";
@@ -56,6 +62,7 @@ function BlockFolderContent({
   updateMutation,
   deleteMutation,
   refetch,
+  onLabelClick,
 }: {
   folderId: number;
   editingId: number | null;
@@ -66,6 +73,7 @@ function BlockFolderContent({
   updateMutation: { isPending: boolean };
   deleteMutation: { isPending: boolean };
   refetch: () => void;
+  onLabelClick?: (label: string) => void;
 }) {
   const { data: folderBlocks, isLoading } = api.blockFolders.getBlocks.useQuery(
     { folderId },
@@ -134,6 +142,7 @@ function BlockFolderContent({
                   refetch();
                 }}
                 isDeleting={deleteMutation.isPending}
+                onLabelClick={onLabelClick}
               />
             )}
           </div>
@@ -216,7 +225,28 @@ function BlockList() {
   const utils = api.useUtils();
   const { notifyUpsert, notifyDelete } = useSync();
 
-  // Use listWithFolders when not searching
+  const [searchParams, setSearchParams] = useSearchParams();
+  const labelFilter = searchParams.get("label") ?? "";
+  const isLabelMode = labelFilter.length > 0;
+
+  const setLabelFilter = (label: string | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (label) next.set("label", label);
+        else next.delete("label");
+        return next;
+      },
+      { replace: false },
+    );
+    setPage(0);
+  };
+
+  useEffect(() => {
+    setPage(0);
+  }, [labelFilter]);
+
+  // Use listWithFolders when neither searching nor filtering by label.
   const {
     data: foldersData,
     isLoading,
@@ -226,18 +256,28 @@ function BlockList() {
       limit: PAGE_SIZE,
       offset,
     },
-    { enabled: debouncedSearch.length === 0 },
+    { enabled: debouncedSearch.length === 0 && !isLabelMode },
   );
 
-  // Debounce search input
+  // Debounce search input. Typing clears any active label filter.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(0);
+      if (search && labelFilter) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("label");
+            return next;
+          },
+          { replace: true },
+        );
+      }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, labelFilter, setSearchParams]);
 
   // Client-side worker search when a query is active. Server-side `blocks.search`
   // can't match ciphertext columns; the worker holds decrypted rows in memory.
@@ -246,13 +286,24 @@ function BlockList() {
     page,
   });
 
+  const labelData = useWorkerLabel<Block>("blocks", labelFilter, {
+    pageSize: PAGE_SIZE,
+    page,
+  });
+
   // Calculate totals for pagination
-  const isSearchMode = debouncedSearch.length > 0;
-  const total = isSearchMode
-    ? searchData.total
-    : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseBlocks ?? 0);
+  const isSearchMode = !isLabelMode && debouncedSearch.length > 0;
+  const total = isLabelMode
+    ? labelData.total
+    : isSearchMode
+      ? searchData.total
+      : (foldersData?.totalFolders ?? 0) + (foldersData?.totalLooseBlocks ?? 0);
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
-  const showLoading = isSearchMode ? searchData.isLoading : isLoading;
+  const showLoading = isLabelMode
+    ? labelData.isLoading
+    : isSearchMode
+      ? searchData.isLoading
+      : isLoading;
 
   const toggleFolder = (folderId: number) => {
     setExpandedFolders((prev) => {
@@ -405,12 +456,149 @@ function BlockList() {
         />
       </div>
 
+      {isLabelMode && (
+        <div className="mb-2 flex items-center gap-2 text-sm text-cyan-medium">
+          <span>Filtered by label:</span>
+          <span className="text-xs px-2 py-0.5 rounded-md bg-cyan-dark text-cyan-medium">
+            {labelFilter}
+          </span>
+          <button
+            onClick={() => setLabelFilter(null)}
+            className="text-xs underline hover:text-foreground transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       <DotDivider className="mb-2" />
 
       {showLoading ? (
         <div className="text-center py-12 text-cyan-medium">
-          {isSearchMode ? "Searching..." : "Loading blocks..."}
+          {isLabelMode
+            ? "Filtering..."
+            : isSearchMode
+              ? "Searching..."
+              : "Loading blocks..."}
         </div>
+      ) : isLabelMode ? (
+        labelData.items.length > 0 ? (
+          <>
+            <div className="space-y-4">
+              {labelData.items.map((block, index) => (
+                <motion.div
+                  className="border-standard-dark-cyan"
+                  key={block.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  {editingId === block.id ? (
+                    <BlockForm
+                      mode="edit"
+                      initialValues={{
+                        name: block.name ?? undefined,
+                        displayId: block.displayId,
+                        text: block.text,
+                        labels: block.labels,
+                        typeId: block.typeId ?? undefined,
+                        folderId: block.folderId ?? undefined,
+                        notes: block.notes ?? undefined,
+                      }}
+                      onSubmit={(values) => handleUpdate(block.id, values)}
+                      onCancel={() => setEditingId(null)}
+                      onDelete={() => handleDelete(block.id)}
+                      isSubmitting={updateMutation.isPending}
+                    />
+                  ) : (
+                    <TextBlock
+                      block={block}
+                      onEdit={() => setEditingId(block.id)}
+                      onDelete={() => handleDelete(block.id)}
+                      onTransform={(blockId, transformedText) =>
+                        handleUpdate(blockId, {
+                          name: block.name ?? undefined,
+                          displayId: block.displayId,
+                          text: transformedText,
+                          labels: block.labels,
+                          typeId: block.typeId ?? undefined,
+                          folderId: block.folderId ?? undefined,
+                          notes: block.notes ?? undefined,
+                        })
+                      }
+                      isDeleting={deleteMutation.isPending}
+                      alwaysActive={true}
+                      onLabelClick={setLabelFilter}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+
+            {labelData.total > PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-6">
+                <span className="text-sm text-cyan-medium">
+                  Showing {offset + 1}&ndash;
+                  {Math.min(offset + PAGE_SIZE, labelData.total)} of{" "}
+                  {labelData.total}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage(0)}
+                  >
+                    First
+                  </Button>
+                  <ButtonGroup>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-28"
+                      disabled={page >= lastPage}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </ButtonGroup>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= lastPage}
+                    onClick={() => setPage(lastPage)}
+                  >
+                    Last
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card>
+            <CardContent className="py-12 border-standard-dark-cyan">
+              <div className="text-center text-cyan-medium">
+                <p className="mb-4">
+                  No blocks found with label "{labelFilter}"
+                </p>
+                <Button onClick={() => setLabelFilter(null)} variant="outline">
+                  Clear Filter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
       ) : isSearchMode ? (
         // Search mode: flat list of blocks
         searchData && searchData.items.length > 0 ? (
@@ -459,6 +647,7 @@ function BlockList() {
                       }
                       isDeleting={deleteMutation.isPending}
                       alwaysActive={true}
+                      onLabelClick={setLabelFilter}
                     />
                   )}
                 </motion.div>
@@ -561,6 +750,7 @@ function BlockList() {
                     updateMutation={updateMutation}
                     deleteMutation={deleteMutation}
                     refetch={refetch}
+                    onLabelClick={setLabelFilter}
                   />
                 </FolderRow>
               ))}
@@ -618,6 +808,7 @@ function BlockList() {
                         }
                         isDeleting={deleteMutation.isPending}
                         alwaysActive={true}
+                        onLabelClick={setLabelFilter}
                       />
                     )}
                   </motion.div>
