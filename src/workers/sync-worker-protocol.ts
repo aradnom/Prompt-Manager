@@ -63,6 +63,15 @@ export type MainToWorkerMessage =
       entityType: SyncEntityType;
     }
   | {
+      // Return the cached rows that carry an exact label match. Used for
+      // label-filter UIs (URL `?label=foo`); distinct from MiniSearch text
+      // search so content that merely mentions the label word doesn't appear.
+      type: "listByLabel";
+      requestId: string;
+      entityType: SyncEntityType;
+      label: string;
+    }
+  | {
       // Close the IDB connection so the main thread can `deleteDatabase`
       // without getting blocked by an open handle. Worker replies with
       // `closed` and is expected to be terminated shortly after.
@@ -92,6 +101,11 @@ export type WorkerToMainMessage =
     }
   | {
       type: "listResult";
+      requestId: string;
+      items: Array<Record<string, unknown>>;
+    }
+  | {
+      type: "listByLabelResult";
       requestId: string;
       items: Array<Record<string, unknown>>;
     }

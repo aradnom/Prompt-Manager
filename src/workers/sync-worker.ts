@@ -56,7 +56,7 @@ const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
     storeFields: ["id"],
   },
   stacks: {
-    fields: ["name", "notes", "renderedContent"],
+    fields: ["name", "notes", "renderedContent", "labels"],
     storeFields: ["id"],
   },
   snapshots: {
@@ -153,6 +153,12 @@ class EntityStore {
   // the full item in search hits and re-index on change without re-fetching.
   private rows = new Map<number, Record<string, unknown>>();
   private index: MiniSearch<IndexedDoc>;
+  // Exact label → row IDs lookup. Distinct from the MiniSearch index so that
+  // "filter by label" (clicking a label pill) returns only rows that actually
+  // carry the label, not rows that happen to mention the label word in their
+  // content. The MiniSearch index still includes labels as a field so the
+  // search bar surfaces label-tagged rows for free-text queries.
+  private labelIndex = new Map<string, Set<number>>();
 
   constructor(private readonly entityType: SyncEntityType) {
     const cfg = ENTITY_CONFIG[entityType];
@@ -163,14 +169,38 @@ class EntityStore {
     });
   }
 
+  private addLabels(id: number, row: Record<string, unknown>): void {
+    const labels = row.labels;
+    if (!Array.isArray(labels)) return;
+    for (const label of labels) {
+      if (typeof label !== "string") continue;
+      let bucket = this.labelIndex.get(label);
+      if (!bucket) {
+        bucket = new Set();
+        this.labelIndex.set(label, bucket);
+      }
+      bucket.add(id);
+    }
+  }
+
+  private removeLabels(id: number): void {
+    for (const [label, bucket] of this.labelIndex) {
+      if (bucket.delete(id) && bucket.size === 0) {
+        this.labelIndex.delete(label);
+      }
+    }
+  }
+
   async loadFromCache(rows: Record<string, unknown>[]): Promise<void> {
     this.rows.clear();
     this.index.removeAll();
+    this.labelIndex.clear();
     const docs: IndexedDoc[] = [];
     for (const row of rows) {
       const id = row.id as number;
       const decrypted = await decryptRow(row);
       this.rows.set(id, decrypted);
+      this.addLabels(id, decrypted);
       docs.push(toIndexedDoc(this.entityType, decrypted));
     }
     this.index.addAll(docs);
@@ -184,17 +214,31 @@ class EntityStore {
       if (this.rows.has(id)) {
         this.rows.delete(id);
         this.index.discard(id);
+        this.removeLabels(id);
       }
     }
     for (const row of upserts) {
       const id = row.id as number;
       if (this.rows.has(id)) {
         this.index.discard(id);
+        this.removeLabels(id);
       }
       const decrypted = await decryptRow(row);
       this.rows.set(id, decrypted);
+      this.addLabels(id, decrypted);
       this.index.add(toIndexedDoc(this.entityType, decrypted));
     }
+  }
+
+  listByLabel(label: string): Array<Record<string, unknown>> {
+    const bucket = this.labelIndex.get(label);
+    if (!bucket) return [];
+    const items: Array<Record<string, unknown>> = [];
+    for (const id of bucket) {
+      const row = this.rows.get(id);
+      if (row) items.push(row);
+    }
+    return items;
   }
 
   search(query: string, options?: SearchOptions): SearchHit[] {
@@ -337,6 +381,15 @@ self.addEventListener("message", (event: MessageEvent<MainToWorkerMessage>) => {
           const items = stores[msg.entityType].listAll();
           post({
             type: "listResult",
+            requestId: msg.requestId,
+            items,
+          });
+          break;
+        }
+        case "listByLabel": {
+          const items = stores[msg.entityType].listByLabel(msg.label);
+          post({
+            type: "listByLabelResult",
             requestId: msg.requestId,
             items,
           });

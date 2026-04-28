@@ -51,6 +51,10 @@ interface SyncContextValue {
     options?: SearchOptions,
   ) => Promise<SearchHit<T>[]>;
   list: <T = unknown>(entityType: SyncEntityType) => Promise<T[]>;
+  listByLabel: <T = unknown>(
+    entityType: SyncEntityType,
+    label: string,
+  ) => Promise<T[]>;
   resync: () => Promise<void>;
   resetCache: () => Promise<void>;
   notifyUpsert: (
@@ -100,6 +104,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     new Map<string, (hits: SearchHit[]) => void>(),
   );
   const pendingListsRef = useRef(
+    new Map<string, (items: Array<Record<string, unknown>>) => void>(),
+  );
+  const pendingLabelListsRef = useRef(
     new Map<string, (items: Array<Record<string, unknown>>) => void>(),
   );
   const searchIdRef = useRef(0);
@@ -210,6 +217,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           }
           break;
         }
+        case "listByLabelResult": {
+          const resolver = pendingLabelListsRef.current.get(msg.requestId);
+          if (resolver) {
+            pendingLabelListsRef.current.delete(msg.requestId);
+            resolver(msg.items);
+          }
+          break;
+        }
         case "error":
           console.error(
             `[sync worker] ${msg.context ?? "error"}: ${msg.message}`,
@@ -261,6 +276,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         resolver([]);
       }
       pendingListsRef.current.clear();
+      for (const [, resolver] of pendingLabelListsRef.current) {
+        resolver([]);
+      }
+      pendingLabelListsRef.current.clear();
     };
   }, [isAuthenticated, accountToken, runSync]);
 
@@ -305,6 +324,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           resolve as (items: Array<Record<string, unknown>>) => void,
         );
         postToWorker({ type: "list", requestId, entityType });
+      });
+    },
+    [postToWorker],
+  );
+
+  const listByLabel = useCallback(
+    <T,>(entityType: SyncEntityType, label: string): Promise<T[]> => {
+      return new Promise((resolve) => {
+        if (!workerRef.current || !label) {
+          resolve([]);
+          return;
+        }
+        const requestId = String(++searchIdRef.current);
+        pendingLabelListsRef.current.set(
+          requestId,
+          resolve as (items: Array<Record<string, unknown>>) => void,
+        );
+        postToWorker({ type: "listByLabel", requestId, entityType, label });
       });
     },
     [postToWorker],
@@ -383,6 +420,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         status,
         search,
         list,
+        listByLabel,
         resync: runSync,
         resetCache,
         notifyUpsert,
