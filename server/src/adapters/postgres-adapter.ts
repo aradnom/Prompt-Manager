@@ -2515,6 +2515,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     stackId: number,
     blockId: number,
     renderedContent?: string,
+    position?: number,
   ): Promise<void> {
     await this.db.transaction().execute(async (trx) => {
       const now = new Date();
@@ -2560,10 +2561,27 @@ export class PostgresStorageAdapter implements IStorageAdapter {
 
       if (!currentRev?.block_ids) return;
 
-      const newBlockIds = currentRev.block_ids.filter((id) => id !== blockId);
-      const newDisabledBlockIds = (currentRev.disabled_block_ids || []).filter(
-        (id) => id !== blockId,
-      );
+      // When `position` is provided, remove only that single occurrence (so
+      // duplicates of the same block can coexist and be removed individually).
+      // Fall back to filtering all occurrences if no position was given or if
+      // the position doesn't actually point at the target block.
+      let newBlockIds: number[];
+      if (
+        position !== undefined &&
+        position >= 0 &&
+        position < currentRev.block_ids.length &&
+        currentRev.block_ids[position] === blockId
+      ) {
+        newBlockIds = [...currentRev.block_ids];
+        newBlockIds.splice(position, 1);
+      } else {
+        newBlockIds = currentRev.block_ids.filter((id) => id !== blockId);
+      }
+      // Only clear the disabled flag if no occurrences remain.
+      const stillPresent = newBlockIds.includes(blockId);
+      const newDisabledBlockIds = stillPresent
+        ? currentRev.disabled_block_ids || []
+        : (currentRev.disabled_block_ids || []).filter((id) => id !== blockId);
 
       // Create new revision
       const newRevision = await trx

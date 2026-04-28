@@ -406,6 +406,7 @@ export const stacksRouter = router({
       z.object({
         stackId: z.number(),
         blockId: z.number(),
+        position: z.number().int().min(0).optional(),
         renderedContent: z
           .string()
           .max(LENGTH_LIMITS.renderedContent)
@@ -429,6 +430,7 @@ export const stacksRouter = router({
         input.stackId,
         input.blockId,
         encryptedRendered,
+        input.position,
       );
       return { success: true };
     }),
