@@ -25,7 +25,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableBlock } from "@/components/SortableBlock";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,12 +46,16 @@ interface TemplateEditorProps {
 
 function TemplateBlocks({
   blockIds,
+  disabledBlockIds,
   onRemoveBlock,
   onReorder,
+  onToggleDisable,
 }: {
   blockIds: number[];
+  disabledBlockIds: number[];
   onRemoveBlock?: (index: number) => void;
   onReorder?: (newBlockIds: number[]) => void;
+  onToggleDisable?: (blockId: number) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -112,34 +117,61 @@ function TemplateBlocks({
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-2">
-          {ordered.map(({ block, sortId }) => (
-            <SortableBlock key={sortId} id={sortId}>
-              <div className="relative border border-cyan-medium/30 rounded p-3 bg-cyan-dark/30 group">
-                {onRemoveBlock && (
-                  <button
-                    onClick={() => onRemoveBlock(sortId)}
-                    className="absolute top-2 right-2 text-cyan-medium hover:text-destructive transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                    aria-label="Remove block from template"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-mono text-cyan-medium">
-                    {block.name || block.displayId}
-                  </span>
-                  {block.name && (
-                    <span className="text-xs font-mono text-cyan-medium/60">
-                      {block.displayId}
-                    </span>
+          {ordered.map(({ block, sortId }) => {
+            const isDisabled = disabledBlockIds.includes(block.id);
+            return (
+              <SortableBlock key={sortId} id={sortId}>
+                <div
+                  className={cn(
+                    "relative border border-cyan-medium/30 rounded p-3 bg-cyan-dark/30 group",
+                    isDisabled && "opacity-40 grayscale contrast-75",
                   )}
+                >
+                  <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                    {onToggleDisable && (
+                      <button
+                        onClick={() => onToggleDisable(block.id)}
+                        className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                        aria-label={
+                          isDisabled
+                            ? "Enable block in this template"
+                            : "Disable block in this template"
+                        }
+                      >
+                        {isDisabled ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                    {onRemoveBlock && (
+                      <button
+                        onClick={() => onRemoveBlock(sortId)}
+                        className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
+                        aria-label="Remove block from template"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-mono text-cyan-medium">
+                      {block.name || block.displayId}
+                    </span>
+                    {block.name && (
+                      <span className="text-xs font-mono text-cyan-medium/60">
+                        {block.displayId}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap font-mono text-foreground/80">
+                    {block.text}
+                  </p>
                 </div>
-                <p className="text-sm whitespace-pre-wrap font-mono text-foreground/80">
-                  {block.text}
-                </p>
-              </div>
-            </SortableBlock>
-          ))}
+              </SortableBlock>
+            );
+          })}
         </div>
       </SortableContext>
     </DndContext>
@@ -154,6 +186,9 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
   const [negative, setNegative] = useState(template.negative);
   const [style, setStyle] = useState<OutputStyle>(template.style);
   const [blockIds, setBlockIds] = useState(template.blockIds);
+  const [disabledBlockIds, setDisabledBlockIds] = useState(
+    template.disabledBlockIds ?? [],
+  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Reset local state when switching to a different template
@@ -165,6 +200,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
     setNegative(template.negative);
     setStyle(template.style);
     setBlockIds(template.blockIds);
+    setDisabledBlockIds(template.disabledBlockIds ?? []);
   }
 
   const utils = api.useUtils();
@@ -372,12 +408,26 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
         </label>
         <TemplateBlocks
           blockIds={blockIds}
+          disabledBlockIds={disabledBlockIds}
           onRemoveBlock={(index) => {
             const newIds = blockIds.filter((_, i) => i !== index);
             setBlockIds(newIds);
+            // If the removed id no longer appears anywhere in the template,
+            // drop it from the disabled list too — same shape rule the stack
+            // editor enforces.
+            const stillPresent = newIds.includes(blockIds[index]);
+            const newDisabled = stillPresent
+              ? disabledBlockIds
+              : disabledBlockIds.filter((id) => id !== blockIds[index]);
+            if (newDisabled !== disabledBlockIds) {
+              setDisabledBlockIds(newDisabled);
+            }
             updateMutation.mutate({
               id: template.id,
               blockIds: newIds,
+              ...(newDisabled !== disabledBlockIds && {
+                disabledBlockIds: newDisabled,
+              }),
             });
           }}
           onReorder={(newBlockIds) => {
@@ -385,6 +435,16 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
             updateMutation.mutate({
               id: template.id,
               blockIds: newBlockIds,
+            });
+          }}
+          onToggleDisable={(blockId) => {
+            const newDisabled = disabledBlockIds.includes(blockId)
+              ? disabledBlockIds.filter((id) => id !== blockId)
+              : [...disabledBlockIds, blockId];
+            setDisabledBlockIds(newDisabled);
+            updateMutation.mutate({
+              id: template.id,
+              disabledBlockIds: newDisabled,
             });
           }}
         />
@@ -411,6 +471,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
               negative,
               style,
               blockIds,
+              disabledBlockIds,
             });
           }}
           disabled={createStackMutation.isPending}
