@@ -1,0 +1,9 @@
+- **Color**: Palette and color treatment
+- **Composition**: Framing, camera angle, and shot type
+- **Embeddings**: Embedding and LoRA triggers
+- **Lighting**: Lighting details
+- **Mood**: Atmosphere and emotional tone
+- **Quality Tags**: Masterpiece! 56K!
+- **Setting**: Details about the setting
+- **Style**: Aesthetic style or medium
+- **Subject**: The main subject of the composition

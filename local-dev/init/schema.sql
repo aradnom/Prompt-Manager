@@ -21,6 +21,17 @@ CREATE TABLE types (
     description character varying(512)
 );
 
+INSERT INTO types (name, description) VALUES
+    ('Color', 'Palette and color treatment'),
+    ('Composition', 'Framing, camera angle, and shot type'),
+    ('Embeddings', 'Embedding and LoRA triggers'),
+    ('Lighting', 'Lighting details'),
+    ('Mood', 'Atmosphere and emotional tone'),
+    ('Quality Tags', 'Masterpiece! 56K!'),
+    ('Setting', 'Details about the setting'),
+    ('Style', 'Aesthetic style or medium'),
+    ('Subject', 'The main subject of the composition');
+
 -- block_folders
 
 CREATE TABLE block_folders (
