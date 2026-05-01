@@ -28,7 +28,11 @@ import {
 import { TEXT_BLOCK_ANIMATION } from "@/lib/text-block-animation-settings";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { resolveWildcardsInText } from "@/lib/wildcard-resolver";
-import { insertWildcard, parseWildcards } from "@/lib/wildcard-parser";
+import {
+  buildWildcardMarker,
+  insertWildcard,
+  parseWildcards,
+} from "@/lib/wildcard-parser";
 import { WildcardBrowser } from "@/components/WildcardBrowser";
 import { DiffText } from "@/components/DiffText";
 import { CardContent, CardHeader } from "@/components/ui/card";
@@ -203,6 +207,13 @@ export function TextBlock({
   const [isLabelSearchOpen, setIsLabelSearchOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [isWildcardBrowserOpen, setIsWildcardBrowserOpen] = useState(false);
+  // When the user triggers the wildcard browser by typing `{` while inline-
+  // editing, this records the position of the `{` so we can replace it on
+  // selection. `null` means "browser opened via toolbar button" — fall back
+  // to appending at end of text.
+  const [wildcardInsertPos, setWildcardInsertPos] = useState<number | null>(
+    null,
+  );
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [activeTransform, setActiveTransform] = useState<
     "more" | "less" | "variation" | null
@@ -702,7 +713,30 @@ export function TextBlock({
   };
 
   const handleWildcardSelect = (displayId: string, path?: string) => {
-    // Insert wildcard at the end of the current text
+    // Triggered by typing `{` while inline-editing: insert the wildcard
+    // marker at the recorded position. The `{` itself was already
+    // preventDefault'd, so we splice in (don't consume a char). Note: the
+    // dialog blurs the textarea, so we can't gate on isInlineEditing here.
+    if (wildcardInsertPos !== null) {
+      const source = inlineTextRef.current ?? block.text;
+      const pos = Math.min(wildcardInsertPos, source.length);
+      const nextChar = source[pos];
+      // Skip the comma if a comma already follows; add a space after the
+      // comma if a word follows immediately so it doesn't run together.
+      let suffix: string;
+      if (nextChar === ",") suffix = "";
+      else if (nextChar && !/\s/.test(nextChar)) suffix = ", ";
+      else suffix = ",";
+      const marker = buildWildcardMarker(displayId, path || "") + suffix;
+      const updated = source.slice(0, pos) + marker + source.slice(pos);
+      setInlineText(updated);
+      inlineTextRef.current = updated;
+      setWildcardInsertPos(null);
+      if (onTransform) onTransform(block.id, updated);
+      return;
+    }
+
+    // Toolbar-button path: insert wildcard at the end of the current text.
     const result = insertWildcard(
       block.text,
       block.text.length,
@@ -941,6 +975,13 @@ export function TextBlock({
                   handleSaveInlineEdit(true);
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "{") {
+                    e.preventDefault();
+                    setWildcardInsertPos(e.currentTarget.selectionStart);
+                    setIsWildcardBrowserOpen(true);
+                  }
+                }}
                 className="block box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -mx-2.5 -my-2 resize-none border-2 border-transparent border-inline-input align-top"
                 maxLength={LENGTH_LIMITS.blockText}
                 minRows={1}
@@ -1452,6 +1493,13 @@ export function TextBlock({
                       setIsMenuVisible(false);
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "{") {
+                      e.preventDefault();
+                      setWildcardInsertPos(e.currentTarget.selectionStart);
+                      setIsWildcardBrowserOpen(true);
+                    }
+                  }}
                   className="box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -m-2 resize-none border-inline-input"
                   maxLength={LENGTH_LIMITS.blockText}
                   minRows={1}
@@ -1831,7 +1879,10 @@ export function TextBlock({
 
       <WildcardBrowser
         open={isWildcardBrowserOpen}
-        onOpenChange={setIsWildcardBrowserOpen}
+        onOpenChange={(open) => {
+          setIsWildcardBrowserOpen(open);
+          if (!open) setWildcardInsertPos(null);
+        }}
         onSelect={handleWildcardSelect}
       />
 
