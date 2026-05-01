@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { getRandomWildcardPath } from "@/lib/wildcard-random";
 import { LENGTH_LIMITS } from "@shared/limits";
 
 interface WildcardBrowserProps {
@@ -99,30 +100,38 @@ export function WildcardBrowser({
                     key={wildcard.id}
                     className="border border-cyan-medium rounded-md"
                   >
-                    <div className="flex items-start justify-between gap-2 p-3">
+                    <div className="flex items-start gap-2 p-3">
                       <button
                         onClick={() => toggleExpanded(wildcard.id)}
-                        className="flex items-start gap-2 flex-1 min-w-0 text-left hover:bg-cyan-dark/50 -m-1 p-1 rounded transition-colors"
+                        aria-label={isExpanded ? "Collapse" : "Expand"}
+                        className="shrink-0 mt-0.5 p-0.5 rounded hover:bg-cyan-dark cursor-pointer"
                       >
                         {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 mt-0.5 shrink-0" />
+                          <ChevronDown className="h-4 w-4" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 mt-0.5 shrink-0" />
+                          <ChevronRight className="h-4 w-4" />
                         )}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium">{wildcard.name}</div>
-                          <div className="text-sm text-cyan-medium font-mono">
-                            {wildcard.displayId}
-                          </div>
-                          {!isExpanded && (
-                            <div className="text-sm text-cyan-medium mt-1">
-                              {values.length} value
-                              {values.length !== 1 ? "s" : ""}
-                            </div>
-                          )}
-                        </div>
                       </button>
-                      <div className="text-xs text-cyan-medium capitalize px-2 py-1 bg-cyan-dark rounded">
+                      <button
+                        onClick={() => {
+                          const randomPath =
+                            getRandomWildcardPath(wildcard) ?? undefined;
+                          handleSelect(wildcard.displayId, randomPath);
+                        }}
+                        className="flex-1 min-w-0 text-left hover:bg-cyan-dark/50 -mx-1 px-1 py-0.5 rounded transition-colors cursor-pointer"
+                      >
+                        <div className="font-medium">{wildcard.name}</div>
+                        <div className="text-sm text-cyan-medium font-mono">
+                          {wildcard.displayId}
+                        </div>
+                        {!isExpanded && (
+                          <div className="text-sm text-cyan-medium mt-1">
+                            {values.length} value
+                            {values.length !== 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </button>
+                      <div className="text-xs text-cyan-medium capitalize px-2 py-1 bg-cyan-dark rounded shrink-0">
                         {wildcard.format}
                       </div>
                     </div>
