@@ -980,6 +980,9 @@ export function TextBlock({
                     e.preventDefault();
                     setWildcardInsertPos(e.currentTarget.selectionStart);
                     setIsWildcardBrowserOpen(true);
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleSaveInlineEdit(true);
                   }
                 }}
                 className="block box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -mx-2.5 -my-2 resize-none border-2 border-transparent border-inline-input align-top"
@@ -1498,6 +1501,9 @@ export function TextBlock({
                       e.preventDefault();
                       setWildcardInsertPos(e.currentTarget.selectionStart);
                       setIsWildcardBrowserOpen(true);
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      handleSaveInlineEdit(true);
                     }
                   }}
                   className="box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -m-2 resize-none border-inline-input"
