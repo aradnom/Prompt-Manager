@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Dices, Lock, LockOpen, Trash2 } from "lucide-react";
 import {
@@ -39,6 +40,7 @@ export function WildcardString({
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition>("top");
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const spanRef = useRef<HTMLSpanElement>(null);
 
   const calculateTooltipPosition = (): TooltipPosition => {
@@ -77,6 +79,7 @@ export function WildcardString({
     if (!enableTooltip) return;
     const position = calculateTooltipPosition();
     setTooltipPosition(position);
+    if (spanRef.current) setAnchorRect(spanRef.current.getBoundingClientRect());
     setShowTooltip(true);
   };
 
@@ -133,30 +136,68 @@ export function WildcardString({
 
   const textSizeClass = valueOnly ? "" : "text-sm";
 
-  const getTooltipPositionClasses = (): string => {
+  const getTooltipFixedStyle = (): React.CSSProperties => {
+    if (!anchorRect) return {};
+    const gap = 8;
     switch (tooltipPosition) {
       case "top":
-        return "bottom-full left-1/2 -translate-x-1/2 mb-2";
+        return {
+          left: anchorRect.left + anchorRect.width / 2,
+          top: anchorRect.top - gap,
+          transform: "translate(-50%, -100%)",
+        };
       case "bottom":
-        return "top-full left-1/2 -translate-x-1/2 mt-2";
+        return {
+          left: anchorRect.left + anchorRect.width / 2,
+          top: anchorRect.bottom + gap,
+          transform: "translate(-50%, 0)",
+        };
       case "left":
-        return "right-full top-1/2 -translate-y-1/2 mr-2";
+        return {
+          left: anchorRect.left - gap,
+          top: anchorRect.top + anchorRect.height / 2,
+          transform: "translate(-100%, -50%)",
+        };
       case "right":
-        return "left-full top-1/2 -translate-y-1/2 ml-2";
+        return {
+          left: anchorRect.right + gap,
+          top: anchorRect.top + anchorRect.height / 2,
+          transform: "translate(0, -50%)",
+        };
     }
   };
 
-  const getBridgeClasses = (): string => {
-    // Invisible bridge to prevent tooltip from closing when moving mouse to it
+  const getBridgeFixedStyle = (): React.CSSProperties => {
+    if (!anchorRect) return {};
     switch (tooltipPosition) {
       case "top":
-        return "bottom-full left-0 right-0 h-2 mb-0";
+        return {
+          left: anchorRect.left,
+          width: anchorRect.width,
+          top: anchorRect.top - 8,
+          height: 8,
+        };
       case "bottom":
-        return "top-full left-0 right-0 h-2 mt-0";
+        return {
+          left: anchorRect.left,
+          width: anchorRect.width,
+          top: anchorRect.bottom,
+          height: 8,
+        };
       case "left":
-        return "right-full top-0 bottom-0 w-2 mr-0";
+        return {
+          top: anchorRect.top,
+          height: anchorRect.height,
+          left: anchorRect.left - 8,
+          width: 8,
+        };
       case "right":
-        return "left-full top-0 bottom-0 w-2 ml-0";
+        return {
+          top: anchorRect.top,
+          height: anchorRect.height,
+          left: anchorRect.right,
+          width: 8,
+        };
     }
   };
 
@@ -207,117 +248,125 @@ export function WildcardString({
     >
       {valueOnly ? value : `${displayId}: ${value}`}
 
-      <AnimatePresence>
-        {enableTooltip && showTooltip && (
-          <>
-            {/* Invisible bridge to prevent tooltip from closing */}
-            <motion.div
-              className={`absolute ${getBridgeClasses()} z-50`}
-              onMouseEnter={handleMouseEnter}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            />
+      {createPortal(
+        <AnimatePresence>
+          {enableTooltip && showTooltip && anchorRect && (
+            <>
+              {/* Invisible bridge to prevent tooltip from closing */}
+              <motion.div
+                className="fixed z-[100]"
+                style={getBridgeFixedStyle()}
+                onMouseEnter={handleMouseEnter}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              />
 
-            <motion.div
-              className={`absolute ${getTooltipPositionClasses()} z-50 w-125 max-h-100 overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4`}
-              onMouseEnter={handleMouseEnter}
-              onMouseUp={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <div className="text-sm text-foreground">
-                <div className="flex items-start justify-between mb-1">
-                  <div>
-                    <div className="font-semibold">{wildcard.name}</div>
-                    <div className="text-xs text-cyan-medium font-mono">
-                      {displayId}
+              <motion.div
+                className="fixed z-[100] w-125 max-h-100 overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4"
+                style={getTooltipFixedStyle()}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <div className="text-sm text-foreground">
+                  <div className="flex items-start justify-between mb-1">
+                    <div>
+                      <div className="font-semibold">{wildcard.name}</div>
+                      <div className="text-xs text-cyan-medium font-mono">
+                        {displayId}
+                      </div>
                     </div>
-                  </div>
-                  <TooltipProvider delayDuration={0}>
-                    <div className="flex gap-1">
-                      {onMarkerChange && fullMatch && (
+                    <TooltipProvider delayDuration={0}>
+                      <div className="flex gap-1">
+                        {onMarkerChange && fullMatch && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={handleToggleFrozen}
+                                onMouseUp={(e) => e.stopPropagation()}
+                                className={`p-2 rounded border transition-colors cursor-pointer ${
+                                  frozen
+                                    ? "border-cyan-medium bg-cyan-dark/50 hover:bg-cyan-dark/80"
+                                    : "border-cyan-medium hover:bg-cyan-dark/80"
+                                }`}
+                                aria-label="Lock current value"
+                              >
+                                {frozen ? (
+                                  <Lock className="h-4 w-4" />
+                                ) : (
+                                  <LockOpen className="h-4 w-4" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Lock current value</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              onClick={handleToggleFrozen}
-                              onMouseUp={(e) => e.stopPropagation()}
-                              className={`p-2 rounded border transition-colors cursor-pointer ${
-                                frozen
-                                  ? "border-cyan-medium bg-cyan-dark/50 hover:bg-cyan-dark/80"
-                                  : "border-cyan-medium hover:bg-cyan-dark/80"
-                              }`}
-                              aria-label="Lock current value"
-                            >
-                              {frozen ? (
-                                <Lock className="h-4 w-4" />
-                              ) : (
-                                <LockOpen className="h-4 w-4" />
-                              )}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Lock current value</TooltipContent>
-                        </Tooltip>
-                      )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={handleRandomSelection}
-                            onMouseUp={(e) => e.stopPropagation()}
-                            className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
-                            aria-label="Pick new value randomly"
-                          >
-                            <Dices className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Pick new value randomly</TooltipContent>
-                      </Tooltip>
-                      {onMarkerChange && fullMatch && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => {
-                                onMarkerChange(fullMatch, "");
-                                setShowTooltip(false);
-                              }}
+                              onClick={handleRandomSelection}
                               onMouseUp={(e) => e.stopPropagation()}
                               className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
-                              aria-label="Remove wildcard"
+                              aria-label="Pick new value randomly"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Dices className="h-4 w-4" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>Remove wildcard</TooltipContent>
+                          <TooltipContent>
+                            Pick new value randomly
+                          </TooltipContent>
                         </Tooltip>
-                      )}
-                    </div>
-                  </TooltipProvider>
+                        {onMarkerChange && fullMatch && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  onMarkerChange(fullMatch, "");
+                                  setShowTooltip(false);
+                                }}
+                                onMouseUp={(e) => e.stopPropagation()}
+                                className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                                aria-label="Remove wildcard"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Remove wildcard</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TooltipProvider>
+                  </div>
+
+                  <div className="mb-4" />
+
+                  <WildcardBrowserLists
+                    wildcard={wildcard}
+                    currentPath={path}
+                    onSelectValue={(newPath) => {
+                      if (onMarkerChange && fullMatch) {
+                        onMarkerChange(
+                          fullMatch,
+                          buildWildcardMarker(displayId, newPath, frozen),
+                        );
+                      }
+                      setShowTooltip(false);
+                    }}
+                  />
                 </div>
-
-                <div className="mb-4" />
-
-                <WildcardBrowserLists
-                  wildcard={wildcard}
-                  currentPath={path}
-                  onSelectValue={(newPath) => {
-                    if (onMarkerChange && fullMatch) {
-                      onMarkerChange(
-                        fullMatch,
-                        buildWildcardMarker(displayId, newPath, frozen),
-                      );
-                    }
-                    setShowTooltip(false);
-                  }}
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </span>
   );
 }
