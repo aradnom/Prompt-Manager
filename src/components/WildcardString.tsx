@@ -1,6 +1,12 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Dices, Lock, LockOpen } from "lucide-react";
+import { Dices, Lock, LockOpen, Trash2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Wildcard } from "@/types/schema";
 import { resolveWildcardPath } from "@/lib/wildcard-value-extractor";
 import { getRandomWildcardPath } from "@/lib/wildcard-random";
@@ -232,34 +238,64 @@ export function WildcardString({
                       {displayId}
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    {onMarkerChange && fullMatch && (
-                      <button
-                        onClick={handleToggleFrozen}
-                        onMouseUp={(e) => e.stopPropagation()}
-                        className={`p-2 rounded border transition-colors ${
-                          frozen
-                            ? "border-cyan-medium bg-cyan-dark/50 hover:bg-cyan-dark/80"
-                            : "border-cyan-medium hover:bg-cyan-dark/80"
-                        }`}
-                        title={frozen ? "Unlock wildcard" : "Lock wildcard"}
-                      >
-                        {frozen ? (
-                          <Lock className="h-4 w-4" />
-                        ) : (
-                          <LockOpen className="h-4 w-4" />
-                        )}
-                      </button>
-                    )}
-                    <button
-                      onClick={handleRandomSelection}
-                      onMouseUp={(e) => e.stopPropagation()}
-                      className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors"
-                      title="Random selection"
-                    >
-                      <Dices className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <TooltipProvider delayDuration={0}>
+                    <div className="flex gap-1">
+                      {onMarkerChange && fullMatch && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={handleToggleFrozen}
+                              onMouseUp={(e) => e.stopPropagation()}
+                              className={`p-2 rounded border transition-colors cursor-pointer ${
+                                frozen
+                                  ? "border-cyan-medium bg-cyan-dark/50 hover:bg-cyan-dark/80"
+                                  : "border-cyan-medium hover:bg-cyan-dark/80"
+                              }`}
+                              aria-label="Lock current value"
+                            >
+                              {frozen ? (
+                                <Lock className="h-4 w-4" />
+                              ) : (
+                                <LockOpen className="h-4 w-4" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Lock current value</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={handleRandomSelection}
+                            onMouseUp={(e) => e.stopPropagation()}
+                            className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                            aria-label="Pick new value randomly"
+                          >
+                            <Dices className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Pick new value randomly</TooltipContent>
+                      </Tooltip>
+                      {onMarkerChange && fullMatch && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => {
+                                onMarkerChange(fullMatch, "");
+                                setShowTooltip(false);
+                              }}
+                              onMouseUp={(e) => e.stopPropagation()}
+                              className="p-2 rounded border border-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                              aria-label="Remove wildcard"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Remove wildcard</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TooltipProvider>
                 </div>
 
                 <div className="mb-4" />

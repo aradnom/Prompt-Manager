@@ -954,10 +954,11 @@ export function TextBlock({
                   enableTooltips={true}
                   enableModifierHighlighting={true}
                   onMarkerChange={(oldMarker, newMarker) => {
-                    const updatedText = block.text.replace(
-                      oldMarker,
-                      newMarker,
-                    );
+                    const target =
+                      newMarker === "" && block.text.includes(oldMarker + ",")
+                        ? oldMarker + ","
+                        : oldMarker;
+                    const updatedText = block.text.replace(target, newMarker);
                     if (onTransform) onTransform(block.id, updatedText);
                   }}
                   onModifierChange={(
@@ -1461,10 +1462,11 @@ export function TextBlock({
                     enableTooltips={true}
                     enableModifierHighlighting={true}
                     onMarkerChange={(oldMarker, newMarker) => {
-                      const updatedText = block.text.replace(
-                        oldMarker,
-                        newMarker,
-                      );
+                      const target =
+                        newMarker === "" && block.text.includes(oldMarker + ",")
+                          ? oldMarker + ","
+                          : oldMarker;
+                      const updatedText = block.text.replace(target, newMarker);
                       if (onTransform) {
                         onTransform(block.id, updatedText);
                       }
