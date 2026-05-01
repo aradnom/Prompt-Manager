@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   StickyNote,
+  Maximize2,
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
@@ -52,6 +53,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DefragLoader } from "@/components/ui/defrag-loader";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
 import { LLMGuard } from "@/components/LLMGuard";
@@ -212,11 +214,28 @@ export function TextBlock({
     endOffset: number;
   } | null>(null);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  // Hover-driven reveal of the collapsed-H chrome (action label row + Expand
+  // icon). Mouse hover with a short grace period; tap-to-reveal handled
+  // separately via `isTouchRevealed` so we can keep mouse and touch logic
+  // independent without faking events.
+  const [isHovered, setIsHovered] = useState(false);
+  const [isTouchRevealed, setIsTouchRevealed] = useState(false);
+  // Set when a transform is fired from the H hover row so we can show a
+  // block-covering loading overlay (the row labels are too small for an
+  // inline spinner). Expanded-state transforms keep their existing per-button
+  // spinner via `activeTransform`/`exploreMutation.isPending`.
+  const [overlayLoading, setOverlayLoading] = useState(false);
   const blockRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inlineSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasPendingInlineSave = useRef(false);
   const inlineTextRef = useRef(block.text);
+  const hoverEnterTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverLeaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Tracked via pointerdown so the text-click handler can suppress
+  // enter-edit on the same tap that revealed the chrome on a touch device.
+  const lastPointerTypeRef = useRef<string>("mouse");
+  const wasRevealedAtPointerDownRef = useRef(false);
   const utils = api.useUtils();
   const { isLLMConfigured } = useLLMStatus();
   const { notifyUpsert } = useSync();
@@ -307,7 +326,32 @@ export function TextBlock({
     ) {
       return;
     }
-    setIsActive(!isActive);
+    // In the collapsed H state the explicit Expand button is the only
+    // path to the active state — chrome clicks should not auto-expand.
+    if (!isActive) return;
+    setIsActive(false);
+  };
+
+  const handleBlockMouseEnter = () => {
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
+    if (lastPointerTypeRef.current === "touch") return;
+    hoverEnterTimerRef.current = setTimeout(() => setIsHovered(true), 50);
+  };
+
+  const handleBlockMouseLeave = () => {
+    if (hoverEnterTimerRef.current) {
+      clearTimeout(hoverEnterTimerRef.current);
+      hoverEnterTimerRef.current = null;
+    }
+    hoverLeaveTimerRef.current = setTimeout(() => setIsHovered(false), 80);
+  };
+
+  const handleBlockPointerDown = (e: React.PointerEvent) => {
+    lastPointerTypeRef.current = e.pointerType;
+    wasRevealedAtPointerDownRef.current = isHovered || isTouchRevealed;
   };
 
   const handleTextMouseUp = (e: React.MouseEvent) => {
@@ -386,6 +430,19 @@ export function TextBlock({
           return;
         }
       }
+    }
+
+    // Touch tap on a not-yet-revealed H block: reveal chrome instead of
+    // entering edit mode. The next tap (when wasRevealedAtPointerDown is
+    // true) falls through to the edit path below.
+    if (
+      !isActive &&
+      !alwaysActive &&
+      lastPointerTypeRef.current === "touch" &&
+      !wasRevealedAtPointerDownRef.current
+    ) {
+      setIsTouchRevealed(true);
+      return;
     }
 
     // No valid selection = simple click, enter edit mode
@@ -485,7 +542,8 @@ export function TextBlock({
 
   // Close active state when clicking outside
   useEffect(() => {
-    if (!isActive || alwaysActive) return;
+    if (alwaysActive) return;
+    if (!isActive && !isTouchRevealed) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -499,11 +557,20 @@ export function TextBlock({
       }
       setIsActive(false);
       setShowRevisions(false);
+      setIsTouchRevealed(false);
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isActive, alwaysActive]);
+  }, [isActive, alwaysActive, isTouchRevealed]);
+
+  // Clean up hover grace timers on unmount.
+  useEffect(() => {
+    return () => {
+      if (hoverEnterTimerRef.current) clearTimeout(hoverEnterTimerRef.current);
+      if (hoverLeaveTimerRef.current) clearTimeout(hoverLeaveTimerRef.current);
+    };
+  }, []);
 
   // Update inline text when block text changes (but not while actively editing)
   useEffect(() => {
@@ -534,8 +601,9 @@ export function TextBlock({
     return parseWildcards(text).map((match) => match.fullMatch);
   };
 
-  const handleMoreDescriptive = async () => {
+  const handleMoreDescriptive = async (fromHover = false) => {
     setActiveTransform("more");
+    if (fromHover) setOverlayLoading(true);
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
@@ -551,11 +619,13 @@ export function TextBlock({
       console.error("Transform failed:", error);
     } finally {
       setActiveTransform(null);
+      if (fromHover) setOverlayLoading(false);
     }
   };
 
-  const handleLessDescriptive = async () => {
+  const handleLessDescriptive = async (fromHover = false) => {
     setActiveTransform("less");
+    if (fromHover) setOverlayLoading(true);
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
@@ -571,13 +641,16 @@ export function TextBlock({
       console.error("Transform failed:", error);
     } finally {
       setActiveTransform(null);
+      if (fromHover) setOverlayLoading(false);
     }
   };
 
   const handleVariation = async (
     operation: "variation-slight" | "variation-fair" | "variation-very",
+    fromHover = false,
   ) => {
     setActiveTransform("variation");
+    if (fromHover) setOverlayLoading(true);
     try {
       const result = await transformMutation.mutateAsync({
         text: getResolvedText(block.text),
@@ -593,6 +666,7 @@ export function TextBlock({
       console.error("Transform failed:", error);
     } finally {
       setActiveTransform(null);
+      if (fromHover) setOverlayLoading(false);
     }
   };
 
@@ -635,16 +709,23 @@ export function TextBlock({
     }
   };
 
+  const isHMode = !isActive && !alwaysActive;
+  const isRevealed = isHovered || isTouchRevealed || isInlineEditing;
+
   return (
     <motion.div
       ref={blockRef}
       className={cn(
-        "relative rounded-lg bg-background text-foreground shadow-sm cursor-pointer",
+        "relative rounded-lg bg-background text-foreground shadow-sm",
         alwaysActive && "border-standard-dark-cyan",
-        !alwaysActive && "border",
+        !alwaysActive &&
+          "border border-cyan-dark hover:border-cyan-medium transition-colors",
         isDisabled && "opacity-40 grayscale contrast-75",
       )}
       onClick={handleBlockClick}
+      onMouseEnter={handleBlockMouseEnter}
+      onMouseLeave={handleBlockMouseLeave}
+      onPointerDown={handleBlockPointerDown}
       animate={{
         padding: isActive ? "8px" : "0px",
         backgroundColor:
@@ -657,184 +738,37 @@ export function TextBlock({
       }}
       transition={TEXT_BLOCK_ANIMATION}
     >
-      <CardHeader
-        className="px-6 py-3"
-        onDoubleClick={(e) => {
-          if (
-            (e.target as HTMLElement).closest("button") ||
-            (e.target as HTMLElement).closest("input") ||
-            (e.target as HTMLElement).closest('[role="menu"]')
-          )
-            return;
-          onEdit();
-        }}
-      >
+      {isHMode && (
         <div
-          className={cn("flex items-start justify-between", {
-            "cursor-pointer": alwaysActive && onEdit,
-          })}
-          onClick={(e) => {
-            if (
-              !alwaysActive ||
-              !onEdit ||
-              (e.target as HTMLElement).closest("button") ||
-              (e.target as HTMLElement).closest("input") ||
-              (e.target as HTMLElement).closest('[role="menu"]')
-            )
-              return;
-            onEdit();
-          }}
+          className="relative px-6"
+          style={{ paddingTop: 36, paddingBottom: 36 }}
         >
-          <div className="flex-1">
-            {isActive && (
-              <div className="mb-2">
-                <div className="flex items-center gap-2">
-                  {isRenamingBlock ? (
-                    <input
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={saveBlockName}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveBlockName();
-                        if (e.key === "Escape") {
-                          setRenameValue(block.name ?? "");
-                          setIsRenamingBlock(false);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Enter block name..."
-                      className="font-semibold px-2 py-0.5 border-inline-input"
-                      maxLength={LENGTH_LIMITS.name}
-                      autoFocus
-                    />
-                  ) : (
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            className="font-semibold text-foreground cursor-pointer hover:text-magenta-light transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRenameValue(block.name ?? "");
-                              setIsRenamingBlock(true);
-                            }}
-                          >
-                            {block.name || block.displayId}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>Click to rename</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <ExpandingIcon active={isActive} origin="left">
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="text-cyan-medium hover:text-foreground transition-colors">
-                            <Info className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="space-y-1 text-xs">
-                            <div>
-                              <span className="font-medium">ID:</span>{" "}
-                              {block.displayId}
-                            </div>
-                            <div>
-                              <span className="font-medium">Created:</span>{" "}
-                              {new Date(block.createdAt).toLocaleString()}
-                            </div>
-                            <div>
-                              <span className="font-medium">Updated:</span>{" "}
-                              {new Date(block.updatedAt).toLocaleString()}
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </ExpandingIcon>
-                  <ExpandingIcon active={isActive} origin="left">
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild className="cursor-pointer">
-                          <button
-                            onClick={() => setShowRevisions(!showRevisions)}
-                            className="text-cyan-medium hover:text-foreground transition-colors"
-                          >
-                            <Clock className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>View block history</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </ExpandingIcon>
-                  {isActive && (
-                    <>
-                      <span className="text-xs text-cyan-medium">
-                        {block.text.length.toLocaleString()} chars &middot; ~
-                        {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
-                        tokens
-                      </span>
-                      {block.folderName && (
-                        <InlineIconBadge icon={Folder}>
-                          {block.folderName}
-                        </InlineIconBadge>
-                      )}
-                    </>
-                  )}
-                </div>
-                {block.name && (
-                  <div className="text-xs text-cyan-medium font-mono mt-0.5">
-                    {block.displayId}
-                  </div>
-                )}
-              </div>
+          {overlayLoading && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/70 rounded-lg">
+              <DefragLoader size={32} />
+            </div>
+          )}
+
+          {/* Top-right cluster: per-block actions + Expand (or Checkbox in select mode) */}
+          <div
+            className={cn(
+              "absolute top-0 right-0 z-20 flex items-center transition-all duration-200 ease-out",
+              isRevealed && !isInlineEditing
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 -translate-y-1 pointer-events-none",
             )}
-            {block.labels.length > 0 && (
-              <div className="flex gap-1 flex-wrap mt-1">
-                {block.labels.map((label) => (
-                  <button
-                    key={label}
-                    onClick={() => {
-                      if (onLabelClick) {
-                        onLabelClick(label);
-                        return;
-                      }
-                      setSelectedLabel(label);
-                      setIsLabelSearchOpen(true);
-                    }}
-                    className={cn(
-                      "px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer",
-                      {
-                        "bg-cyan-medium text-cyan-light": isActive,
-                      },
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className={cn("flex items-center", isActive && "gap-2")}>
+          >
             {isSelectMode ? (
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={onToggleSelect}
-                className="cursor-pointer"
-              />
+              <div className="w-8 h-8 flex items-center justify-center">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={onToggleSelect}
+                  className="cursor-pointer"
+                />
+              </div>
             ) : (
               <>
-                {block.type && (
-                  <button
-                    onClick={() => setIsTypeSearchOpen(true)}
-                    className="px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors cursor-pointer"
-                  >
-                    {block.type.name}
-                  </button>
-                )}
-                <ExpandingIcon active={isActive} origin="right">
+                <div className="flex items-center gap-3 pl-2 pr-3 h-8">
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -857,9 +791,7 @@ export function TextBlock({
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                </ExpandingIcon>
-                {onToggleDisable && (
-                  <ExpandingIcon active={isActive} origin="right">
+                  {onToggleDisable && (
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -889,9 +821,7 @@ export function TextBlock({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </ExpandingIcon>
-                )}
-                <ExpandingIcon active={isActive} origin="right">
+                  )}
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -909,34 +839,14 @@ export function TextBlock({
                       <TooltipContent>Copy block text</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                </ExpandingIcon>
-                {onRemoveFromFolder && block.folderId != null && (
-                  <ExpandingIcon active={isActive} origin="right">
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveFromFolder();
-                            }}
-                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                            aria-label="Remove from folder"
-                          >
-                            <FolderX className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Remove from folder</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </ExpandingIcon>
-                )}
-                <ExpandingIcon active={isActive} origin="right">
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={onDelete}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                          }}
                           disabled={isDeleting}
                           className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
                           aria-label="Delete block"
@@ -947,253 +857,758 @@ export function TextBlock({
                       <TooltipContent>Delete block</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                </ExpandingIcon>
+                </div>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsActive(true);
+                          setIsTouchRevealed(false);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center rounded-tr-lg rounded-bl-lg border-l border-b bg-cyan-medium/15 text-cyan-medium hover:bg-cyan-medium/40 hover:text-foreground transition-colors cursor-pointer"
+                        aria-label="Show more"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Show more</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </>
             )}
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="group relative mb-4">
-          {isInlineEditing ? (
-            <TextareaAutosize
-              ref={textareaRef}
-              value={inlineText}
-              onChange={(e) => {
-                setInlineText(e.target.value);
-                inlineTextRef.current = e.target.value;
-                debouncedInlineSave();
-              }}
-              onBlur={(e) => {
-                // Don't close if clicking on the selection menu
-                const relatedTarget = e.relatedTarget as HTMLElement;
-                if (relatedTarget?.closest("[data-selection-menu]")) {
-                  return;
-                }
-                handleSaveInlineEdit(true);
-              }}
-              onMouseUp={(e) => {
-                const textarea = e.currentTarget;
-                const { selectionStart, selectionEnd } = textarea;
 
-                if (selectionStart !== selectionEnd) {
-                  // Normalize to word boundaries
-                  const normalized = normalizeToWordBoundaries(
-                    inlineText,
-                    selectionStart,
-                    selectionEnd,
-                  );
+          {/* Content group: labels/type + text — translates up on reveal */}
+          <div
+            style={{
+              transform: isRevealed ? "translateY(-10px)" : "translateY(0)",
+              transition: "transform 200ms ease-out",
+            }}
+          >
+            {(block.labels.length > 0 || block.type) && (
+              <div className="flex gap-1 flex-wrap mb-4 items-center">
+                {block.type && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTypeSearchOpen(true);
+                    }}
+                    className="px-2 py-1 text-xs rounded-md border border-magenta-medium bg-transparent text-magenta-medium hover:bg-magenta-medium/10 transition-colors cursor-pointer"
+                  >
+                    {block.type.name}
+                  </button>
+                )}
+                {block.labels.map((label) => (
+                  <button
+                    key={label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onLabelClick) {
+                        onLabelClick(label);
+                        return;
+                      }
+                      setSelectedLabel(label);
+                      setIsLabelSearchOpen(true);
+                    }}
+                    className="px-2 py-1 text-xs rounded-md border border-transparent bg-cyan-dark text-cyan-light hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-                  // Don't show modifier menu for wildcard content
-                  if (
-                    normalized.text &&
-                    !selectionOverlapsWildcard(
-                      inlineText,
-                      normalized.start,
-                      normalized.end,
-                    )
-                  ) {
-                    // Get approximate position of selected text within textarea
-                    const startPos = getTextareaCaretPosition(
-                      textarea,
-                      normalized.start,
-                    );
-                    const endPos = getTextareaCaretPosition(
-                      textarea,
-                      normalized.end,
-                    );
-                    const lineHeight =
-                      parseFloat(
-                        window.getComputedStyle(textarea).lineHeight,
-                      ) || 24;
-
-                    const fakeRange = {
-                      getBoundingClientRect: () => ({
-                        top: startPos.top,
-                        bottom: startPos.top + lineHeight,
-                        left: startPos.left,
-                        right: endPos.left,
-                        width: Math.max(endPos.left - startPos.left, 50),
-                        height: lineHeight,
-                        x: startPos.left,
-                        y: startPos.top,
-                        toJSON: () => ({}),
-                      }),
-                    } as Range;
-
-                    setTextSelection({
-                      text: normalized.text,
-                      range: fakeRange,
-                      startOffset: normalized.start,
-                      endOffset: normalized.end,
-                    });
-                    setIsMenuVisible(true);
-
-                    // Update textarea selection to match normalized
-                    textarea.setSelectionRange(
-                      normalized.start,
-                      normalized.end,
-                    );
-                  }
-                } else {
-                  setTextSelection(null);
-                  setIsMenuVisible(false);
-                }
-              }}
-              className="box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -m-2 resize-none border-inline-input"
-              maxLength={LENGTH_LIMITS.blockText}
-              minRows={1}
-            />
-          ) : (
-            <div
-              className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 border-transparent transition-colors"
-              onMouseUp={handleTextMouseUp}
-              onClick={handleTextClick}
-            >
-              <TextWithWildcards
-                text={block.text}
-                className="text-sm whitespace-pre-wrap cursor-text"
-                enableTooltips={true}
-                enableModifierHighlighting={true}
-                onMarkerChange={(oldMarker, newMarker) => {
-                  const updatedText = block.text.replace(oldMarker, newMarker);
-                  if (onTransform) {
-                    onTransform(block.id, updatedText);
-                  }
+            {isInlineEditing ? (
+              <TextareaAutosize
+                ref={textareaRef}
+                value={inlineText}
+                onChange={(e) => {
+                  setInlineText(e.target.value);
+                  inlineTextRef.current = e.target.value;
+                  debouncedInlineSave();
                 }}
-                onModifierChange={(_oldText, newText, startIndex, endIndex) => {
-                  const updatedText =
-                    block.text.slice(0, startIndex) +
-                    newText +
-                    block.text.slice(endIndex);
-                  if (onTransform) {
-                    onTransform(block.id, updatedText);
-                  }
+                onBlur={(e) => {
+                  const relatedTarget = e.relatedTarget as HTMLElement;
+                  if (relatedTarget?.closest("[data-selection-menu]")) return;
+                  handleSaveInlineEdit(true);
                 }}
+                onClick={(e) => e.stopPropagation()}
+                className="block box-content w-full text-sm whitespace-pre-wrap p-2 -mx-2.5 -my-2 resize-none border-2 border-transparent border-inline-input align-top"
+                maxLength={LENGTH_LIMITS.blockText}
+                minRows={1}
               />
-            </div>
-          )}
-        </div>
-        <div className="border-t pt-4">
-          <div className="flex gap-2 flex-wrap">
+            ) : (
+              <div
+                className={cn(
+                  "cursor-text rounded p-2 -m-2 border-transparent transition-colors",
+                  isRevealed && "bg-cyan-dark/50",
+                )}
+                onMouseUp={handleTextMouseUp}
+                onClick={handleTextClick}
+              >
+                <TextWithWildcards
+                  text={block.text}
+                  className="text-sm whitespace-pre-wrap cursor-text"
+                  enableTooltips={true}
+                  enableModifierHighlighting={true}
+                  onMarkerChange={(oldMarker, newMarker) => {
+                    const updatedText = block.text.replace(
+                      oldMarker,
+                      newMarker,
+                    );
+                    if (onTransform) onTransform(block.id, updatedText);
+                  }}
+                  onModifierChange={(
+                    _oldText,
+                    newText,
+                    startIndex,
+                    endIndex,
+                  ) => {
+                    const updatedText =
+                      block.text.slice(0, startIndex) +
+                      newText +
+                      block.text.slice(endIndex);
+                    if (onTransform) onTransform(block.id, updatedText);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Action label row — slides in from below into the bottom padding */}
+          <div
+            className={cn(
+              "absolute left-6 right-6 bottom-2 flex items-center text-[11.5px] font-medium whitespace-nowrap transition-all duration-200 ease-out",
+              isRevealed
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-2 pointer-events-none",
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
             <LLMGuard>
-              <ButtonGroup>
-                <LoadingAnimatedButton
-                  variant="secondary"
-                  size="sm"
-                  active={isActive}
-                  onClick={handleMoreDescriptive}
-                  loading={activeTransform === "more"}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleMoreDescriptive(true)}
                   disabled={
                     !isLLMConfigured ||
                     activeTransform !== null ||
                     exploreMutation.isPending
                   }
+                  className="text-cyan-light/90 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  More Descriptive
-                </LoadingAnimatedButton>
-                <ButtonGroupSeparator />
-                <LoadingAnimatedButton
-                  variant="secondary"
-                  size="sm"
-                  active={isActive}
-                  onClick={handleLessDescriptive}
-                  loading={activeTransform === "less"}
+                  <span className="lg:hidden">More</span>
+                  <span className="hidden lg:inline">More Descriptive</span>
+                </button>
+                <span className="text-cyan-medium/40">·</span>
+                <button
+                  onClick={() => handleLessDescriptive(true)}
                   disabled={
                     !isLLMConfigured ||
                     activeTransform !== null ||
                     exploreMutation.isPending
                   }
+                  className="text-cyan-light/90 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Less Descriptive
-                </LoadingAnimatedButton>
-              </ButtonGroup>
-              <ButtonGroup>
+                  <span className="lg:hidden">Less</span>
+                  <span className="hidden lg:inline">Less Descriptive</span>
+                </button>
+                <span className="text-cyan-medium/40">·</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
+                    <button
+                      disabled={
+                        !isLLMConfigured ||
+                        activeTransform !== null ||
+                        exploreMutation.isPending
+                      }
+                      className="text-cyan-light/90 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Variation
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      onClick={() => handleVariation("variation-slight", true)}
+                    >
+                      Slightly Different
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleVariation("variation-fair", true)}
+                    >
+                      Fairly Different
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleVariation("variation-very", true)}
+                    >
+                      Very Different
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="text-cyan-medium/40">·</span>
+                <button
+                  onClick={handleExplore}
+                  disabled={
+                    !isLLMConfigured ||
+                    activeTransform !== null ||
+                    exploreMutation.isPending
+                  }
+                  className="text-cyan-light/90 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="lg:hidden">Explore</span>
+                  <span className="hidden lg:inline">Explore Variations</span>
+                </button>
+                <span className="text-cyan-medium/40">·</span>
+                <button
+                  onClick={() => setIsWildcardBrowserOpen(true)}
+                  className="text-cyan-light/90 hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <span className="lg:hidden">Wildcard</span>
+                  <span className="hidden lg:inline">Insert Wildcard</span>
+                </button>
+              </div>
+            </LLMGuard>
+            <div className="ml-auto flex items-center gap-1.5">
+              {onDuplicate && (
+                <>
+                  <button
+                    onClick={onDuplicate}
+                    className="text-cyan-light/80 hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    <span className="lg:hidden">Duplicate</span>
+                    <span className="hidden lg:inline">Duplicate Block</span>
+                  </button>
+                  <span className="text-cyan-medium/40">·</span>
+                </>
+              )}
+              <button
+                onClick={onEdit}
+                className="text-cyan-light/80 hover:text-foreground transition-colors cursor-pointer"
+              >
+                <span className="lg:hidden">Edit</span>
+                <span className="hidden lg:inline">Edit Block</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isHMode && (
+        <>
+          <CardHeader
+            className="px-6 py-3"
+            onDoubleClick={(e) => {
+              if (
+                (e.target as HTMLElement).closest("button") ||
+                (e.target as HTMLElement).closest("input") ||
+                (e.target as HTMLElement).closest('[role="menu"]')
+              )
+                return;
+              onEdit();
+            }}
+          >
+            <div
+              className={cn("flex items-start justify-between", {
+                "cursor-pointer": alwaysActive && onEdit,
+              })}
+              onClick={(e) => {
+                if (
+                  !alwaysActive ||
+                  !onEdit ||
+                  (e.target as HTMLElement).closest("button") ||
+                  (e.target as HTMLElement).closest("input") ||
+                  (e.target as HTMLElement).closest('[role="menu"]')
+                )
+                  return;
+                onEdit();
+              }}
+            >
+              <div className="flex-1">
+                {isActive && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2">
+                      {isRenamingBlock ? (
+                        <input
+                          type="text"
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={saveBlockName}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveBlockName();
+                            if (e.key === "Escape") {
+                              setRenameValue(block.name ?? "");
+                              setIsRenamingBlock(false);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Enter block name..."
+                          className="font-semibold px-2 py-0.5 border-inline-input"
+                          maxLength={LENGTH_LIMITS.name}
+                          autoFocus
+                        />
+                      ) : (
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="font-semibold text-foreground cursor-pointer hover:text-magenta-light transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRenameValue(block.name ?? "");
+                                  setIsRenamingBlock(true);
+                                }}
+                              >
+                                {block.name || block.displayId}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Click to rename</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <ExpandingIcon active={isActive} origin="left">
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="text-cyan-medium hover:text-foreground transition-colors">
+                                <Info className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1 text-xs">
+                                <div>
+                                  <span className="font-medium">ID:</span>{" "}
+                                  {block.displayId}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Created:</span>{" "}
+                                  {new Date(block.createdAt).toLocaleString()}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Updated:</span>{" "}
+                                  {new Date(block.updatedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </ExpandingIcon>
+                      <ExpandingIcon active={isActive} origin="left">
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild className="cursor-pointer">
+                              <button
+                                onClick={() => setShowRevisions(!showRevisions)}
+                                className="text-cyan-medium hover:text-foreground transition-colors"
+                              >
+                                <Clock className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>View block history</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </ExpandingIcon>
+                      {isActive && (
+                        <span className="text-xs text-cyan-medium">
+                          {block.text.length.toLocaleString()} chars &middot; ~
+                          {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
+                          tokens
+                        </span>
+                      )}
+                    </div>
+                    {block.name && (
+                      <div className="text-xs text-cyan-medium font-mono mt-0.5">
+                        {block.displayId}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(block.labels.length > 0 || (block.type && !isSelectMode)) && (
+                  <div className="flex gap-1 flex-wrap mt-1 items-center">
+                    {block.type && !isSelectMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsTypeSearchOpen(true);
+                        }}
+                        className="px-2 py-1 text-xs rounded-md border border-magenta-medium bg-transparent text-magenta-medium hover:bg-magenta-medium/10 transition-colors cursor-pointer"
+                      >
+                        {block.type.name}
+                      </button>
+                    )}
+                    {block.labels.map((label) => (
+                      <button
+                        key={label}
+                        onClick={() => {
+                          if (onLabelClick) {
+                            onLabelClick(label);
+                            return;
+                          }
+                          setSelectedLabel(label);
+                          setIsLabelSearchOpen(true);
+                        }}
+                        className={cn(
+                          "px-2 py-1 text-xs rounded-md border border-transparent transition-colors cursor-pointer",
+                          isActive
+                            ? "bg-cyan-medium text-cyan-light hover:bg-cyan-medium/60"
+                            : "bg-cyan-dark text-cyan-light hover:bg-cyan-dark/80",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className={cn("flex items-center", isActive && "gap-2")}>
+                {isSelectMode ? (
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={onToggleSelect}
+                    className="cursor-pointer"
+                  />
+                ) : (
+                  <>
+                    {block.folderName && (
+                      <InlineIconBadge icon={Folder}>
+                        {block.folderName}
+                      </InlineIconBadge>
+                    )}
+                    {onRemoveFromFolder && block.folderId != null && (
+                      <ExpandingIcon active={isActive} origin="right">
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemoveFromFolder();
+                                }}
+                                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                                aria-label="Remove from folder"
+                              >
+                                <FolderX className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Remove from folder</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </ExpandingIcon>
+                    )}
+                    {alwaysActive && (
+                      <>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsNotesDialogOpen(true);
+                                }}
+                                className={cn(
+                                  "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
+                                  block.notes && "text-foreground",
+                                )}
+                                aria-label="Edit notes"
+                              >
+                                <StickyNote className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {block.notes ? "Edit notes" : "Add notes"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(block.text);
+                                }}
+                                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                                aria-label="Copy block text"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy block text</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={onDelete}
+                                disabled={isDeleting}
+                                className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                                aria-label="Delete block"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete block</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="group relative mb-4">
+              {isInlineEditing ? (
+                <TextareaAutosize
+                  ref={textareaRef}
+                  value={inlineText}
+                  onChange={(e) => {
+                    setInlineText(e.target.value);
+                    inlineTextRef.current = e.target.value;
+                    debouncedInlineSave();
+                  }}
+                  onBlur={(e) => {
+                    // Don't close if clicking on the selection menu
+                    const relatedTarget = e.relatedTarget as HTMLElement;
+                    if (relatedTarget?.closest("[data-selection-menu]")) {
+                      return;
+                    }
+                    handleSaveInlineEdit(true);
+                  }}
+                  onMouseUp={(e) => {
+                    const textarea = e.currentTarget;
+                    const { selectionStart, selectionEnd } = textarea;
+
+                    if (selectionStart !== selectionEnd) {
+                      // Normalize to word boundaries
+                      const normalized = normalizeToWordBoundaries(
+                        inlineText,
+                        selectionStart,
+                        selectionEnd,
+                      );
+
+                      // Don't show modifier menu for wildcard content
+                      if (
+                        normalized.text &&
+                        !selectionOverlapsWildcard(
+                          inlineText,
+                          normalized.start,
+                          normalized.end,
+                        )
+                      ) {
+                        // Get approximate position of selected text within textarea
+                        const startPos = getTextareaCaretPosition(
+                          textarea,
+                          normalized.start,
+                        );
+                        const endPos = getTextareaCaretPosition(
+                          textarea,
+                          normalized.end,
+                        );
+                        const lineHeight =
+                          parseFloat(
+                            window.getComputedStyle(textarea).lineHeight,
+                          ) || 24;
+
+                        const fakeRange = {
+                          getBoundingClientRect: () => ({
+                            top: startPos.top,
+                            bottom: startPos.top + lineHeight,
+                            left: startPos.left,
+                            right: endPos.left,
+                            width: Math.max(endPos.left - startPos.left, 50),
+                            height: lineHeight,
+                            x: startPos.left,
+                            y: startPos.top,
+                            toJSON: () => ({}),
+                          }),
+                        } as Range;
+
+                        setTextSelection({
+                          text: normalized.text,
+                          range: fakeRange,
+                          startOffset: normalized.start,
+                          endOffset: normalized.end,
+                        });
+                        setIsMenuVisible(true);
+
+                        // Update textarea selection to match normalized
+                        textarea.setSelectionRange(
+                          normalized.start,
+                          normalized.end,
+                        );
+                      }
+                    } else {
+                      setTextSelection(null);
+                      setIsMenuVisible(false);
+                    }
+                  }}
+                  className="box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -m-2 resize-none border-inline-input"
+                  maxLength={LENGTH_LIMITS.blockText}
+                  minRows={1}
+                />
+              ) : (
+                <div
+                  className="cursor-pointer hover:bg-cyan-dark/50 rounded p-2 -m-2 border-transparent transition-colors"
+                  onMouseUp={handleTextMouseUp}
+                  onClick={handleTextClick}
+                >
+                  <TextWithWildcards
+                    text={block.text}
+                    className="text-sm whitespace-pre-wrap cursor-text"
+                    enableTooltips={true}
+                    enableModifierHighlighting={true}
+                    onMarkerChange={(oldMarker, newMarker) => {
+                      const updatedText = block.text.replace(
+                        oldMarker,
+                        newMarker,
+                      );
+                      if (onTransform) {
+                        onTransform(block.id, updatedText);
+                      }
+                    }}
+                    onModifierChange={(
+                      _oldText,
+                      newText,
+                      startIndex,
+                      endIndex,
+                    ) => {
+                      const updatedText =
+                        block.text.slice(0, startIndex) +
+                        newText +
+                        block.text.slice(endIndex);
+                      if (onTransform) {
+                        onTransform(block.id, updatedText);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="border-t pt-4">
+              <div className="flex gap-2 flex-wrap">
+                <LLMGuard>
+                  <ButtonGroup>
                     <LoadingAnimatedButton
                       variant="secondary"
                       size="sm"
                       active={isActive}
-                      loading={activeTransform === "variation"}
+                      onClick={() => handleMoreDescriptive()}
+                      loading={activeTransform === "more"}
                       disabled={
                         !isLLMConfigured ||
                         activeTransform !== null ||
                         exploreMutation.isPending
                       }
                     >
-                      Variation
+                      More Descriptive
                     </LoadingAnimatedButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem
-                      onClick={() => handleVariation("variation-slight")}
+                    <ButtonGroupSeparator />
+                    <LoadingAnimatedButton
+                      variant="secondary"
+                      size="sm"
+                      active={isActive}
+                      onClick={() => handleLessDescriptive()}
+                      loading={activeTransform === "less"}
+                      disabled={
+                        !isLLMConfigured ||
+                        activeTransform !== null ||
+                        exploreMutation.isPending
+                      }
                     >
-                      Slightly Different
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleVariation("variation-fair")}
+                      Less Descriptive
+                    </LoadingAnimatedButton>
+                  </ButtonGroup>
+                  <ButtonGroup>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <LoadingAnimatedButton
+                          variant="secondary"
+                          size="sm"
+                          active={isActive}
+                          loading={activeTransform === "variation"}
+                          disabled={
+                            !isLLMConfigured ||
+                            activeTransform !== null ||
+                            exploreMutation.isPending
+                          }
+                        >
+                          Variation
+                        </LoadingAnimatedButton>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem
+                          onClick={() => handleVariation("variation-slight")}
+                        >
+                          Slightly Different
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleVariation("variation-fair")}
+                        >
+                          Fairly Different
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleVariation("variation-very")}
+                        >
+                          Very Different
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <ButtonGroupSeparator />
+                    <LoadingAnimatedButton
+                      variant="secondary"
+                      size="sm"
+                      active={isActive}
+                      onClick={handleExplore}
+                      loading={exploreMutation.isPending}
+                      disabled={
+                        !isLLMConfigured ||
+                        activeTransform !== null ||
+                        exploreMutation.isPending
+                      }
                     >
-                      Fairly Different
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleVariation("variation-very")}
-                    >
-                      Very Different
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <ButtonGroupSeparator />
-                <LoadingAnimatedButton
+                      Explore Variations
+                    </LoadingAnimatedButton>
+                  </ButtonGroup>
+                </LLMGuard>
+                <AnimatedButton
                   variant="secondary"
                   size="sm"
                   active={isActive}
-                  onClick={handleExplore}
-                  loading={exploreMutation.isPending}
-                  disabled={
-                    !isLLMConfigured ||
-                    activeTransform !== null ||
-                    exploreMutation.isPending
-                  }
+                  onClick={() => setIsWildcardBrowserOpen(true)}
                 >
-                  Explore Variations
-                </LoadingAnimatedButton>
-              </ButtonGroup>
-            </LLMGuard>
-            <AnimatedButton
-              variant="secondary"
-              size="sm"
-              active={isActive}
-              onClick={() => setIsWildcardBrowserOpen(true)}
-            >
-              Insert Wildcard
-            </AnimatedButton>
-            <ButtonGroup className="ml-auto">
-              {onDuplicate && (
-                <>
+                  Insert Wildcard
+                </AnimatedButton>
+                <ButtonGroup className="ml-auto">
+                  {onDuplicate && (
+                    <>
+                      <AnimatedButton
+                        variant="secondary"
+                        size="sm"
+                        active={isActive}
+                        onClick={onDuplicate}
+                      >
+                        Duplicate Block
+                      </AnimatedButton>
+                      <ButtonGroupSeparator />
+                    </>
+                  )}
                   <AnimatedButton
                     variant="secondary"
                     size="sm"
                     active={isActive}
-                    onClick={onDuplicate}
+                    onClick={onEdit}
                   >
-                    Duplicate Block
+                    Edit Block
                   </AnimatedButton>
-                  <ButtonGroupSeparator />
-                </>
-              )}
-              <AnimatedButton
-                variant="secondary"
-                size="sm"
-                active={isActive}
-                onClick={onEdit}
-              >
-                Edit Block
-              </AnimatedButton>
-            </ButtonGroup>
-          </div>
-        </div>
-      </CardContent>
+                </ButtonGroup>
+              </div>
+            </div>
+          </CardContent>
+        </>
+      )}
 
       {/* Revisions overlay */}
       <AnimatePresence>
