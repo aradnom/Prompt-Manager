@@ -451,7 +451,13 @@ export function TextBlock({
     setIsInlineEditing(true);
     setInlineText(block.text);
     // Focus textarea after state update
-    setTimeout(() => textareaRef.current?.focus(), 0);
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      const end = ta.value.length;
+      ta.setSelectionRange(end, end);
+    }, 0);
   };
 
   const handleTextClick = (e: React.MouseEvent) => {
@@ -935,7 +941,7 @@ export function TextBlock({
                   handleSaveInlineEdit(true);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="block box-content w-full text-sm whitespace-pre-wrap p-2 -mx-2.5 -my-2 resize-none border-2 border-transparent border-inline-input align-top"
+                className="block box-content w-full text-sm leading-6 whitespace-pre-wrap p-2 -mx-2.5 -my-2 resize-none border-2 border-transparent border-inline-input align-top"
                 maxLength={LENGTH_LIMITS.blockText}
                 minRows={1}
               />
@@ -950,7 +956,7 @@ export function TextBlock({
               >
                 <TextWithWildcards
                   text={block.text}
-                  className="text-sm whitespace-pre-wrap cursor-text"
+                  className="text-sm leading-6 whitespace-pre-wrap cursor-text"
                   enableTooltips={true}
                   enableModifierHighlighting={true}
                   onMarkerChange={(oldMarker, newMarker) => {
