@@ -749,10 +749,10 @@ export function TextBlock({
             </div>
           )}
 
-          {/* Top-right: Expand icon (or Checkbox in select mode) */}
+          {/* Top-right cluster: per-block actions + Expand (or Checkbox in select mode) */}
           <div
             className={cn(
-              "absolute top-0 right-0 z-20 transition-all duration-200 ease-out",
+              "absolute top-0 right-0 z-20 flex items-center transition-all duration-200 ease-out",
               isRevealed && !isInlineEditing
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 -translate-y-1 pointer-events-none",
@@ -767,24 +767,116 @@ export function TextBlock({
                 />
               </div>
             ) : (
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsActive(true);
-                        setIsTouchRevealed(false);
-                      }}
-                      className="w-8 h-8 flex items-center justify-center rounded-tr-lg rounded-bl-lg border-l border-b bg-cyan-medium/15 text-cyan-medium hover:bg-cyan-medium/40 hover:text-foreground transition-colors cursor-pointer"
-                      aria-label="Show more"
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Show more</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <>
+                <div className="flex items-center gap-3 pl-2 pr-3 h-8">
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsNotesDialogOpen(true);
+                          }}
+                          className={cn(
+                            "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
+                            block.notes && "text-foreground",
+                          )}
+                          aria-label="Edit notes"
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {block.notes ? "Edit notes" : "Add notes"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {onToggleDisable && (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleDisable();
+                            }}
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                            aria-label={
+                              isDisabled
+                                ? "Enable block in this prompt"
+                                : "Disable block in this prompt"
+                            }
+                          >
+                            {isDisabled ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isDisabled
+                            ? "Enable block in this prompt"
+                            : "Disable block in this prompt"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(block.text);
+                          }}
+                          className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                          aria-label="Copy block text"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy block text</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                          }}
+                          disabled={isDeleting}
+                          className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                          aria-label="Delete block"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete block</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsActive(true);
+                          setIsTouchRevealed(false);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center rounded-tr-lg rounded-bl-lg border-l border-b bg-cyan-medium/15 text-cyan-medium hover:bg-cyan-medium/40 hover:text-foreground transition-colors cursor-pointer"
+                        aria-label="Show more"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Show more</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
             )}
           </div>
 
@@ -803,7 +895,7 @@ export function TextBlock({
                       e.stopPropagation();
                       setIsTypeSearchOpen(true);
                     }}
-                    className="px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors cursor-pointer"
+                    className="px-2 py-1 text-xs rounded-md border border-magenta-medium bg-transparent text-magenta-medium hover:bg-magenta-medium/10 transition-colors cursor-pointer"
                   >
                     {block.type.name}
                   </button>
@@ -820,7 +912,7 @@ export function TextBlock({
                       setSelectedLabel(label);
                       setIsLabelSearchOpen(true);
                     }}
-                    className="px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer"
+                    className="px-2 py-1 text-xs rounded-md border border-transparent bg-cyan-dark text-cyan-light hover:bg-cyan-dark/80 transition-colors cursor-pointer"
                   >
                     {label}
                   </button>
@@ -1117,18 +1209,11 @@ export function TextBlock({
                         </TooltipProvider>
                       </ExpandingIcon>
                       {isActive && (
-                        <>
-                          <span className="text-xs text-cyan-medium">
-                            {block.text.length.toLocaleString()} chars &middot;
-                            ~{Math.ceil(block.text.length / 4).toLocaleString()}{" "}
-                            tokens
-                          </span>
-                          {block.folderName && (
-                            <InlineIconBadge icon={Folder}>
-                              {block.folderName}
-                            </InlineIconBadge>
-                          )}
-                        </>
+                        <span className="text-xs text-cyan-medium">
+                          {block.text.length.toLocaleString()} chars &middot; ~
+                          {Math.ceil(block.text.length / 4).toLocaleString()}{" "}
+                          tokens
+                        </span>
                       )}
                     </div>
                     {block.name && (
@@ -1138,8 +1223,19 @@ export function TextBlock({
                     )}
                   </div>
                 )}
-                {block.labels.length > 0 && (
-                  <div className="flex gap-1 flex-wrap mt-1">
+                {(block.labels.length > 0 || (block.type && !isSelectMode)) && (
+                  <div className="flex gap-1 flex-wrap mt-1 items-center">
+                    {block.type && !isSelectMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsTypeSearchOpen(true);
+                        }}
+                        className="px-2 py-1 text-xs rounded-md border border-magenta-medium bg-transparent text-magenta-medium hover:bg-magenta-medium/10 transition-colors cursor-pointer"
+                      >
+                        {block.type.name}
+                      </button>
+                    )}
                     {block.labels.map((label) => (
                       <button
                         key={label}
@@ -1152,10 +1248,10 @@ export function TextBlock({
                           setIsLabelSearchOpen(true);
                         }}
                         className={cn(
-                          "px-2 py-1 text-xs rounded-md bg-cyan-dark text-cyan-medium hover:bg-cyan-dark/80 transition-colors cursor-pointer",
-                          {
-                            "bg-cyan-medium text-cyan-light": isActive,
-                          },
+                          "px-2 py-1 text-xs rounded-md border border-transparent transition-colors cursor-pointer",
+                          isActive
+                            ? "bg-cyan-medium text-cyan-light hover:bg-cyan-medium/60"
+                            : "bg-cyan-dark text-cyan-light hover:bg-cyan-dark/80",
                         )}
                       >
                         {label}
@@ -1173,90 +1269,11 @@ export function TextBlock({
                   />
                 ) : (
                   <>
-                    {block.type && (
-                      <button
-                        onClick={() => setIsTypeSearchOpen(true)}
-                        className="px-2 py-1 text-xs font-medium rounded-md bg-magenta-dark text-foreground hover:bg-magenta-dark/90 transition-colors cursor-pointer"
-                      >
-                        {block.type.name}
-                      </button>
+                    {block.folderName && (
+                      <InlineIconBadge icon={Folder}>
+                        {block.folderName}
+                      </InlineIconBadge>
                     )}
-                    <ExpandingIcon active={isActive} origin="right">
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsNotesDialogOpen(true);
-                              }}
-                              className={cn(
-                                "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
-                                block.notes && "text-foreground",
-                              )}
-                              aria-label="Edit notes"
-                            >
-                              <StickyNote className="h-4 w-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {block.notes ? "Edit notes" : "Add notes"}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </ExpandingIcon>
-                    {onToggleDisable && (
-                      <ExpandingIcon active={isActive} origin="right">
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onToggleDisable();
-                                }}
-                                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                                aria-label={
-                                  isDisabled
-                                    ? "Enable block in this prompt"
-                                    : "Disable block in this prompt"
-                                }
-                              >
-                                {isDisabled ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {isDisabled
-                                ? "Enable block in this prompt"
-                                : "Disable block in this prompt"}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ExpandingIcon>
-                    )}
-                    <ExpandingIcon active={isActive} origin="right">
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(block.text);
-                              }}
-                              className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                              aria-label="Copy block text"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Copy block text</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </ExpandingIcon>
                     {onRemoveFromFolder && block.folderId != null && (
                       <ExpandingIcon active={isActive} origin="right">
                         <TooltipProvider delayDuration={0}>
@@ -1278,23 +1295,64 @@ export function TextBlock({
                         </TooltipProvider>
                       </ExpandingIcon>
                     )}
-                    <ExpandingIcon active={isActive} origin="right">
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={onDelete}
-                              disabled={isDeleting}
-                              className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-                              aria-label="Delete block"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete block</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </ExpandingIcon>
+                    {alwaysActive && (
+                      <>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsNotesDialogOpen(true);
+                                }}
+                                className={cn(
+                                  "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
+                                  block.notes && "text-foreground",
+                                )}
+                                aria-label="Edit notes"
+                              >
+                                <StickyNote className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {block.notes ? "Edit notes" : "Add notes"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(block.text);
+                                }}
+                                className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                                aria-label="Copy block text"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy block text</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={onDelete}
+                                disabled={isDeleting}
+                                className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
+                                aria-label="Delete block"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete block</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </>
+                    )}
                   </>
                 )}
               </div>
