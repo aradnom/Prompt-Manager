@@ -84,6 +84,17 @@ export interface BlockStack {
   activeRevisionId: number | null;
   blockIds: number[];
   disabledBlockIds: number[];
+  /**
+   * Decrypted, parsed group list from the active revision. `null` when the
+   * stack has never had groups; `[]` when groups were created and then all
+   * removed. Mirrors the active revision's `blockGroups` so callers don't
+   * need to load the revision separately.
+   *
+   * NOTE: at the storage-adapter boundary this field temporarily holds the
+   * raw cipher string (or null) and is replaced by the decrypted structure
+   * inside the tRPC router's `decryptStack`. Same pattern as `name`/`notes`.
+   */
+  blockGroups: TextBlockGroup[] | null;
   labels: string[];
 }
 
@@ -106,6 +117,11 @@ export interface TextBlockGroup {
   color: string | null;
   /** Block ids in intended group order. Treated as advisory at render time. */
   blockIds: number[];
+  /**
+   * Persistent collapsed-state flag. Lives on the group so it survives
+   * reloads and prompt switches without round-tripping through localStorage.
+   */
+  collapsed: boolean;
 }
 
 export interface StackRevision {

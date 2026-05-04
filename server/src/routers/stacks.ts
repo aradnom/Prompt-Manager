@@ -71,8 +71,25 @@ export function decryptStack<T extends BlockStack | StackWithBlocks>(
       }
     : withFolder) as unknown as T;
 
-  if ("blocks" in base && Array.isArray((base as StackWithBlocks).blocks)) {
-    const expanded = base as StackWithBlocks;
+  // `blockGroups` is mirrored from the active stack revision and arrives as a
+  // raw cipher string (or null). Decode in place so callers see the parsed
+  // structure regardless of whether they loaded the revision separately.
+  const stackBase = base as unknown as BlockStack;
+  const decodedGroups = decodeBlockGroups(
+    (stackBase as unknown as { blockGroups: unknown }).blockGroups,
+    stackBase.blockIds ?? [],
+    key,
+  );
+  const withGroups = {
+    ...(base as unknown as Record<string, unknown>),
+    blockGroups: decodedGroups,
+  } as unknown as T;
+
+  if (
+    "blocks" in withGroups &&
+    Array.isArray((withGroups as StackWithBlocks).blocks)
+  ) {
+    const expanded = withGroups as StackWithBlocks;
     return {
       ...expanded,
       blocks: expanded.blocks.map((b) => decryptBlockWithRevisions(b, key)),
@@ -80,7 +97,33 @@ export function decryptStack<T extends BlockStack | StackWithBlocks>(
     } as unknown as T;
   }
 
-  return base;
+  return withGroups;
+}
+
+/**
+ * Decrypt + JSON.parse + normalize a raw `block_groups` cipher value. Returns
+ * `null` on any failure — group state must never block a load. Used for both
+ * `BlockStack.blockGroups` (mirrored from active revision) and per-revision
+ * decoding inside `decryptStackRevision`.
+ */
+function decodeBlockGroups(
+  raw: unknown,
+  revisionBlockIds: number[],
+  key: Buffer,
+): TextBlockGroup[] | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  const plaintext = tryDecrypt(raw, key);
+  if (!plaintext) return null;
+  try {
+    const candidate = JSON.parse(plaintext);
+    if (!Array.isArray(candidate)) return null;
+    return normalizeBlockGroups(
+      candidate as TextBlockGroup[],
+      revisionBlockIds,
+    );
+  } catch {
+    return null;
+  }
 }
 
 function decryptStackRevision(row: StackRevision, key: Buffer): StackRevision {
@@ -90,30 +133,11 @@ function decryptStackRevision(row: StackRevision, key: Buffer): StackRevision {
     key,
   ) as unknown as StackRevision;
 
-  // `blockGroups` arrives from the storage layer as a raw cipher string (or
-  // null). Decrypt + JSON.parse here so callers see the structured form.
-  // Failures degrade silently to `null` — group state can never block load.
-  const raw = (row as unknown as { blockGroups: string | null | undefined })
-    .blockGroups;
-  let parsed: TextBlockGroup[] | null = null;
-  if (typeof raw === "string" && raw.length > 0) {
-    const plaintext = tryDecrypt(raw, key);
-    if (plaintext) {
-      try {
-        const candidate = JSON.parse(plaintext);
-        if (Array.isArray(candidate)) {
-          parsed = normalizeBlockGroups(
-            candidate as TextBlockGroup[],
-            decrypted.blockIds,
-          );
-        }
-      } catch {
-        parsed = null;
-      }
-    }
-  }
-
-  return { ...decrypted, blockGroups: parsed };
+  const raw = (row as unknown as { blockGroups: unknown }).blockGroups;
+  return {
+    ...decrypted,
+    blockGroups: decodeBlockGroups(raw, decrypted.blockIds, key),
+  };
 }
 
 function encryptStackBlockGroups(
@@ -543,6 +567,7 @@ export const stacksRouter = router({
               name: z.string().max(LENGTH_LIMITS.blockGroupName),
               color: z.string().max(64).nullable(),
               blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds),
+              collapsed: z.boolean(),
             }),
           )
           .max(LENGTH_LIMITS.blockGroups),

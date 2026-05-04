@@ -41,6 +41,7 @@ export function normalizeBlockGroups(
       name: typeof g.name === "string" ? g.name : "",
       color: typeof g.color === "string" ? g.color : null,
       blockIds: cleanedBlockIds,
+      collapsed: g.collapsed === true,
     });
   }
 
