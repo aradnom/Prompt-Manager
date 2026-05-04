@@ -171,6 +171,12 @@ interface TextBlockProps {
    * a popup browser.
    */
   onLabelClick?: (label: string) => void;
+  /**
+   * When provided, the block's outer border uses this color instead of the
+   * default cyan-dark/cyan-medium pair. Used by `BlockGroupContainer` so the
+   * blocks inside a group visually inherit the group's color.
+   */
+  borderColorOverride?: string | null;
 }
 
 export function TextBlock({
@@ -191,6 +197,7 @@ export function TextBlock({
   alwaysActive = false,
   style,
   onLabelClick,
+  borderColorOverride,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
   const [isRenamingBlock, setIsRenamingBlock] = useState(false);
@@ -775,6 +782,7 @@ export function TextBlock({
         boxShadow: isActive
           ? "0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3)"
           : "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        ...(borderColorOverride ? { borderColor: borderColorOverride } : {}),
       }}
       transition={TEXT_BLOCK_ANIMATION}
     >
