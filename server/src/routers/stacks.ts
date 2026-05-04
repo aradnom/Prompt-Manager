@@ -16,7 +16,9 @@ import type {
   StackRevision,
   StackSnapshot,
   StackWithBlocks,
+  TextBlockGroup,
 } from "@/types/schema";
+import { normalizeBlockGroups } from "@shared/block-groups";
 
 const mutationRL = withRateLimit(
   "stacks.create",
@@ -82,11 +84,43 @@ export function decryptStack<T extends BlockStack | StackWithBlocks>(
 }
 
 function decryptStackRevision(row: StackRevision, key: Buffer): StackRevision {
-  return decryptStringFields(
+  const decrypted = decryptStringFields(
     row as unknown as Record<string, unknown>,
     ["renderedContent"],
     key,
   ) as unknown as StackRevision;
+
+  // `blockGroups` arrives from the storage layer as a raw cipher string (or
+  // null). Decrypt + JSON.parse here so callers see the structured form.
+  // Failures degrade silently to `null` — group state can never block load.
+  const raw = (row as unknown as { blockGroups: string | null | undefined })
+    .blockGroups;
+  let parsed: TextBlockGroup[] | null = null;
+  if (typeof raw === "string" && raw.length > 0) {
+    const plaintext = tryDecrypt(raw, key);
+    if (plaintext) {
+      try {
+        const candidate = JSON.parse(plaintext);
+        if (Array.isArray(candidate)) {
+          parsed = normalizeBlockGroups(
+            candidate as TextBlockGroup[],
+            decrypted.blockIds,
+          );
+        }
+      } catch {
+        parsed = null;
+      }
+    }
+  }
+
+  return { ...decrypted, blockGroups: parsed };
+}
+
+function encryptStackBlockGroups(
+  groups: TextBlockGroup[],
+  key: Buffer,
+): string {
+  return encrypt(JSON.stringify(groups), key);
 }
 
 // Snapshots are fully static — fields are captured at snapshot time and never
@@ -497,6 +531,44 @@ export const stacksRouter = router({
       return { success: true };
     }),
 
+  setBlockGroups: protectedProcedure
+    .use(mutationRL)
+    .input(
+      z.object({
+        stackId: z.number(),
+        blockGroups: z
+          .array(
+            z.object({
+              id: z.string().min(1).max(64),
+              name: z.string().max(LENGTH_LIMITS.blockGroupName),
+              color: z.string().max(64).nullable(),
+              blockIds: z.array(z.number()).max(LENGTH_LIMITS.blockIds),
+            }),
+          )
+          .max(LENGTH_LIMITS.blockGroups),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const key = requireKey(ctx.derivedKey);
+      const stack = await ctx.storage.getStack(input.stackId);
+      if (!stack) throw new Error("Stack not found");
+      if (stack.userId !== ctx.userId) throw new Error("Unauthorized");
+
+      // Normalize against the revision's current `blockIds` so the persisted
+      // payload can never reference stale ids.
+      const normalized = normalizeBlockGroups(
+        input.blockGroups,
+        stack.blockIds,
+      );
+
+      const encrypted =
+        normalized.length === 0
+          ? null
+          : encryptStackBlockGroups(normalized, key);
+      await ctx.storage.setStackBlockGroups(input.stackId, encrypted);
+      return { blockGroups: normalized };
+    }),
+
   toggleBlockDisabled: protectedProcedure
     .input(
       z.object({
@@ -677,7 +749,7 @@ export const stacksRouter = router({
       if (stack.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      const { id, stackId: _stackId, ...updates } = input;
+      const { id, ...updates } = input;
       const encrypted = encryptStringFields(
         updates as Record<string, unknown>,
         ["name", "notes"],
