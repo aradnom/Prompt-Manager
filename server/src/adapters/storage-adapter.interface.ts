@@ -167,6 +167,15 @@ export interface IStorageAdapter {
     blockIds: number[],
     renderedContent?: string,
   ): Promise<void>;
+  /**
+   * Replace the entire `block_groups` payload on the stack's active revision.
+   * Pass `null` to clear groups. Storage layer treats the value as an opaque
+   * blob — encryption and normalization happen at the router layer.
+   */
+  setStackBlockGroups(
+    stackId: number,
+    encryptedBlockGroups: string | null,
+  ): Promise<void>;
   updateStackRevisionContent(
     stackId: number,
     renderedContent: string,

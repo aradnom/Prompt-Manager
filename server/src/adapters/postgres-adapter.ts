@@ -2668,6 +2668,52 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     });
   }
 
+  async setStackBlockGroups(
+    stackId: number,
+    encryptedBlockGroups: string | null,
+  ): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      const now = new Date();
+
+      const stackInfo = await trx
+        .selectFrom("stacks")
+        .select(["active_revision_id"])
+        .where("id", "=", stackId)
+        .executeTakeFirst();
+
+      let revisionIdToUpdate: number | null = null;
+      if (stackInfo?.active_revision_id) {
+        revisionIdToUpdate = stackInfo.active_revision_id;
+      } else {
+        const latestRev = await trx
+          .selectFrom("stack_revisions")
+          .select("id")
+          .where("stack_id", "=", stackId)
+          .orderBy("created_at", "desc")
+          .limit(1)
+          .executeTakeFirst();
+        revisionIdToUpdate = latestRev?.id ?? null;
+      }
+
+      if (!revisionIdToUpdate) return;
+
+      await trx
+        .updateTable("stack_revisions")
+        .set({
+          block_groups: encryptedBlockGroups,
+          updated_at: now,
+        })
+        .where("id", "=", revisionIdToUpdate)
+        .execute();
+
+      await trx
+        .updateTable("stacks")
+        .set({ updated_at: now })
+        .where("id", "=", stackId)
+        .execute();
+    });
+  }
+
   async updateStackRevisionContent(
     stackId: number,
     renderedContent: string,
@@ -3529,11 +3575,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   private mapStackRevision(
     row: Selectable<Database["stack_revisions"]>,
   ): StackRevision {
+    // `block_groups` is the raw cipher string at this layer; the router layer
+    // decrypts and JSON.parses it. We surface it on the `blockGroups` field as
+    // an unparsed string here and rely on the router's decryptStackRevision to
+    // replace it with the parsed structure before the value escapes the
+    // server boundary.
     return {
       id: row.id,
       stackId: row.stack_id,
       blockIds: row.block_ids,
       disabledBlockIds: row.disabled_block_ids,
+      blockGroups: row.block_groups as unknown as NonNullable<
+        StackRevision["blockGroups"]
+      > | null,
       renderedContent: row.rendered_content,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
