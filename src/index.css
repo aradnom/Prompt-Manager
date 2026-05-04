@@ -23,6 +23,15 @@
   --color-background: #0f0535;
   --color-foreground: #ffffff;
 
+  --color-groups-1: #c94657;
+  --color-groups-2: #c84d29;
+  --color-groups-3: #748400;
+  --color-groups-4: #009161;
+  --color-groups-5: #0087ab;
+  --color-groups-6: #147bd8;
+  --color-groups-7: #7b64d4;
+  --color-groups-8: #bf4884;
+
   --radius: 0.5rem;
 
   --font-sans: "Quicksand", sans-serif;
