@@ -87,11 +87,37 @@ export interface BlockStack {
   labels: string[];
 }
 
+/**
+ * A purely organizational grouping of blocks within a single stack revision.
+ * Groups do NOT affect rendered prompt content — they're a UI concern only.
+ *
+ * Membership semantics: `blockIds` is treated as advisory. The renderer walks
+ * these in order, skips ids that aren't in the revision's `blockIds`, and
+ * stops the run at the first non-contiguous existing member. Anything from
+ * that point onward in the group is silently dropped from the rendered
+ * group. This keeps the feature bolt-on: a corrupt group never blocks a
+ * stack from loading or saving.
+ */
+export interface TextBlockGroup {
+  /** Stable client-generated identifier; persists across revisions. */
+  id: string;
+  name: string;
+  /** Optional preset color key. Null means "use default styling". */
+  color: string | null;
+  /** Block ids in intended group order. Treated as advisory at render time. */
+  blockIds: number[];
+}
+
 export interface StackRevision {
   id: number;
   stackId: number;
   blockIds: number[];
   disabledBlockIds: number[];
+  /**
+   * Decrypted, parsed group list. `null` when the stack has never had
+   * groups; `[]` when groups were created and then all removed.
+   */
+  blockGroups?: TextBlockGroup[] | null;
   renderedContent?: string | null;
   createdAt: Date;
   updatedAt: Date;
