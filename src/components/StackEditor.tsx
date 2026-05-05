@@ -772,6 +772,23 @@ export function StackEditor({ stack }: StackEditorProps) {
     });
   };
 
+  const handleRemoveBlockFromGroup = (groupId: string, blockId: number) => {
+    const existing = stackWithBlocks?.blockGroups ?? [];
+    const next = existing
+      .map((g) =>
+        g.id === groupId
+          ? { ...g, blockIds: g.blockIds.filter((id) => id !== blockId) }
+          : g,
+      )
+      // Drop the group entirely once its last member leaves so we don't
+      // leave a stale empty group lingering in storage.
+      .filter((g) => g.blockIds.length > 0);
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: next,
+    });
+  };
+
   const handleGenerateBlockCreated = async (newBlock: { id: number }) => {
     try {
       await addBlockMutation.mutateAsync({
@@ -1162,6 +1179,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                           index: number,
                           borderColor?: string | null,
                           inGroup?: boolean,
+                          groupId?: string,
                         ) => {
                           const block = blocks[index];
                           const suppress =
@@ -1241,6 +1259,15 @@ export function StackEditor({ stack }: StackEditorProps) {
                                     }
                                     style={stack.style}
                                     borderColorOverride={borderColor ?? null}
+                                    onRemoveFromGroup={
+                                      groupId
+                                        ? () =>
+                                            handleRemoveBlockFromGroup(
+                                              groupId,
+                                              block.id,
+                                            )
+                                        : undefined
+                                    }
                                   />
                                 </div>
                               )}
@@ -1340,7 +1367,12 @@ export function StackEditor({ stack }: StackEditorProps) {
                                 strategy={verticalListSortingStrategy}
                               >
                                 {item.indices.map((idx) =>
-                                  renderBlockAt(idx, groupBorder, true),
+                                  renderBlockAt(
+                                    idx,
+                                    groupBorder,
+                                    true,
+                                    item.group.id,
+                                  ),
                                 )}
                               </SortableContext>
                             </BlockGroupContainer>

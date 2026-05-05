@@ -13,6 +13,7 @@ import {
   EyeOff,
   StickyNote,
   Maximize2,
+  Ungroup,
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
@@ -158,6 +159,10 @@ interface TextBlockProps {
   isDeleting?: boolean;
   isDisabled?: boolean;
   onToggleDisable?: () => void;
+  /** When provided, the block is part of a group and this handler removes
+   *  it from that group. Surfaces an Ungroup button in both collapsed and
+   *  expanded views. */
+  onRemoveFromGroup?: () => void;
   isSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -189,6 +194,7 @@ export function TextBlock({
   onSelectBlock,
   isDisabled,
   onToggleDisable,
+  onRemoveFromGroup,
   isDeleting,
   isSelectMode,
   isSelected,
@@ -889,6 +895,25 @@ export function TextBlock({
                       <TooltipContent>Copy block text</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  {onRemoveFromGroup && (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveFromGroup();
+                            }}
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                            aria-label="Remove from group"
+                          >
+                            <Ungroup className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Remove from group</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1663,6 +1688,19 @@ export function TextBlock({
                         onClick={onDuplicate}
                       >
                         Duplicate Block
+                      </AnimatedButton>
+                      <ButtonGroupSeparator />
+                    </>
+                  )}
+                  {onRemoveFromGroup && (
+                    <>
+                      <AnimatedButton
+                        variant="secondary"
+                        size="sm"
+                        active={isActive}
+                        onClick={onRemoveFromGroup}
+                      >
+                        Remove From Group
                       </AnimatedButton>
                       <ButtonGroupSeparator />
                     </>
