@@ -27,8 +27,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableBlock } from "@/components/SortableBlock";
+import { groupColorHex } from "@/components/BlockGroupContainer";
 import { ChevronDown, Eye, EyeOff, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { TextBlockGroup } from "@/types/schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,12 +51,14 @@ interface TemplateEditorProps {
 function TemplateBlocks({
   blockIds,
   disabledBlockIds,
+  blockGroups,
   onRemoveBlock,
   onReorder,
   onToggleDisable,
 }: {
   blockIds: number[];
   disabledBlockIds: number[];
+  blockGroups: TextBlockGroup[] | null;
   onRemoveBlock?: (index: number) => void;
   onReorder?: (newBlockIds: number[]) => void;
   onToggleDisable?: (blockId: number) => void;
@@ -98,6 +102,60 @@ function TemplateBlocks({
       return block ? { block, sortId: `t-${index}` } : null;
     })
     .filter((item): item is NonNullable<typeof item> => item != null);
+
+  // Read-only group annotation: for each position in `blockIds`, decide which
+  // group owns it. We mirror the renderer's advisory rule — walk a group's
+  // blockIds in order, anchor at the first match in the array, and stop at
+  // the first non-contiguous member. The first position in a run gets a
+  // header; all positions in the run get a left-border tint.
+  type GroupRun = {
+    groupId: string;
+    name: string;
+    color: string | null;
+    /** position indices in `blockIds` that belong to this run */
+    positions: number[];
+  };
+  const runs: GroupRun[] = [];
+  const positionToRun = new Map<number, GroupRun>();
+  if (blockGroups && blockGroups.length > 0) {
+    const claimed = new Set<number>();
+    for (const group of blockGroups) {
+      const positions: number[] = [];
+      let cursor = 0;
+      for (const memberId of group.blockIds) {
+        let found = -1;
+        for (let i = cursor; i < blockIds.length; i++) {
+          if (claimed.has(i)) continue;
+          if (blockIds[i] === memberId) {
+            found = i;
+            break;
+          }
+        }
+        if (found === -1) break;
+        if (
+          positions.length > 0 &&
+          found !== positions[positions.length - 1] + 1
+        ) {
+          break;
+        }
+        positions.push(found);
+        cursor = found + 1;
+      }
+      if (positions.length > 0) {
+        const run: GroupRun = {
+          groupId: group.id,
+          name: group.name,
+          color: group.color,
+          positions,
+        };
+        runs.push(run);
+        for (const p of positions) {
+          claimed.add(p);
+          positionToRun.set(p, run);
+        }
+      }
+    }
+  }
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveSortId(String(event.active.id));
@@ -189,10 +247,45 @@ function TemplateBlocks({
         <div className="space-y-2">
           {ordered.map(({ block, sortId }) => {
             const isDisabled = disabledBlockIds.includes(block.id);
+            const positionIndex = parseInt(sortId.slice(2), 10);
+            const run = positionToRun.get(positionIndex);
+            const isRunStart =
+              run !== undefined && run.positions[0] === positionIndex;
+            const colorHex = run ? groupColorHex(run.color) : null;
             return (
-              <SortableBlock key={sortId} id={sortId}>
-                {renderTile(block, sortId, isDisabled)}
-              </SortableBlock>
+              <div key={sortId}>
+                {isRunStart && (
+                  <div
+                    className="flex items-center gap-2 px-2 py-1 rounded text-xs font-mono mb-1"
+                    style={{
+                      backgroundColor: colorHex
+                        ? `color-mix(in srgb, ${colorHex} 18%, transparent)`
+                        : "color-mix(in srgb, var(--color-cyan-medium) 18%, transparent)",
+                      color: colorHex ?? "var(--color-cyan-medium)",
+                    }}
+                  >
+                    <span className="font-semibold">
+                      {run!.name || "Group"}
+                    </span>
+                  </div>
+                )}
+                <div
+                  style={
+                    run
+                      ? {
+                          borderLeft: `2px solid ${
+                            colorHex ?? "var(--color-cyan-medium)"
+                          }`,
+                          paddingLeft: 8,
+                        }
+                      : undefined
+                  }
+                >
+                  <SortableBlock id={sortId}>
+                    {renderTile(block, sortId, isDisabled)}
+                  </SortableBlock>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -441,6 +534,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
         <TemplateBlocks
           blockIds={blockIds}
           disabledBlockIds={disabledBlockIds}
+          blockGroups={template.blockGroups ?? null}
           onRemoveBlock={(index) => {
             const newIds = blockIds.filter((_, i) => i !== index);
             setBlockIds(newIds);
@@ -504,6 +598,7 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
               style,
               blockIds,
               disabledBlockIds,
+              blockGroups: template.blockGroups ?? null,
             });
           }}
           disabled={createStackMutation.isPending}
