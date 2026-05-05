@@ -106,7 +106,7 @@ export function decryptStack<T extends BlockStack | StackWithBlocks>(
  * `BlockStack.blockGroups` (mirrored from active revision) and per-revision
  * decoding inside `decryptStackRevision`.
  */
-function decodeBlockGroups(
+export function decodeBlockGroups(
   raw: unknown,
   revisionBlockIds: number[],
   key: Buffer,
@@ -140,7 +140,7 @@ function decryptStackRevision(row: StackRevision, key: Buffer): StackRevision {
   };
 }
 
-function encryptStackBlockGroups(
+export function encryptStackBlockGroups(
   groups: TextBlockGroup[],
   key: Buffer,
 ): string {
@@ -195,13 +195,31 @@ export const stacksRouter = router({
           .array(z.string().max(LENGTH_LIMITS.name))
           .max(LENGTH_LIMITS.labels)
           .optional(),
+        blockGroups: z
+          .array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              color: z.string().nullable(),
+              blockIds: z.array(z.number()),
+              collapsed: z.boolean(),
+            }),
+          )
+          .nullable()
+          .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       const key = requireKey(ctx.derivedKey);
-      const encrypted = encryptStackFields(input, key);
+      const { blockGroups, ...rest } = input;
+      const encrypted = encryptStackFields(rest, key);
+      const blockGroupsCipher =
+        blockGroups && blockGroups.length > 0
+          ? encryptStackBlockGroups(blockGroups, key)
+          : null;
       return ctx.storage.createStack({
         ...encrypted,
+        blockGroups: blockGroupsCipher as unknown as TextBlockGroup[] | null,
         userId: ctx.userId,
       });
     }),

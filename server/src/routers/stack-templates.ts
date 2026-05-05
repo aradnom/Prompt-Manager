@@ -8,7 +8,11 @@ import {
   requireKey,
   tryDecrypt,
 } from "@server/lib/envelope";
-import type { StackTemplate } from "@/types/schema";
+import type { StackTemplate, TextBlockGroup } from "@/types/schema";
+import {
+  decodeBlockGroups,
+  encryptStackBlockGroups,
+} from "@server/routers/stacks";
 
 const mutationRL = withRateLimit(
   "stackTemplates.create",
@@ -26,11 +30,38 @@ function encryptTemplateFields<T extends Record<string, unknown>>(
 }
 
 function decryptTemplate(row: StackTemplate, key: Buffer): StackTemplate {
-  return decryptStringFields(
+  const base = decryptStringFields(
     row as unknown as Record<string, unknown>,
     ENCRYPTED_TEMPLATE_FIELDS,
     key,
   ) as unknown as StackTemplate;
+  const raw = (row as unknown as { blockGroups: unknown }).blockGroups;
+  return {
+    ...base,
+    blockGroups: decodeBlockGroups(raw, base.blockIds ?? [], key),
+  };
+}
+
+const blockGroupsZod = z
+  .array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      color: z.string().nullable(),
+      blockIds: z.array(z.number()),
+      collapsed: z.boolean(),
+    }),
+  )
+  .nullable()
+  .optional();
+
+function encodeBlockGroupsForStorage(
+  groups: TextBlockGroup[] | null | undefined,
+  key: Buffer,
+): string | null | undefined {
+  if (groups === undefined) return undefined;
+  if (groups === null || groups.length === 0) return null;
+  return encryptStackBlockGroups(groups, key);
 }
 
 export const stackTemplatesRouter = router({
@@ -48,14 +79,24 @@ export const stackTemplatesRouter = router({
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
         notes: z.string().max(LENGTH_LIMITS.notes).optional(),
+        blockGroups: blockGroupsZod,
       }),
     )
     .mutation(async ({ input, ctx }) => {
       const key = requireKey(ctx.derivedKey);
-      const encrypted = encryptTemplateFields(input, key);
+      const { blockGroups, ...rest } = input;
+      const encrypted = encryptTemplateFields(rest, key);
+      const blockGroupsCipher = encodeBlockGroupsForStorage(blockGroups, key);
       const created = await ctx.storage.createStackTemplate({
         displayId: generateDisplayId(),
         ...encrypted,
+        ...(blockGroupsCipher !== undefined
+          ? {
+              blockGroups: blockGroupsCipher as unknown as
+                | TextBlockGroup[]
+                | null,
+            }
+          : {}),
         userId: ctx.userId,
       });
       return decryptTemplate(created, key);
@@ -89,6 +130,7 @@ export const stackTemplatesRouter = router({
         negative: z.boolean().optional(),
         style: z.enum(["t5", "clip"]).nullable().optional(),
         notes: z.string().max(LENGTH_LIMITS.notes).nullable().optional(),
+        blockGroups: blockGroupsZod,
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -100,9 +142,19 @@ export const stackTemplatesRouter = router({
       if (template.userId !== ctx.userId) {
         throw new Error("Unauthorized");
       }
-      const { id, ...updates } = input;
-      const encrypted = encryptTemplateFields(updates, key);
-      const updated = await ctx.storage.updateStackTemplate(id, encrypted);
+      const { id, blockGroups, ...rest } = input;
+      const encrypted = encryptTemplateFields(rest, key);
+      const blockGroupsCipher = encodeBlockGroupsForStorage(blockGroups, key);
+      const updated = await ctx.storage.updateStackTemplate(id, {
+        ...encrypted,
+        ...(blockGroupsCipher !== undefined
+          ? {
+              blockGroups: blockGroupsCipher as unknown as
+                | TextBlockGroup[]
+                | null,
+            }
+          : {}),
+      });
       return decryptTemplate(updated, key);
     }),
 
@@ -189,6 +241,11 @@ export const stackTemplatesRouter = router({
       const composedName =
         input.name ?? (stackName ? `${stackName} Template` : undefined);
       const encrypted = encryptTemplateFields({ name: composedName }, key);
+      // `stack.blockGroups` at this layer is the raw cipher string from the
+      // active revision (or null) — pass through unchanged so the same encrypted
+      // bytes land on the template row.
+      const rawGroups = (stack as unknown as { blockGroups: unknown })
+        .blockGroups;
       const created = await ctx.storage.createStackTemplate({
         displayId: generateDisplayId(),
         name: encrypted.name,
@@ -197,6 +254,7 @@ export const stackTemplatesRouter = router({
         commaSeparated: stack.commaSeparated,
         negative: stack.negative,
         style: stack.style,
+        blockGroups: rawGroups as unknown as TextBlockGroup[] | null,
         userId: ctx.userId,
       });
       return decryptTemplate(created, key);
