@@ -65,6 +65,7 @@ function TemplateBlocks({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  const [activeSortId, setActiveSortId] = useState<string | null>(null);
 
   const { data: blocks, isLoading } = api.blocks.getByIds.useQuery(
     { ids: blockIds },
@@ -97,8 +98,6 @@ function TemplateBlocks({
       return block ? { block, sortId: `t-${index}` } : null;
     })
     .filter((item): item is NonNullable<typeof item> => item != null);
-
-  const [activeSortId, setActiveSortId] = useState<string | null>(null);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveSortId(String(event.active.id));
