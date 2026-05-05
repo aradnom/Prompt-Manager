@@ -782,9 +782,11 @@ export function TextBlock({
         boxShadow: isActive
           ? "0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3)"
           : "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-        ...(borderColorOverride ? { borderColor: borderColorOverride } : {}),
       }}
       transition={TEXT_BLOCK_ANIMATION}
+      style={
+        borderColorOverride ? { borderColor: borderColorOverride } : undefined
+      }
     >
       {isHMode && (
         <div
