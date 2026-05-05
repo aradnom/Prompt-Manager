@@ -297,6 +297,13 @@ function TemplateBlocks({
           overIndex = lastIdx;
           effectiveSide = "below";
         }
+      } else if (oldGroupId !== null && overGroupId === null) {
+        // Crossing OUT of a group into loose territory: the over target is
+        // the nearest loose block on whichever side. The default direction
+        // rule lands the dragged block on the far side of that block, which
+        // leaves no landing slot directly adjacent to the group. Invert so
+        // the block lands between the group and the over block.
+        effectiveSide = effectiveSide === "above" ? "below" : "above";
       }
     }
 
@@ -350,15 +357,20 @@ function TemplateBlocks({
     overBlockIndex !== null &&
     activeBlockIndex !== overBlockIndex &&
     activeBlockGroupId !== overBlockGroupId;
-  const dropIndicatorSide: "above" | "below" | null =
-    isCrossContainerDrag &&
-    overBlockGroupId === null &&
-    activeBlockIndex !== null &&
-    overBlockIndex !== null
-      ? activeBlockIndex < overBlockIndex
-        ? "below"
-        : "above"
-      : null;
+  const dropIndicatorSide: "above" | "below" | null = (() => {
+    if (!isCrossContainerDrag) return null;
+    if (overBlockGroupId !== null) return null;
+    if (activeBlockIndex === null || overBlockIndex === null) return null;
+    const natural: "above" | "below" =
+      activeBlockIndex < overBlockIndex ? "below" : "above";
+    // Mirror the handleDragEnd inversion: when leaving a group for loose
+    // territory, the indicator (and landing slot) sits between the group
+    // and the over block, not on its far side.
+    if (activeBlockGroupId !== null) {
+      return natural === "above" ? "below" : "above";
+    }
+    return natural;
+  })();
   const dropTargetGroupId: string | null = (() => {
     if (!activeParsed || activeParsed.kind !== "block") return null;
     if (!overParsed) return null;
@@ -473,7 +485,7 @@ function TemplateBlocks({
         items={topLevelSortableIds}
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-2">
+        <div className="flex flex-col gap-4">
           {renderItems.map((item) => {
             if (item.kind === "block") {
               return renderBlockAt(item.index);

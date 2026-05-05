@@ -204,6 +204,8 @@ export function BlockGroupContainer({
       className={cn("relative", "rounded-lg")}
       style={{
         ...sortableStyle,
+        marginTop: 2,
+        marginBottom: 2,
         borderStyle: "solid",
         borderColor: borderColorWithOpacity,
         borderWidth: 2,
