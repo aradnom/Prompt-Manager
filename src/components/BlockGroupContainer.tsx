@@ -1,6 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronRight, Group, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Group,
+  GripVertical,
+  Trash2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { LENGTH_LIMITS } from "@shared/limits";
 import type { TextBlockGroup } from "@/types/schema";
@@ -60,6 +68,11 @@ interface BlockGroupContainerProps {
   onUpdate: (patch: Partial<TextBlockGroup>) => void;
   onDelete: () => void;
   children: React.ReactNode;
+  /** Sortable id for the group itself. Required so groups can be dragged. */
+  sortableId: string;
+  /** True when an external block is being dragged onto this group; brightens
+   *  the panel so the user can see they're about to drop into it. */
+  isDropTarget?: boolean;
 }
 
 export function BlockGroupContainer({
@@ -68,7 +81,22 @@ export function BlockGroupContainer({
   onUpdate,
   onDelete,
   children,
+  sortableId,
+  isDropTarget,
 }: BlockGroupContainerProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sortableId });
+  const sortableStyle: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionsMounted, setActionsMounted] = useState(false);
   const [actionsClip, setActionsClip] = useState(true);
@@ -98,6 +126,17 @@ export function BlockGroupContainer({
       }, 40);
     }
   }, [menuOpen]);
+
+  // After releasing a drag, close the menu — the cursor likely isn't over
+  // the chip anymore and no mouseleave fired while isDragging suppressed it.
+  const prevDraggingRef = useRef(isDragging);
+  useEffect(() => {
+    if (prevDraggingRef.current && !isDragging) {
+      scheduleClose();
+    }
+    prevDraggingRef.current = isDragging;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging]);
 
   // Keep name draft in sync with prop changes from outside (server refetch),
   // but don't clobber an in-progress edit.
@@ -160,19 +199,24 @@ export function BlockGroupContainer({
 
   return (
     <div
+      ref={setNodeRef}
+      {...attributes}
       className={cn("relative", "rounded-lg")}
       style={{
+        ...sortableStyle,
         borderStyle: "solid",
         borderColor: borderColorWithOpacity,
         borderWidth: 2,
+        backgroundColor: isDropTarget
+          ? withOpacity(colorHex ?? DEFAULT_BORDER, 0.18)
+          : undefined,
+        transition: "background-color 0.15s ease-out",
       }}
     >
       {/* Group icon + hover-expanded menu, mirroring StackOutputBlock's
           -right-2 -top-3 placement onto the upper-left. */}
       <motion.div
-        layout
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        className="absolute -left-2 -top-3 z-20 flex items-center gap-1 px-1.5 py-1 rounded-md border shadow-md"
+        className="absolute -left-3 -top-3 z-20 flex items-center gap-1 px-1.5 py-1.5 pl-2 rounded-md border shadow-md"
         style={{
           borderColor,
           backgroundColor: SOLID_BG,
@@ -181,9 +225,32 @@ export function BlockGroupContainer({
           cancelClose();
           setMenuOpen(true);
         }}
-        onMouseLeave={scheduleClose}
+        onMouseLeave={() => {
+          if (!isDragging) scheduleClose();
+        }}
       >
-        <motion.div layout="position" className="flex items-center">
+        <AnimatePresence initial={false}>
+          {menuOpen && (
+            <motion.button
+              key="group-drag-handle"
+              type="button"
+              {...listeners}
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className={cn(
+                "flex items-center overflow-hidden cursor-grab active:cursor-grabbing hover:text-foreground",
+                !colorHex && "text-cyan-medium",
+              )}
+              style={colorHex ? { color: colorHex } : undefined}
+              aria-label="Drag group"
+            >
+              <GripVertical className="h-4 w-4" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+        <motion.div className="flex items-center">
           <Group
             className="h-3.5 w-3.5"
             style={{ color: colorHex ?? undefined }}
@@ -191,7 +258,6 @@ export function BlockGroupContainer({
         </motion.div>
         {isRenaming ? (
           <motion.input
-            layout="position"
             type="text"
             value={nameDraft}
             onChange={(e) => setNameDraft(e.target.value)}
@@ -218,7 +284,6 @@ export function BlockGroupContainer({
             <Tooltip>
               <TooltipTrigger asChild>
                 <motion.button
-                  layout="position"
                   type="button"
                   onClick={() => {
                     if (!menuOpen) return;
@@ -248,7 +313,6 @@ export function BlockGroupContainer({
           {actionsMounted && (
             <motion.div
               key="actions"
-              layout
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: "auto" }}
               exit={{ opacity: 0, width: 0 }}
@@ -382,7 +446,7 @@ export function BlockGroupContainer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="p-3 flex flex-col gap-4"
+            className="px-4 py-4 flex flex-col gap-4"
           >
             {children}
           </motion.div>

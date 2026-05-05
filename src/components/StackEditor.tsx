@@ -14,12 +14,16 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverEvent,
+  CollisionDetection,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -278,27 +282,210 @@ export function StackEditor({ stack }: StackEditorProps) {
     }),
   );
 
+  // Sortable ids: blocks use `b-${index}`, groups use `g-${groupId}`.
+  const blockSortId = (i: number) => `b-${i}`;
+  const groupSortId = (id: string) => `g-${id}`;
+  const parseSortId = (
+    id: string,
+  ):
+    | { kind: "block"; index: number }
+    | { kind: "group"; groupId: string }
+    | null => {
+    if (id.startsWith("b-")) {
+      const n = parseInt(id.slice(2), 10);
+      return Number.isFinite(n) ? { kind: "block", index: n } : null;
+    }
+    if (id.startsWith("g-")) return { kind: "group", groupId: id.slice(2) };
+    return null;
+  };
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [overDragId, setOverDragId] = useState<string | null>(null);
+
+  // When dragging a block, exclude group containers (g-*) from collision
+  // candidates. Group rects roughly center on their single child block,
+  // creating ties with closestCenter that flip the over target erratically
+  // mid-drag. Letting the inner block always be the over target keeps the
+  // visual stable; the cross-container drop logic still appends to the group.
+  const collisionDetection: CollisionDetection = (args) => {
+    const isBlock = String(args.active.id).startsWith("b-");
+    if (!isBlock) return closestCenter(args);
+    return closestCenter({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(
+        (c) => !String(c.id).startsWith("g-"),
+      ),
+    });
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverDragId(over ? String(over.id) : null);
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragId(null);
+    setOverDragId(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    setOverDragId(null);
     const { active, over } = event;
 
     if (!over || active.id === over.id || !stackWithBlocks?.blocks) {
       return;
     }
 
-    const oldIndex = active.id as number;
-    const newIndex = over.id as number;
+    const activeParsed = parseSortId(String(active.id));
+    const overParsed = parseSortId(String(over.id));
+    if (!activeParsed || !overParsed) return;
 
-    const reorderedBlocks = arrayMove(
-      stackWithBlocks.blocks,
-      oldIndex,
-      newIndex,
-    );
-    const blockIds = reorderedBlocks.map((block) => block.id);
+    const blocks = stackWithBlocks.blocks;
+    const groups = stackWithBlocks.blockGroups ?? [];
 
-    reorderBlocksMutation.mutate({
-      stackId: stack.id,
-      blockIds,
+    // Helper: resync a group's blockIds order against a flat block id list.
+    const resyncGroupOrder = (
+      g: TextBlockGroup,
+      flat: number[],
+      mutated: { changed: boolean },
+    ) => {
+      const positionOf = new Map(flat.map((id, i) => [id, i]));
+      const sorted = g.blockIds
+        .slice()
+        .sort((a, b) => (positionOf.get(a) ?? 0) - (positionOf.get(b) ?? 0));
+      if (
+        sorted.length !== g.blockIds.length ||
+        sorted.some((id, i) => id !== g.blockIds[i])
+      ) {
+        mutated.changed = true;
+      }
+      return { ...g, blockIds: sorted };
+    };
+
+    // Group drag: move the active group's whole block range to a new spot.
+    if (activeParsed.kind === "group") {
+      const sourceGroup = groups.find((g) => g.id === activeParsed.groupId);
+      if (!sourceGroup) return;
+      const groupIdSet = new Set(sourceGroup.blockIds);
+      const groupBlocksInOrder = blocks.filter((b) => groupIdSet.has(b.id));
+      const sourceFirstIdx = blocks.findIndex((b) => groupIdSet.has(b.id));
+
+      let targetBlockId: number | undefined;
+      let side: "above" | "below" = "below";
+      if (overParsed.kind === "block") {
+        targetBlockId = blocks[overParsed.index]?.id;
+        side = sourceFirstIdx < overParsed.index ? "below" : "above";
+      } else {
+        const targetGroup = groups.find((g) => g.id === overParsed.groupId);
+        if (!targetGroup) return;
+        const targetIds = new Set(targetGroup.blockIds);
+        const inOrder = blocks.filter((b) => targetIds.has(b.id));
+        const targetFirstIdx = blocks.findIndex((b) => targetIds.has(b.id));
+        side = sourceFirstIdx < targetFirstIdx ? "below" : "above";
+        targetBlockId =
+          side === "below" ? inOrder[inOrder.length - 1]?.id : inOrder[0]?.id;
+      }
+      if (targetBlockId === undefined) return;
+
+      const without = blocks.filter((b) => !groupIdSet.has(b.id));
+      const targetIdx = without.findIndex((b) => b.id === targetBlockId);
+      if (targetIdx === -1) return;
+      const insertAt = side === "below" ? targetIdx + 1 : targetIdx;
+      const reordered = [
+        ...without.slice(0, insertAt),
+        ...groupBlocksInOrder,
+        ...without.slice(insertAt),
+      ];
+      reorderBlocksMutation.mutate({
+        stackId: stack.id,
+        blockIds: reordered.map((b) => b.id),
+      });
+      return;
+    }
+
+    // active is a block. Determine over-block + target group.
+    const oldIndex = activeParsed.index;
+    const oldGroupId = indexToGroupId.get(oldIndex) ?? null;
+    let overIndex: number;
+    let overGroupId: string | null;
+    let effectiveSide: "above" | "below" = "below";
+
+    const lastIdxOfGroup = (groupId: string): number => {
+      const target = groups.find((g) => g.id === groupId);
+      if (!target) return -1;
+      const targetIds = new Set(target.blockIds);
+      const inOrder = blocks.filter((b) => targetIds.has(b.id));
+      const lastId = inOrder[inOrder.length - 1]?.id;
+      return lastId !== undefined
+        ? blocks.findIndex((b) => b.id === lastId)
+        : -1;
+    };
+
+    if (overParsed.kind === "group") {
+      // Dropped on a group's chrome — append to end of that group.
+      const lastIdx = lastIdxOfGroup(overParsed.groupId);
+      if (lastIdx === -1) return;
+      overIndex = lastIdx;
+      overGroupId = overParsed.groupId;
+      effectiveSide = "below";
+    } else {
+      overIndex = overParsed.index;
+      overGroupId = indexToGroupId.get(overIndex) ?? null;
+      effectiveSide = oldIndex < overIndex ? "below" : "above";
+      // Cross-container drop INTO a group always lands at the group's end —
+      // ordering within the group is done with a follow-up reorder.
+      if (overGroupId !== null && overGroupId !== oldGroupId) {
+        const lastIdx = lastIdxOfGroup(overGroupId);
+        if (lastIdx !== -1) {
+          overIndex = lastIdx;
+          effectiveSide = "below";
+        }
+      }
+    }
+
+    if (oldIndex === overIndex && oldGroupId === overGroupId) return;
+
+    const isCross = oldGroupId !== overGroupId;
+    let newIndex = overIndex;
+    if (isCross || overParsed.kind === "group") {
+      const targetLogical =
+        effectiveSide === "below" ? overIndex + 1 : overIndex;
+      newIndex = oldIndex < targetLogical ? targetLogical - 1 : targetLogical;
+    }
+
+    const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex);
+    const blockIds = reorderedBlocks.map((b) => b.id);
+    const activeBlockId = blocks[oldIndex].id;
+
+    reorderBlocksMutation.mutate({ stackId: stack.id, blockIds });
+
+    // Membership: dragged block now belongs to overGroupId (or stays if same).
+    const newGroupId = isCross ? overGroupId : oldGroupId;
+    const mutated = { changed: false };
+    const updatedGroups = groups.map((g) => {
+      const wasMember = g.blockIds.includes(activeBlockId);
+      const shouldBeMember = g.id === newGroupId;
+      let ids = g.blockIds;
+      if (wasMember && !shouldBeMember) {
+        ids = ids.filter((id) => id !== activeBlockId);
+        mutated.changed = true;
+      } else if (!wasMember && shouldBeMember) {
+        ids = [...ids, activeBlockId];
+        mutated.changed = true;
+      }
+      return resyncGroupOrder({ ...g, blockIds: ids }, blockIds, mutated);
     });
+    if (mutated.changed) {
+      setBlockGroupsMutation.mutate({
+        stackId: stack.id,
+        blockGroups: updatedGroups,
+      });
+    }
   };
 
   const handleAddExistingBlock = (blockId: number) => {
@@ -657,6 +844,91 @@ export function StackEditor({ stack }: StackEditorProps) {
     return items;
   }, [stackWithBlocks?.blocks, stackWithBlocks?.blockGroups]);
 
+  // Map every block index to the id of the group it belongs to (or null if
+  // loose). Used by drag handling to detect cross-container drags.
+  const indexToGroupId = useMemo(() => {
+    const map = new Map<number, string | null>();
+    renderItems.forEach((item) => {
+      if (item.kind === "block") {
+        map.set(item.index, null);
+      } else {
+        item.indices.forEach((i) => map.set(i, item.group.id));
+      }
+    });
+    return map;
+  }, [renderItems]);
+
+  const activeParsedDrag = activeDragId ? parseSortId(activeDragId) : null;
+  const overParsedDrag = overDragId ? parseSortId(overDragId) : null;
+  const activeBlockIndex =
+    activeParsedDrag?.kind === "block" ? activeParsedDrag.index : null;
+  const overBlockIndex =
+    overParsedDrag?.kind === "block" ? overParsedDrag.index : null;
+  const activeBlockGroupId =
+    activeBlockIndex !== null
+      ? (indexToGroupId.get(activeBlockIndex) ?? null)
+      : null;
+  const overBlockGroupId =
+    overBlockIndex !== null
+      ? (indexToGroupId.get(overBlockIndex) ?? null)
+      : null;
+  const isCrossContainerDrag =
+    activeBlockIndex !== null &&
+    overBlockIndex !== null &&
+    activeBlockIndex !== overBlockIndex &&
+    activeBlockGroupId !== overBlockGroupId;
+  // Drop line only when crossing INTO loose territory. Crossing into a group
+  // is communicated via group highlight + always-append-to-end on drop.
+  const dropIndicatorSide: "above" | "below" | null =
+    isCrossContainerDrag &&
+    overBlockGroupId === null &&
+    activeBlockIndex !== null &&
+    overBlockIndex !== null
+      ? activeBlockIndex < overBlockIndex
+        ? "below"
+        : "above"
+      : null;
+  // Which group (if any) is the highlighted drop target. Active must be a
+  // block from outside the target group (or active over the group itself).
+  const dropTargetGroupId: string | null = (() => {
+    if (!activeParsedDrag || activeParsedDrag.kind !== "block") return null;
+    if (!overParsedDrag) return null;
+    if (overParsedDrag.kind === "group") {
+      return activeBlockGroupId === overParsedDrag.groupId
+        ? null
+        : overParsedDrag.groupId;
+    }
+    if (overBlockGroupId !== null && overBlockGroupId !== activeBlockGroupId) {
+      return overBlockGroupId;
+    }
+    return null;
+  })();
+
+  // The active block being dragged — used to render a DragOverlay so the
+  // visual stays under the cursor across nested SortableContexts.
+  const activeBlock =
+    activeBlockIndex !== null && stackWithBlocks?.blocks
+      ? stackWithBlocks.blocks[activeBlockIndex]
+      : null;
+  const activeBlockBorderColor = (() => {
+    if (!activeBlock || !activeBlockGroupId) return null;
+    const g = (stackWithBlocks?.blockGroups ?? []).find(
+      (g) => g.id === activeBlockGroupId,
+    );
+    return g ? groupColorHex(g.color) : null;
+  })();
+
+  // Top-level sortable items: a string id per renderItem.
+  const topLevelSortableIds = useMemo(
+    () =>
+      renderItems.map((item) =>
+        item.kind === "block"
+          ? blockSortId(item.index)
+          : groupSortId(item.group.id),
+      ),
+    [renderItems],
+  );
+
   return (
     <>
       <Card className="relative h-full flex flex-col">
@@ -862,14 +1134,17 @@ export function StackEditor({ stack }: StackEditorProps) {
             ) : (
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={collisionDetection}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragCancel={handleDragCancel}
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex flex-col gap-4">
                   {stackWithBlocks?.blocks &&
                   stackWithBlocks.blocks.length > 0 ? (
                     <SortableContext
-                      items={stackWithBlocks.blocks.map((_, i) => i)}
+                      items={topLevelSortableIds}
                       strategy={verticalListSortingStrategy}
                     >
                       {(() => {
@@ -877,10 +1152,24 @@ export function StackEditor({ stack }: StackEditorProps) {
                         const renderBlockAt = (
                           index: number,
                           borderColor?: string | null,
+                          inGroup?: boolean,
                         ) => {
                           const block = blocks[index];
+                          const suppress =
+                            isCrossContainerDrag && index !== activeBlockIndex;
+                          const indicator =
+                            isCrossContainerDrag && index === overBlockIndex
+                              ? dropIndicatorSide
+                              : null;
                           return (
-                            <SortableBlock key={index} id={index}>
+                            <SortableBlock
+                              key={index}
+                              id={blockSortId(index)}
+                              suppressTransform={suppress}
+                              dropIndicator={indicator}
+                              indicatorColor={borderColor ?? undefined}
+                              compactHandle={inGroup}
+                            >
                               {editingBlockId === block.id ? (
                                 <motion.div
                                   initial={{ opacity: 0, y: 16 }}
@@ -954,6 +1243,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                             return renderBlockAt(item.index);
                           }
                           const groupBorder = groupColorHex(item.group.color);
+                          const innerIds = item.indices.map(blockSortId);
                           return (
                             <BlockGroupContainer
                               key={item.group.id}
@@ -963,10 +1253,17 @@ export function StackEditor({ stack }: StackEditorProps) {
                                 handleUpdateGroup(item.group.id, patch)
                               }
                               onDelete={() => handleDeleteGroup(item.group.id)}
+                              sortableId={groupSortId(item.group.id)}
+                              isDropTarget={dropTargetGroupId === item.group.id}
                             >
-                              {item.indices.map((idx) =>
-                                renderBlockAt(idx, groupBorder),
-                              )}
+                              <SortableContext
+                                items={innerIds}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                {item.indices.map((idx) =>
+                                  renderBlockAt(idx, groupBorder, true),
+                                )}
+                              </SortableContext>
                             </BlockGroupContainer>
                           );
                         });
@@ -982,6 +1279,25 @@ export function StackEditor({ stack }: StackEditorProps) {
                       </div>
                     )
                   )}
+
+                  <DragOverlay dropAnimation={null}>
+                    {activeBlock ? (
+                      <div style={{ pointerEvents: "none" }}>
+                        <TextBlock
+                          block={activeBlock}
+                          isDisabled={
+                            stackWithBlocks?.disabledBlockIds?.includes(
+                              activeBlock.id,
+                            ) ?? false
+                          }
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                          style={stack.style}
+                          borderColorOverride={activeBlockBorderColor}
+                        />
+                      </div>
+                    ) : null}
+                  </DragOverlay>
 
                   {isCreatingNew && (
                     <motion.div
