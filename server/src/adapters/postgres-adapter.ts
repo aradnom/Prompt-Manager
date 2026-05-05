@@ -1480,12 +1480,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .executeTakeFirstOrThrow();
 
       // 2. Create Initial Revision
+      // `input.blockGroups` is the raw cipher string at this boundary (router
+      // encrypts before calling), or null when no groups were provided.
+      const initialBlockGroupsCipher = (
+        input as unknown as { blockGroups?: unknown }
+      ).blockGroups;
       const revisionResult = await trx
         .insertInto("stack_revisions")
         .values({
           stack_id: stackResult.id,
           block_ids: input.blockIds ?? [],
           disabled_block_ids: input.disabledBlockIds ?? [],
+          block_groups:
+            typeof initialBlockGroupsCipher === "string"
+              ? initialBlockGroupsCipher
+              : null,
           created_at: now,
           updated_at: now,
           user_id: input.userId ?? null,
@@ -3004,6 +3013,10 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     input: CreateStackTemplateInput,
   ): Promise<StackTemplate> {
     const now = new Date();
+    // `input.blockGroups` is the raw cipher string at this boundary (the
+    // router encrypts before calling), or null when no groups were provided.
+    const blockGroupsCipher = (input as unknown as { blockGroups?: unknown })
+      .blockGroups;
     const result = await this.db
       .insertInto("stack_templates")
       .values({
@@ -3015,6 +3028,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         negative: input.negative ?? false,
         style: input.style ?? null,
         notes: input.notes ?? null,
+        block_groups:
+          typeof blockGroupsCipher === "string" ? blockGroupsCipher : null,
         user_id: input.userId ?? null,
         created_at: now,
         updated_at: now,
@@ -3052,6 +3067,14 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     if (updates.negative !== undefined) updateData.negative = updates.negative;
     if (updates.style !== undefined) updateData.style = updates.style ?? null;
     if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
+    // `updates.blockGroups` at this layer is the raw cipher string (or null)
+    // — the router encrypted it before calling the adapter.
+    const blockGroupsUpdate = (updates as unknown as { blockGroups?: unknown })
+      .blockGroups;
+    if (blockGroupsUpdate !== undefined) {
+      updateData.block_groups =
+        typeof blockGroupsUpdate === "string" ? blockGroupsUpdate : null;
+    }
 
     const result = await this.db
       .updateTable("stack_templates")
@@ -3838,6 +3861,11 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       negative: row.negative,
       style: row.style ?? null,
       notes: row.notes,
+      // Raw cipher string at this layer; the router decrypts and JSON.parses
+      // before the value escapes the server boundary.
+      blockGroups: row.block_groups as unknown as NonNullable<
+        StackTemplate["blockGroups"]
+      > | null,
       userId: row.user_id,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
