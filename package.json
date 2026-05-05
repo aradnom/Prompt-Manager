@@ -18,7 +18,8 @@
     "migrate:down": "tsx server/src/scripts/migrate.ts down",
     "migrate:check": "tsx server/src/scripts/migrate-check.ts",
     "migrate:user-content": "tsx server/src/scripts/migrate-user-content.ts",
-    "deploy": "deploy/deploy.sh"
+    "deploy": "deploy/deploy.sh",
+    "tw-scs": "npx @laststance/tailwind-suggest-canonical-classes 'src/**/*.{tsx,jsx,html}'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

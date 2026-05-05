@@ -14,7 +14,7 @@ export function LMStudioCorsWarning() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.2 }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] max-w-xl pointer-events-none"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-60 max-w-xl pointer-events-none"
         >
           <div className="pointer-events-auto bg-magenta-light text-foreground px-4 py-3 rounded-md shadow-lg border border-magenta-medium/50 flex items-start gap-3">
             <div className="flex-1 text-sm">
