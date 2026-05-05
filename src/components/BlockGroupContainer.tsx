@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Eye,
+  EyeOff,
   Group,
   GripVertical,
   Trash2,
@@ -73,6 +75,12 @@ interface BlockGroupContainerProps {
   /** True when an external block is being dragged onto this group; brightens
    *  the panel so the user can see they're about to drop into it. */
   isDropTarget?: boolean;
+  /** Aggregate disabled state of the group's blocks: "all" disabled,
+   *  "none" disabled, or a "mixed" set. Drives the toggle button's icon
+   *  and the click semantics (mixed → disable-all). */
+  disabledState?: "all" | "none" | "mixed";
+  /** Toggle disabled state for every block in the group. */
+  onToggleDisable?: () => void;
 }
 
 export function BlockGroupContainer({
@@ -83,6 +91,8 @@ export function BlockGroupContainer({
   children,
   sortableId,
   isDropTarget,
+  disabledState,
+  onToggleDisable,
 }: BlockGroupContainerProps) {
   const {
     attributes,
@@ -332,7 +342,9 @@ export function BlockGroupContainer({
                       type="button"
                       onClick={() => onUpdate({ collapsed: !group.collapsed })}
                       className="px-1.5 rounded hover:bg-cyan-dark/40 transition-colors cursor-pointer text-cyan-medium hover:text-foreground"
-                      aria-label={group.collapsed ? "Expand" : "Collapse"}
+                      aria-label={
+                        group.collapsed ? "Expand blocks" : "Collapse blocks"
+                      }
                     >
                       {group.collapsed ? (
                         <ChevronRight className="h-3.5 w-3.5" />
@@ -342,10 +354,40 @@ export function BlockGroupContainer({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {group.collapsed ? "Expand" : "Collapse"}
+                    {group.collapsed ? "Expand blocks" : "Collapse blocks"}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              {onToggleDisable && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={onToggleDisable}
+                        className="px-1.5 rounded hover:bg-cyan-dark/40 transition-colors cursor-pointer text-cyan-medium hover:text-foreground"
+                        aria-label={
+                          disabledState === "all"
+                            ? "Enable all blocks in group"
+                            : "Disable all blocks in group"
+                        }
+                      >
+                        {disabledState === "all" ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {disabledState === "all"
+                        ? "Enable all blocks in group"
+                        : "Disable all blocks in group"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
 
               {/* Current-color swatch with hover-revealed vertical palette. */}
               <div

@@ -1253,6 +1253,22 @@ export function StackEditor({ stack }: StackEditorProps) {
                           }
                           const groupBorder = groupColorHex(item.group.color);
                           const innerIds = item.indices.map(blockSortId);
+                          const groupBlockIds = item.indices
+                            .map((i) => stackWithBlocks?.blocks?.[i]?.id)
+                            .filter(
+                              (id): id is number => typeof id === "number",
+                            );
+                          const currentDisabled =
+                            stackWithBlocks?.disabledBlockIds ?? [];
+                          const disabledCount = groupBlockIds.filter((id) =>
+                            currentDisabled.includes(id),
+                          ).length;
+                          const groupDisabledState: "all" | "none" | "mixed" =
+                            groupBlockIds.length === 0 || disabledCount === 0
+                              ? "none"
+                              : disabledCount === groupBlockIds.length
+                                ? "all"
+                                : "mixed";
                           return (
                             <BlockGroupContainer
                               key={item.group.id}
@@ -1264,6 +1280,25 @@ export function StackEditor({ stack }: StackEditorProps) {
                               onDelete={() => handleDeleteGroup(item.group.id)}
                               sortableId={groupSortId(item.group.id)}
                               isDropTarget={dropTargetGroupId === item.group.id}
+                              disabledState={groupDisabledState}
+                              onToggleDisable={async () => {
+                                // mixed/none → disable-all; all → enable-all.
+                                // toggleBlockDisabledInStack does a read-
+                                // modify-write on the revision's disabled_
+                                // block_ids array, so concurrent calls race
+                                // and clobber each other. Await sequentially.
+                                const targetDisabled =
+                                  groupDisabledState !== "all";
+                                for (const id of groupBlockIds) {
+                                  const isDisabled =
+                                    currentDisabled.includes(id);
+                                  if (isDisabled !== targetDisabled) {
+                                    await toggleBlockDisabledMutation.mutateAsync(
+                                      { stackId: stack.id, blockId: id },
+                                    );
+                                  }
+                                }
+                              }}
                             >
                               <SortableContext
                                 items={innerIds}

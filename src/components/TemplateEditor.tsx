@@ -60,6 +60,7 @@ function TemplateBlocks({
   onUpdateGroup,
   onDeleteGroup,
   onToggleDisable,
+  onToggleDisableGroup,
 }: {
   blockIds: number[];
   disabledBlockIds: number[];
@@ -74,6 +75,10 @@ function TemplateBlocks({
   onUpdateGroup?: (groupId: string, patch: Partial<TextBlockGroup>) => void;
   onDeleteGroup?: (groupId: string) => void;
   onToggleDisable?: (blockId: number) => void;
+  onToggleDisableGroup?: (
+    blockIds: number[],
+    disabledState: "all" | "none" | "mixed",
+  ) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -491,6 +496,18 @@ function TemplateBlocks({
               return renderBlockAt(item.index);
             }
             const innerIds = item.indices.map(blockSortId);
+            const groupBlockIds = item.indices
+              .map((i) => blockIds[i])
+              .filter((id): id is number => typeof id === "number");
+            const disabledCount = groupBlockIds.filter((id) =>
+              disabledBlockIds.includes(id),
+            ).length;
+            const groupDisabledState: "all" | "none" | "mixed" =
+              groupBlockIds.length === 0 || disabledCount === 0
+                ? "none"
+                : disabledCount === groupBlockIds.length
+                  ? "all"
+                  : "mixed";
             return (
               <BlockGroupContainer
                 key={item.group.id}
@@ -500,6 +517,13 @@ function TemplateBlocks({
                 onDelete={() => onDeleteGroup?.(item.group.id)}
                 sortableId={groupSortId(item.group.id)}
                 isDropTarget={dropTargetGroupId === item.group.id}
+                disabledState={groupDisabledState}
+                onToggleDisable={
+                  onToggleDisableGroup
+                    ? () =>
+                        onToggleDisableGroup(groupBlockIds, groupDisabledState)
+                    : undefined
+                }
               >
                 <SortableContext
                   items={innerIds}
@@ -835,6 +859,17 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
             updateMutation.mutate({
               id: template.id,
               disabledBlockIds: newDisabled,
+            });
+          }}
+          onToggleDisableGroup={(groupBlockIds, disabledState) => {
+            const next =
+              disabledState === "all"
+                ? disabledBlockIds.filter((id) => !groupBlockIds.includes(id))
+                : Array.from(new Set([...disabledBlockIds, ...groupBlockIds]));
+            setDisabledBlockIds(next);
+            updateMutation.mutate({
+              id: template.id,
+              disabledBlockIds: next,
             });
           }}
         />
