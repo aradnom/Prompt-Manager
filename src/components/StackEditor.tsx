@@ -1299,6 +1299,41 @@ export function StackEditor({ stack }: StackEditorProps) {
                                   }
                                 }
                               }}
+                              onRandomize={
+                                groupBlockIds.length < 2
+                                  ? undefined
+                                  : async () => {
+                                      const enabledIds = groupBlockIds.filter(
+                                        (id) => !currentDisabled.includes(id),
+                                      );
+                                      // Exclude the sole currently-enabled
+                                      // block so randomize always changes
+                                      // something. With 0 or 2+ enabled,
+                                      // pick from the full set.
+                                      const candidates =
+                                        enabledIds.length === 1
+                                          ? groupBlockIds.filter(
+                                              (id) => id !== enabledIds[0],
+                                            )
+                                          : groupBlockIds;
+                                      const winner =
+                                        candidates[
+                                          Math.floor(
+                                            Math.random() * candidates.length,
+                                          )
+                                        ];
+                                      for (const id of groupBlockIds) {
+                                        const shouldBeDisabled = id !== winner;
+                                        const isDisabled =
+                                          currentDisabled.includes(id);
+                                        if (isDisabled !== shouldBeDisabled) {
+                                          await toggleBlockDisabledMutation.mutateAsync(
+                                            { stackId: stack.id, blockId: id },
+                                          );
+                                        }
+                                      }
+                                    }
+                              }
                             >
                               <SortableContext
                                 items={innerIds}

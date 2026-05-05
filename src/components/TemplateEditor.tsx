@@ -61,6 +61,7 @@ function TemplateBlocks({
   onDeleteGroup,
   onToggleDisable,
   onToggleDisableGroup,
+  onRandomizeGroup,
 }: {
   blockIds: number[];
   disabledBlockIds: number[];
@@ -79,6 +80,7 @@ function TemplateBlocks({
     blockIds: number[],
     disabledState: "all" | "none" | "mixed",
   ) => void;
+  onRandomizeGroup?: (blockIds: number[]) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -524,6 +526,11 @@ function TemplateBlocks({
                         onToggleDisableGroup(groupBlockIds, groupDisabledState)
                     : undefined
                 }
+                onRandomize={
+                  onRandomizeGroup && groupBlockIds.length >= 2
+                    ? () => onRandomizeGroup(groupBlockIds)
+                    : undefined
+                }
               >
                 <SortableContext
                   items={innerIds}
@@ -859,6 +866,27 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
             updateMutation.mutate({
               id: template.id,
               disabledBlockIds: newDisabled,
+            });
+          }}
+          onRandomizeGroup={(groupBlockIds) => {
+            const enabledIds = groupBlockIds.filter(
+              (id) => !disabledBlockIds.includes(id),
+            );
+            const candidates =
+              enabledIds.length === 1
+                ? groupBlockIds.filter((id) => id !== enabledIds[0])
+                : groupBlockIds;
+            const winner =
+              candidates[Math.floor(Math.random() * candidates.length)];
+            const groupSet = new Set(groupBlockIds);
+            const next = [
+              ...disabledBlockIds.filter((id) => !groupSet.has(id)),
+              ...groupBlockIds.filter((id) => id !== winner),
+            ];
+            setDisabledBlockIds(next);
+            updateMutation.mutate({
+              id: template.id,
+              disabledBlockIds: next,
             });
           }}
           onToggleDisableGroup={(groupBlockIds, disabledState) => {

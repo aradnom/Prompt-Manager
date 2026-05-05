@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Dices,
   Eye,
   EyeOff,
   Group,
@@ -81,6 +82,9 @@ interface BlockGroupContainerProps {
   disabledState?: "all" | "none" | "mixed";
   /** Toggle disabled state for every block in the group. */
   onToggleDisable?: () => void;
+  /** Pick one random block in the group to leave enabled and disable the
+   *  rest. Hidden when the group has fewer than 2 blocks. */
+  onRandomize?: () => void;
 }
 
 export function BlockGroupContainer({
@@ -93,6 +97,7 @@ export function BlockGroupContainer({
   isDropTarget,
   disabledState,
   onToggleDisable,
+  onRandomize,
 }: BlockGroupContainerProps) {
   const {
     attributes,
@@ -384,6 +389,26 @@ export function BlockGroupContainer({
                       {disabledState === "all"
                         ? "Enable all blocks in group"
                         : "Disable all blocks in group"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {onRandomize && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={onRandomize}
+                        className="px-1.5 rounded hover:bg-cyan-dark/40 transition-colors cursor-pointer text-cyan-medium hover:text-foreground"
+                        aria-label="Randomly enable one block in group"
+                      >
+                        <Dices className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Randomly enable one block in group
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
