@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -92,25 +94,94 @@ function TemplateBlocks({
   const ordered = blockIds
     .map((id, index) => {
       const block = blockMap.get(id);
-      return block ? { block, sortId: index } : null;
+      return block ? { block, sortId: `t-${index}` } : null;
     })
     .filter((item): item is NonNullable<typeof item> => item != null);
 
+  const [activeSortId, setActiveSortId] = useState<string | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveSortId(String(event.active.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveSortId(null);
     const { active, over } = event;
     if (!over || active.id === over.id || !onReorder) return;
 
-    const oldIndex = active.id as number;
-    const newIndex = over.id as number;
+    const oldIndex = parseInt(String(active.id).slice(2), 10);
+    const newIndex = parseInt(String(over.id).slice(2), 10);
+    if (!Number.isFinite(oldIndex) || !Number.isFinite(newIndex)) return;
 
     onReorder(arrayMove(blockIds, oldIndex, newIndex));
   };
+
+  const renderTile = (
+    block: NonNullable<ReturnType<typeof blockMap.get>>,
+    sortId: string,
+    isDisabled: boolean,
+  ) => (
+    <div
+      className={cn(
+        "relative border border-cyan-medium/30 rounded p-3 bg-cyan-dark/30 group",
+        isDisabled && "opacity-40 grayscale contrast-75",
+      )}
+    >
+      <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100">
+        {onToggleDisable && (
+          <button
+            onClick={() => onToggleDisable(block.id)}
+            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+            aria-label={
+              isDisabled
+                ? "Enable block in this template"
+                : "Disable block in this template"
+            }
+          >
+            {isDisabled ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        )}
+        {onRemoveBlock && (
+          <button
+            onClick={() => onRemoveBlock(parseInt(sortId.slice(2), 10))}
+            className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
+            aria-label="Remove block from template"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs font-mono text-cyan-medium">
+          {block.name || block.displayId}
+        </span>
+        {block.name && (
+          <span className="text-xs font-mono text-cyan-medium/60">
+            {block.displayId}
+          </span>
+        )}
+      </div>
+      <p className="text-sm whitespace-pre-wrap font-mono text-foreground/80">
+        {block.text}
+      </p>
+    </div>
+  );
+
+  const activeItem = activeSortId
+    ? ordered.find((item) => item.sortId === activeSortId)
+    : null;
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveSortId(null)}
     >
       <SortableContext
         items={ordered.map((item) => item.sortId)}
@@ -121,59 +192,21 @@ function TemplateBlocks({
             const isDisabled = disabledBlockIds.includes(block.id);
             return (
               <SortableBlock key={sortId} id={sortId}>
-                <div
-                  className={cn(
-                    "relative border border-cyan-medium/30 rounded p-3 bg-cyan-dark/30 group",
-                    isDisabled && "opacity-40 grayscale contrast-75",
-                  )}
-                >
-                  <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100">
-                    {onToggleDisable && (
-                      <button
-                        onClick={() => onToggleDisable(block.id)}
-                        className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                        aria-label={
-                          isDisabled
-                            ? "Enable block in this template"
-                            : "Disable block in this template"
-                        }
-                      >
-                        {isDisabled ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    )}
-                    {onRemoveBlock && (
-                      <button
-                        onClick={() => onRemoveBlock(sortId)}
-                        className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
-                        aria-label="Remove block from template"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-mono text-cyan-medium">
-                      {block.name || block.displayId}
-                    </span>
-                    {block.name && (
-                      <span className="text-xs font-mono text-cyan-medium/60">
-                        {block.displayId}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap font-mono text-foreground/80">
-                    {block.text}
-                  </p>
-                </div>
+                {renderTile(block, sortId, isDisabled)}
               </SortableBlock>
             );
           })}
         </div>
       </SortableContext>
+      <DragOverlay dropAnimation={null}>
+        {activeItem
+          ? renderTile(
+              activeItem.block,
+              activeItem.sortId,
+              disabledBlockIds.includes(activeItem.block.id),
+            )
+          : null}
+      </DragOverlay>
     </DndContext>
   );
 }
