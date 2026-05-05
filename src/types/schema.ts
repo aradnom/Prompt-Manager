@@ -166,6 +166,12 @@ export interface StackTemplate {
   negative: boolean;
   style: OutputStyle;
   notes: string | null;
+  /**
+   * Decrypted, parsed group list. Same boundary semantics as
+   * `BlockStack.blockGroups`: holds the raw cipher at the adapter layer and is
+   * replaced by the decrypted structure inside the tRPC router.
+   */
+  blockGroups: TextBlockGroup[] | null;
   userId: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -180,6 +186,7 @@ export interface CreateStackTemplateInput {
   negative?: boolean;
   style?: OutputStyle;
   notes?: string;
+  blockGroups?: TextBlockGroup[] | null;
   userId?: number;
 }
 
@@ -191,6 +198,7 @@ export interface UpdateStackTemplateInput {
   negative?: boolean;
   style?: OutputStyle;
   notes?: string | null;
+  blockGroups?: TextBlockGroup[] | null;
 }
 
 export interface BlockWithRevisions extends Block {
@@ -249,6 +257,7 @@ export interface CreateStackInput {
   disabledBlockIds?: number[];
   folderId?: number | null;
   labels?: string[];
+  blockGroups?: TextBlockGroup[] | null;
 }
 
 export interface UpdateStackInput {

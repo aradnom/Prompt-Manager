@@ -144,6 +144,7 @@ export interface StackTemplatesTable {
     "t5" | "clip" | null
   >;
   notes: ColumnType<string | null, string | null, string | null>;
+  block_groups: ColumnType<string | null, string | null, string | null>;
   user_id: number | null;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
