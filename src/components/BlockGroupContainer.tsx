@@ -46,6 +46,10 @@ export function groupColorHex(color: string | null): string | null {
 }
 
 const DEFAULT_BORDER = "var(--color-cyan-medium)";
+// Tweak this 0–1 to adjust the group border/menu chrome opacity.
+const BORDER_OPACITY = 0.7;
+const withOpacity = (color: string, opacity: number): string =>
+  `color-mix(in srgb, ${color} ${Math.round(opacity * 100)}%, transparent)`;
 // Solid app background — used inline so the menu can never bleed through to
 // blocks underneath, regardless of which Tailwind classes survive purge.
 const SOLID_BG = "#0f0535";
@@ -148,16 +152,19 @@ export function BlockGroupContainer({
   };
 
   const colorHex = groupColorHex(group.color);
+  const borderColorWithOpacity = withOpacity(
+    colorHex ?? DEFAULT_BORDER,
+    BORDER_OPACITY,
+  );
   const borderColor = colorHex ?? DEFAULT_BORDER;
 
   return (
     <div
-      className={cn("relative", group.collapsed && "rounded-lg")}
+      className={cn("relative", "rounded-lg")}
       style={{
         borderStyle: "solid",
-        borderColor,
-        ...(group.collapsed ? { borderWidth: 2 } : null),
-        ...(!group.collapsed ? { borderLeftWidth: 2 } : null),
+        borderColor: borderColorWithOpacity,
+        borderWidth: 2,
       }}
     >
       {/* Group icon + hover-expanded menu, mirroring StackOutputBlock's
@@ -204,7 +211,7 @@ export function BlockGroupContainer({
             maxLength={LENGTH_LIMITS.blockGroupName}
             placeholder="Group name"
             autoFocus
-            className="px-2 py-0.5 text-xs font-mono bg-cyan-dark/30 border border-cyan-medium/40 rounded outline-none focus:border-cyan-light w-32"
+            className="px-2 py-0.5 text-xs bg-cyan-dark/30 border border-cyan-medium/40 rounded-sm outline-none focus:border-cyan-light w-32"
           />
         ) : (
           <TooltipProvider delayDuration={0}>
