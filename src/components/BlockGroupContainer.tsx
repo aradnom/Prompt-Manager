@@ -340,6 +340,67 @@ export function BlockGroupContainer({
               className="flex items-center gap-1"
               style={{ overflow: actionsClip ? "hidden" : "visible" }}
             >
+              {/* Current-color swatch with hover-revealed vertical palette. */}
+              <div
+                className="relative flex items-center"
+                onMouseEnter={() => {
+                  cancelColorClose();
+                  setColorOpen(true);
+                }}
+                onMouseLeave={scheduleColorClose}
+              >
+                <button
+                  type="button"
+                  className="h-5 w-5 rounded-full border-2 cursor-pointer"
+                  style={{
+                    borderColor,
+                    backgroundColor: colorHex ?? "transparent",
+                  }}
+                  aria-label="Pick group color"
+                  title="Color"
+                />
+                <AnimatePresence>
+                  {colorOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.12 }}
+                      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 flex flex-col gap-1 p-1.5 rounded-md border-2 shadow-lg z-30"
+                      style={{
+                        borderColor: DEFAULT_BORDER,
+                        backgroundColor: SOLID_BG,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ color: null })}
+                        className={cn(
+                          "h-4 w-4 rounded-full border-2 cursor-pointer transition-transform hover:scale-110",
+                          group.color === null && "ring-1 ring-foreground",
+                        )}
+                        style={{ borderColor: DEFAULT_BORDER }}
+                        aria-label="Default color"
+                        title="Default"
+                      />
+                      {GROUP_COLOR_PRESETS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => onUpdate({ color: c })}
+                          className={cn(
+                            "h-4 w-4 rounded-full cursor-pointer transition-transform hover:scale-110",
+                            group.color === c && "ring-1 ring-foreground",
+                          )}
+                          style={{ backgroundColor: GROUP_COLOR_HEX[c] }}
+                          aria-label={`Color ${c}`}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               <TooltipProvider delayDuration={0}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -413,67 +474,6 @@ export function BlockGroupContainer({
                   </Tooltip>
                 </TooltipProvider>
               )}
-
-              {/* Current-color swatch with hover-revealed vertical palette. */}
-              <div
-                className="relative flex items-center"
-                onMouseEnter={() => {
-                  cancelColorClose();
-                  setColorOpen(true);
-                }}
-                onMouseLeave={scheduleColorClose}
-              >
-                <button
-                  type="button"
-                  className="h-5 w-5 rounded-full border-2 cursor-pointer"
-                  style={{
-                    borderColor,
-                    backgroundColor: colorHex ?? "transparent",
-                  }}
-                  aria-label="Pick group color"
-                  title="Color"
-                />
-                <AnimatePresence>
-                  {colorOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.12 }}
-                      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 flex flex-col gap-1 p-1.5 rounded-md border-2 shadow-lg z-30"
-                      style={{
-                        borderColor: DEFAULT_BORDER,
-                        backgroundColor: SOLID_BG,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onUpdate({ color: null })}
-                        className={cn(
-                          "h-4 w-4 rounded-full border-2 cursor-pointer transition-transform hover:scale-110",
-                          group.color === null && "ring-1 ring-foreground",
-                        )}
-                        style={{ borderColor: DEFAULT_BORDER }}
-                        aria-label="Default color"
-                        title="Default"
-                      />
-                      {GROUP_COLOR_PRESETS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => onUpdate({ color: c })}
-                          className={cn(
-                            "h-4 w-4 rounded-full cursor-pointer transition-transform hover:scale-110",
-                            group.color === c && "ring-1 ring-foreground",
-                          )}
-                          style={{ backgroundColor: GROUP_COLOR_HEX[c] }}
-                          aria-label={`Color ${c}`}
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
 
               <TooltipProvider delayDuration={0}>
                 <Tooltip>
