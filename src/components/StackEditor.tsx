@@ -1063,6 +1063,23 @@ export function StackEditor({ stack }: StackEditorProps) {
                     </TooltipTrigger>
                     <TooltipContent>View snapshots</TooltipContent>
                   </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setIsNotesOpen(true)}
+                        className={cn(
+                          "ml-3 text-cyan-medium hover:text-foreground transition-colors cursor-pointer relative align-top",
+                          stackWithBlocks?.notes && "text-foreground",
+                        )}
+                        aria-label="Prompt notes"
+                      >
+                        <StickyNote className="inline h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {stackWithBlocks?.notes ? "Edit notes" : "Add notes"}
+                    </TooltipContent>
+                  </Tooltip>
                 </TooltipProvider>
                 {stack.negative && (
                   <span className="ml-3 align-middle text-xs px-2 py-0.5 rounded bg-magenta-dark/30 border border-magenta-medium text-magenta-light">
@@ -1128,25 +1145,6 @@ export function StackEditor({ stack }: StackEditorProps) {
                   Close Prompt
                 </Button>
               </ButtonGroup>
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => setIsNotesOpen(true)}
-                      className={cn(
-                        "text-cyan-medium hover:text-foreground transition-colors cursor-pointer",
-                        stackWithBlocks?.notes && "text-foreground",
-                      )}
-                      aria-label="Prompt notes"
-                    >
-                      <StickyNote className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {stackWithBlocks?.notes ? "Edit notes" : "Add notes"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
           </div>
         </CardHeader>
