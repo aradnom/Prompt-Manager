@@ -991,7 +991,12 @@ export function StackEditor({ stack }: StackEditorProps) {
 
   return (
     <>
-      <Card className="relative h-full flex flex-col">
+      <Card
+        className="relative h-full flex flex-col"
+        style={{
+          boxShadow: "0 0 15px rgb(from var(--color-cyan-medium) r g b / 0.4)",
+        }}
+      >
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
