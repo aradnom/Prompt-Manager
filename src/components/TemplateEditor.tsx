@@ -8,6 +8,7 @@ import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import {
   DndContext,
@@ -913,7 +914,9 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
           <Search className="mr-2 h-4 w-4" />
           Add Existing Block
         </Button>
-        <Button
+        <LoadingAnimatedButton
+          active
+          loading={createStackMutation.isPending}
           onClick={() => {
             const name = template.name?.replace(/ Template$/, "") || undefined;
             createStackMutation.mutate({
@@ -930,8 +933,8 @@ export function TemplateEditor({ template, onUpdate }: TemplateEditorProps) {
           }}
           disabled={createStackMutation.isPending}
         >
-          {createStackMutation.isPending ? "Creating..." : "Use Template"}
-        </Button>
+          Use Template
+        </LoadingAnimatedButton>
       </div>
 
       <BlockSearchDialog

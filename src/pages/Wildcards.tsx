@@ -18,6 +18,7 @@ import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useTransform } from "@/hooks/useTransform";
 import { RasterIcon } from "@/components/RasterIcon";
 import { Button } from "@/components/ui/button";
+import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
 import { SearchInput } from "@/components/ui/search-input";
@@ -738,7 +739,12 @@ export default function Wildcards() {
                   <span className="text-xs text-cyan-medium">
                     {generateConcept.length}/140 characters
                   </span>
-                  <Button
+                  <LoadingAnimatedButton
+                    active
+                    loading={
+                      generateWildcardMutation.isPending ||
+                      autoLabelMutation.isPending
+                    }
                     onClick={handleGenerateSubmit}
                     disabled={
                       !generateConcept.trim() ||
@@ -746,11 +752,8 @@ export default function Wildcards() {
                       autoLabelMutation.isPending
                     }
                   >
-                    {generateWildcardMutation.isPending ||
-                    autoLabelMutation.isPending
-                      ? "Generating..."
-                      : "Generate"}
-                  </Button>
+                    Generate
+                  </LoadingAnimatedButton>
                 </div>
               </div>
             </div>
@@ -786,7 +789,12 @@ export default function Wildcards() {
                       className="flex-1 px-3 py-2 rounded-md border border-cyan-medium bg-background"
                       maxLength={140}
                     />
-                    <Button
+                    <LoadingAnimatedButton
+                      active
+                      loading={
+                        generateWildcardMutation.isPending ||
+                        autoLabelMutation.isPending
+                      }
                       onClick={handleGenerateSubmit}
                       disabled={
                         !generateConcept.trim() ||
@@ -795,11 +803,8 @@ export default function Wildcards() {
                       }
                       variant="outline"
                     >
-                      {generateWildcardMutation.isPending ||
-                      autoLabelMutation.isPending
-                        ? "Generating..."
-                        : "Regenerate"}
-                    </Button>
+                      Regenerate
+                    </LoadingAnimatedButton>
                   </div>
                 </div>
 

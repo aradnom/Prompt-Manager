@@ -20,6 +20,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -185,15 +186,17 @@ function TemplateCard({
             >
               Edit Template
             </Button>
-            <Button
+            <LoadingAnimatedButton
               variant="default"
               size="sm"
+              active
+              loading={createStackMutation.isPending}
               onClick={handleUseTemplate}
               disabled={createStackMutation.isPending}
               className="cursor-pointer"
             >
-              {createStackMutation.isPending ? "Creating..." : "Use Template"}
-            </Button>
+              Use Template
+            </LoadingAnimatedButton>
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>

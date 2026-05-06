@@ -8,6 +8,7 @@ import { api, RouterOutput } from "@/lib/api";
 import { useSync } from "@/contexts/SyncContext";
 import { LENGTH_LIMITS } from "@shared/limits";
 import { Button } from "@/components/ui/button";
+import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
 import { DisplayIdInput } from "@/components/ui/display-id-input";
 import {
   Card,
@@ -110,9 +111,14 @@ export function CreatePromptForm({
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Create"}
-            </Button>
+            <LoadingAnimatedButton
+              active
+              loading={createMutation.isPending}
+              onClick={handleCreate}
+              disabled={createMutation.isPending}
+            >
+              Create
+            </LoadingAnimatedButton>
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>

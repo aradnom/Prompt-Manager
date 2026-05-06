@@ -7,7 +7,7 @@ import { generateUUID } from "@/lib/uuid";
 import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { useTransform } from "@/hooks/useTransform";
 import { useSync } from "@/contexts/SyncContext";
-import { Button } from "@/components/ui/button";
+import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Dialog,
@@ -142,14 +142,16 @@ export function GenerateBlockDialog({
                 <span className="text-xs text-cyan-medium">
                   {generateConcept.length}/140 characters
                 </span>
-                <Button
+                <LoadingAnimatedButton
+                  active
+                  loading={generateMutation.isPending}
                   onClick={handleGenerateSubmit}
                   disabled={
                     !generateConcept.trim() || generateMutation.isPending
                   }
                 >
-                  {generateMutation.isPending ? "Generating..." : "Generate"}
-                </Button>
+                  Generate
+                </LoadingAnimatedButton>
               </div>
             </div>
           ) : generateMutation.isPending ? (
