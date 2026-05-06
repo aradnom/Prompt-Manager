@@ -99,6 +99,9 @@ export interface StackRevisionsTable {
     number[] | undefined,
     number[] | undefined
   >;
+  // Encrypted JSON-stringified array of TextBlockGroup. NULL when there are no
+  // groups so existing rows cost nothing.
+  block_groups: ColumnType<string | null, string | null, string | null>;
   rendered_content: ColumnType<string | null, string | null, string | null>;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
@@ -141,6 +144,7 @@ export interface StackTemplatesTable {
     "t5" | "clip" | null
   >;
   notes: ColumnType<string | null, string | null, string | null>;
+  block_groups: ColumnType<string | null, string | null, string | null>;
   user_id: number | null;
   created_at: ColumnType<Date, Date | undefined, Date | undefined>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;

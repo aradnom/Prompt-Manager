@@ -1194,6 +1194,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .select(["stack_folders.name as folder_name"])
       .where("stacks.folder_id", "=", folderId)
@@ -1204,6 +1219,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(r, r.folder_name ?? null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
+      stack.blockGroups = (r.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return stack;
     });
   }
@@ -1311,6 +1328,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .where("stacks.user_id", "=", userId)
       .where("stacks.folder_id", "is", null)
@@ -1323,6 +1355,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(r, null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
+      stack.blockGroups = (r.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return stack;
     });
   }
@@ -1446,12 +1480,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         .executeTakeFirstOrThrow();
 
       // 2. Create Initial Revision
+      // `input.blockGroups` is the raw cipher string at this boundary (router
+      // encrypts before calling), or null when no groups were provided.
+      const initialBlockGroupsCipher = (
+        input as unknown as { blockGroups?: unknown }
+      ).blockGroups;
       const revisionResult = await trx
         .insertInto("stack_revisions")
         .values({
           stack_id: stackResult.id,
           block_ids: input.blockIds ?? [],
           disabled_block_ids: input.disabledBlockIds ?? [],
+          block_groups:
+            typeof initialBlockGroupsCipher === "string"
+              ? initialBlockGroupsCipher
+              : null,
           created_at: now,
           updated_at: now,
           user_id: input.userId ?? null,
@@ -1551,6 +1594,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .where("stacks.id", "=", id)
       .executeTakeFirst();
@@ -1558,6 +1616,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const stack = this.mapStack(stackResult, folderName);
     stack.blockIds = revQuery?.block_ids || [];
     stack.disabledBlockIds = revQuery?.disabled_block_ids || [];
+    stack.blockGroups = (revQuery?.block_groups ??
+      null) as unknown as BlockStack["blockGroups"];
     return stack;
   }
 
@@ -1615,6 +1675,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
                 .limit(1),
             )
             .as("rendered_content"),
+          eb.fn
+            .coalesce(
+              eb
+                .selectFrom("stack_revisions as active_rev")
+                .select("active_rev.block_groups")
+                .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+                .limit(1),
+              eb
+                .selectFrom("stack_revisions")
+                .select("block_groups")
+                .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+                .orderBy("created_at", "desc")
+                .limit(1),
+            )
+            .as("block_groups"),
         ])
         .where("stacks.id", "=", id)
         .executeTakeFirstOrThrow();
@@ -1650,6 +1725,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           stack_id: newStackResult.id,
           block_ids: originalStack.block_ids || [],
           disabled_block_ids: originalStack.disabled_block_ids || [],
+          block_groups: originalStack.block_groups ?? null,
           rendered_content: originalStack.rendered_content || null,
           created_at: now,
           updated_at: now,
@@ -1672,6 +1748,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(updatedStackResult);
       stack.blockIds = originalStack.block_ids || [];
       stack.disabledBlockIds = originalStack.disabled_block_ids || [];
+      stack.blockGroups = (originalStack.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return stack;
     });
   }
@@ -1703,6 +1781,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(stackResult);
       stack.blockIds = revision.block_ids;
       stack.disabledBlockIds = revision.disabled_block_ids;
+      stack.blockGroups = (revision.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return stack;
     });
   }
@@ -1758,6 +1838,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .select(["stack_folders.name as folder_name"])
       .where("stacks.id", "=", id)
@@ -1768,6 +1863,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const stack = this.mapStack(result, result.folder_name ?? null);
     stack.blockIds = result.block_ids || [];
     stack.disabledBlockIds = result.disabled_block_ids || [];
+    stack.blockGroups = (result.block_groups ??
+      null) as unknown as BlockStack["blockGroups"];
 
     if (options?.includeBlocks) {
       return this.expandStack(stack, options.includeRevisions ?? false);
@@ -1816,6 +1913,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .select(["stack_folders.name as folder_name"])
       .where("stacks.uuid", "=", uuid)
@@ -1826,6 +1938,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const stack = this.mapStack(result, result.folder_name ?? null);
     stack.blockIds = result.block_ids || [];
     stack.disabledBlockIds = result.disabled_block_ids || [];
+    stack.blockGroups = (result.block_groups ??
+      null) as unknown as BlockStack["blockGroups"];
 
     if (options?.includeBlocks) {
       return this.expandStack(stack, options.includeRevisions ?? false);
@@ -1874,6 +1988,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .select(["stack_folders.name as folder_name"])
       .where("stacks.display_id", "=", displayId)
@@ -1885,6 +2014,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     const stack = this.mapStack(result, result.folder_name ?? null);
     stack.blockIds = result.block_ids || [];
     stack.disabledBlockIds = result.disabled_block_ids || [];
+    stack.blockGroups = (result.block_groups ??
+      null) as unknown as BlockStack["blockGroups"];
 
     if (options?.includeBlocks) {
       return this.expandStack(stack, options.includeRevisions ?? false);
@@ -2111,6 +2242,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .select(["stack_folders.name as folder_name"]);
 
@@ -2141,6 +2287,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(r, r.folder_name ?? null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
+      stack.blockGroups = (r.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return stack;
     });
 
@@ -2206,6 +2354,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .select(["stack_folders.name as folder_name"]);
 
@@ -2261,6 +2424,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(r, r.folder_name ?? null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
+      stack.blockGroups = (r.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return stack;
     });
 
@@ -2306,6 +2471,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
               .limit(1),
           )
           .as("disabled_block_ids"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
       ])
       .where("display_id", "=", displayId)
       .where("user_id", "=", userId)
@@ -2668,6 +2848,52 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     });
   }
 
+  async setStackBlockGroups(
+    stackId: number,
+    encryptedBlockGroups: string | null,
+  ): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      const now = new Date();
+
+      const stackInfo = await trx
+        .selectFrom("stacks")
+        .select(["active_revision_id"])
+        .where("id", "=", stackId)
+        .executeTakeFirst();
+
+      let revisionIdToUpdate: number | null = null;
+      if (stackInfo?.active_revision_id) {
+        revisionIdToUpdate = stackInfo.active_revision_id;
+      } else {
+        const latestRev = await trx
+          .selectFrom("stack_revisions")
+          .select("id")
+          .where("stack_id", "=", stackId)
+          .orderBy("created_at", "desc")
+          .limit(1)
+          .executeTakeFirst();
+        revisionIdToUpdate = latestRev?.id ?? null;
+      }
+
+      if (!revisionIdToUpdate) return;
+
+      await trx
+        .updateTable("stack_revisions")
+        .set({
+          block_groups: encryptedBlockGroups,
+          updated_at: now,
+        })
+        .where("id", "=", revisionIdToUpdate)
+        .execute();
+
+      await trx
+        .updateTable("stacks")
+        .set({ updated_at: now })
+        .where("id", "=", stackId)
+        .execute();
+    });
+  }
+
   async updateStackRevisionContent(
     stackId: number,
     renderedContent: string,
@@ -2787,6 +3013,10 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     input: CreateStackTemplateInput,
   ): Promise<StackTemplate> {
     const now = new Date();
+    // `input.blockGroups` is the raw cipher string at this boundary (the
+    // router encrypts before calling), or null when no groups were provided.
+    const blockGroupsCipher = (input as unknown as { blockGroups?: unknown })
+      .blockGroups;
     const result = await this.db
       .insertInto("stack_templates")
       .values({
@@ -2798,6 +3028,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
         negative: input.negative ?? false,
         style: input.style ?? null,
         notes: input.notes ?? null,
+        block_groups:
+          typeof blockGroupsCipher === "string" ? blockGroupsCipher : null,
         user_id: input.userId ?? null,
         created_at: now,
         updated_at: now,
@@ -2835,6 +3067,14 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     if (updates.negative !== undefined) updateData.negative = updates.negative;
     if (updates.style !== undefined) updateData.style = updates.style ?? null;
     if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
+    // `updates.blockGroups` at this layer is the raw cipher string (or null)
+    // — the router encrypted it before calling the adapter.
+    const blockGroupsUpdate = (updates as unknown as { blockGroups?: unknown })
+      .blockGroups;
+    if (blockGroupsUpdate !== undefined) {
+      updateData.block_groups =
+        typeof blockGroupsUpdate === "string" ? blockGroupsUpdate : null;
+    }
 
     const result = await this.db
       .updateTable("stack_templates")
@@ -3307,6 +3547,21 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           .coalesce(
             eb
               .selectFrom("stack_revisions as active_rev")
+              .select("active_rev.block_groups")
+              .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+              .limit(1),
+            eb
+              .selectFrom("stack_revisions")
+              .select("block_groups")
+              .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+              .orderBy("created_at", "desc")
+              .limit(1),
+          )
+          .as("block_groups"),
+        eb.fn
+          .coalesce(
+            eb
+              .selectFrom("stack_revisions as active_rev")
               .select("active_rev.rendered_content")
               .whereRef("active_rev.id", "=", "stacks.active_revision_id")
               .limit(1),
@@ -3339,6 +3594,8 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       const stack = this.mapStack(r, r.folder_name ?? null);
       stack.blockIds = r.block_ids || [];
       stack.disabledBlockIds = r.disabled_block_ids || [];
+      stack.blockGroups = (r.block_groups ??
+        null) as unknown as BlockStack["blockGroups"];
       return { ...stack, renderedContent: r.rendered_content ?? null };
     });
 
@@ -3522,6 +3779,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       activeRevisionId: row.active_revision_id,
       blockIds: [], // To be filled by subquery
       disabledBlockIds: [], // To be filled by subquery
+      blockGroups: null, // To be filled by subquery; cipher string at this layer
       labels: row.labels ?? [],
     };
   }
@@ -3529,11 +3787,19 @@ export class PostgresStorageAdapter implements IStorageAdapter {
   private mapStackRevision(
     row: Selectable<Database["stack_revisions"]>,
   ): StackRevision {
+    // `block_groups` is the raw cipher string at this layer; the router layer
+    // decrypts and JSON.parses it. We surface it on the `blockGroups` field as
+    // an unparsed string here and rely on the router's decryptStackRevision to
+    // replace it with the parsed structure before the value escapes the
+    // server boundary.
     return {
       id: row.id,
       stackId: row.stack_id,
       blockIds: row.block_ids,
       disabledBlockIds: row.disabled_block_ids,
+      blockGroups: row.block_groups as unknown as NonNullable<
+        StackRevision["blockGroups"]
+      > | null,
       renderedContent: row.rendered_content,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
@@ -3595,6 +3861,11 @@ export class PostgresStorageAdapter implements IStorageAdapter {
       negative: row.negative,
       style: row.style ?? null,
       notes: row.notes,
+      // Raw cipher string at this layer; the router decrypts and JSON.parses
+      // before the value escapes the server boundary.
+      blockGroups: row.block_groups as unknown as NonNullable<
+        StackTemplate["blockGroups"]
+      > | null,
       userId: row.user_id,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),

@@ -110,6 +110,12 @@ function HomeContent() {
                   that can be easily added/deleted/rearranged/disabled.
                 </li>
                 <li>
+                  <strong>Block groups:</strong> Bundle related blocks into
+                  labeled, color-coded groups. Collapse to keep the editor tidy,
+                  disable the whole group at once, or randomize to pick a single
+                  block from the set.
+                </li>
+                <li>
                   <strong>Transformations:</strong> Easily generate new block
                   content via LLMs (supports BYOK with
                   OpenAI/Anthropic/Gemini/Grok, or LM Studio, or local model
@@ -121,6 +127,11 @@ function HomeContent() {
                   inject into block content with a nice interface for
                   randomizing/selecting specific options/freezing specific
                   wildcards, etc.
+                </li>
+                <li>
+                  <strong>Generate wildcards:</strong> Describe the wildcard you
+                  want and let an LLM populate it with a set of fitting options
+                  — no need to brainstorm dozens of variants by hand.
                 </li>
                 <li>
                   <strong>Revisions:</strong> Supports full revision history for

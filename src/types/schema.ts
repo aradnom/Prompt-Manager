@@ -84,7 +84,44 @@ export interface BlockStack {
   activeRevisionId: number | null;
   blockIds: number[];
   disabledBlockIds: number[];
+  /**
+   * Decrypted, parsed group list from the active revision. `null` when the
+   * stack has never had groups; `[]` when groups were created and then all
+   * removed. Mirrors the active revision's `blockGroups` so callers don't
+   * need to load the revision separately.
+   *
+   * NOTE: at the storage-adapter boundary this field temporarily holds the
+   * raw cipher string (or null) and is replaced by the decrypted structure
+   * inside the tRPC router's `decryptStack`. Same pattern as `name`/`notes`.
+   */
+  blockGroups: TextBlockGroup[] | null;
   labels: string[];
+}
+
+/**
+ * A purely organizational grouping of blocks within a single stack revision.
+ * Groups do NOT affect rendered prompt content — they're a UI concern only.
+ *
+ * Membership semantics: `blockIds` is treated as advisory. The renderer walks
+ * these in order, skips ids that aren't in the revision's `blockIds`, and
+ * stops the run at the first non-contiguous existing member. Anything from
+ * that point onward in the group is silently dropped from the rendered
+ * group. This keeps the feature bolt-on: a corrupt group never blocks a
+ * stack from loading or saving.
+ */
+export interface TextBlockGroup {
+  /** Stable client-generated identifier; persists across revisions. */
+  id: string;
+  name: string;
+  /** Optional preset color key. Null means "use default styling". */
+  color: string | null;
+  /** Block ids in intended group order. Treated as advisory at render time. */
+  blockIds: number[];
+  /**
+   * Persistent collapsed-state flag. Lives on the group so it survives
+   * reloads and prompt switches without round-tripping through localStorage.
+   */
+  collapsed: boolean;
 }
 
 export interface StackRevision {
@@ -92,6 +129,11 @@ export interface StackRevision {
   stackId: number;
   blockIds: number[];
   disabledBlockIds: number[];
+  /**
+   * Decrypted, parsed group list. `null` when the stack has never had
+   * groups; `[]` when groups were created and then all removed.
+   */
+  blockGroups?: TextBlockGroup[] | null;
   renderedContent?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -124,6 +166,12 @@ export interface StackTemplate {
   negative: boolean;
   style: OutputStyle;
   notes: string | null;
+  /**
+   * Decrypted, parsed group list. Same boundary semantics as
+   * `BlockStack.blockGroups`: holds the raw cipher at the adapter layer and is
+   * replaced by the decrypted structure inside the tRPC router.
+   */
+  blockGroups: TextBlockGroup[] | null;
   userId: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -138,6 +186,7 @@ export interface CreateStackTemplateInput {
   negative?: boolean;
   style?: OutputStyle;
   notes?: string;
+  blockGroups?: TextBlockGroup[] | null;
   userId?: number;
 }
 
@@ -149,6 +198,7 @@ export interface UpdateStackTemplateInput {
   negative?: boolean;
   style?: OutputStyle;
   notes?: string | null;
+  blockGroups?: TextBlockGroup[] | null;
 }
 
 export interface BlockWithRevisions extends Block {
@@ -207,6 +257,7 @@ export interface CreateStackInput {
   disabledBlockIds?: number[];
   folderId?: number | null;
   labels?: string[];
+  blockGroups?: TextBlockGroup[] | null;
 }
 
 export interface UpdateStackInput {

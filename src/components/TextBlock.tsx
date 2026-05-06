@@ -13,6 +13,7 @@ import {
   EyeOff,
   StickyNote,
   Maximize2,
+  Ungroup,
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { api, RouterOutput } from "@/lib/api";
@@ -73,6 +74,11 @@ import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useSync } from "@/contexts/SyncContext";
 import type { OutputStyle } from "@/types/schema";
 import { LENGTH_LIMITS } from "@shared/limits";
+
+// Toggle for whether grouped blocks inherit the group's color on their
+// border. Flip to `false` while iterating on alternative group-styling
+// ideas without ripping out the wiring.
+const APPLY_GROUP_BORDER_COLOR = false;
 
 /**
  * Get the approximate pixel position of a text offset within a textarea
@@ -158,6 +164,10 @@ interface TextBlockProps {
   isDeleting?: boolean;
   isDisabled?: boolean;
   onToggleDisable?: () => void;
+  /** When provided, the block is part of a group and this handler removes
+   *  it from that group. Surfaces an Ungroup button in both collapsed and
+   *  expanded views. */
+  onRemoveFromGroup?: () => void;
   isSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -171,6 +181,12 @@ interface TextBlockProps {
    * a popup browser.
    */
   onLabelClick?: (label: string) => void;
+  /**
+   * When provided, the block's outer border uses this color instead of the
+   * default cyan-dark/cyan-medium pair. Used by `BlockGroupContainer` so the
+   * blocks inside a group visually inherit the group's color.
+   */
+  borderColorOverride?: string | null;
 }
 
 export function TextBlock({
@@ -183,6 +199,7 @@ export function TextBlock({
   onSelectBlock,
   isDisabled,
   onToggleDisable,
+  onRemoveFromGroup,
   isDeleting,
   isSelectMode,
   isSelected,
@@ -191,6 +208,7 @@ export function TextBlock({
   alwaysActive = false,
   style,
   onLabelClick,
+  borderColorOverride,
 }: TextBlockProps) {
   const [isActive, setIsActive] = useState(defaultActive || alwaysActive);
   const [isRenamingBlock, setIsRenamingBlock] = useState(false);
@@ -777,6 +795,11 @@ export function TextBlock({
           : "0 1px 2px 0 rgb(0 0 0 / 0.05)",
       }}
       transition={TEXT_BLOCK_ANIMATION}
+      style={
+        APPLY_GROUP_BORDER_COLOR && borderColorOverride
+          ? { borderColor: borderColorOverride }
+          : undefined
+      }
     >
       {isHMode && (
         <div
@@ -789,24 +812,32 @@ export function TextBlock({
             </div>
           )}
 
-          {/* Top-right cluster: per-block actions + Expand (or Checkbox in select mode) */}
-          <div
-            className={cn(
-              "absolute top-0 right-0 z-20 flex items-center transition-all duration-200 ease-out",
-              isRevealed && !isInlineEditing
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 -translate-y-1 pointer-events-none",
-            )}
-          >
-            {isSelectMode ? (
-              <div className="w-8 h-8 flex items-center justify-center">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={onToggleSelect}
-                  className="cursor-pointer"
-                />
-              </div>
-            ) : (
+          {/* Top-left checkbox: always visible while select mode is on so
+              users see at a glance where to click to select blocks. */}
+          {isSelectMode && (
+            <div
+              className="absolute top-0 left-0 z-20 w-8 h-8 flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onToggleSelect}
+                className="cursor-pointer"
+              />
+            </div>
+          )}
+
+          {/* Top-right cluster: per-block actions + Expand. Hidden in
+              select mode — the only relevant action is the checkbox. */}
+          {!isSelectMode && (
+            <div
+              className={cn(
+                "absolute top-0 right-0 z-20 flex items-center transition-all duration-200 ease-out",
+                isRevealed && !isInlineEditing
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 -translate-y-1 pointer-events-none",
+              )}
+            >
               <>
                 <div className="flex items-center gap-3 pl-2 pr-3 h-8">
                   <TooltipProvider delayDuration={0}>
@@ -879,6 +910,25 @@ export function TextBlock({
                       <TooltipContent>Copy block text</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  {onRemoveFromGroup && (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveFromGroup();
+                            }}
+                            className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                            aria-label="Remove from group"
+                          >
+                            <Ungroup className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Remove from group</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -889,12 +939,12 @@ export function TextBlock({
                           }}
                           disabled={isDeleting}
                           className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-                          aria-label="Delete block"
+                          aria-label="Remove block"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>Delete block</TooltipContent>
+                      <TooltipContent>Remove block</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
@@ -917,8 +967,8 @@ export function TextBlock({
                   </Tooltip>
                 </TooltipProvider>
               </>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Content group: labels/type + text — translates up on reveal */}
           <div
@@ -1653,6 +1703,19 @@ export function TextBlock({
                         onClick={onDuplicate}
                       >
                         Duplicate Block
+                      </AnimatedButton>
+                      <ButtonGroupSeparator />
+                    </>
+                  )}
+                  {onRemoveFromGroup && (
+                    <>
+                      <AnimatedButton
+                        variant="secondary"
+                        size="sm"
+                        active={isActive}
+                        onClick={onRemoveFromGroup}
+                      >
+                        Remove From Group
                       </AnimatedButton>
                       <ButtonGroupSeparator />
                     </>

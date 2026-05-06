@@ -254,7 +254,7 @@ export function WildcardString({
             <>
               {/* Invisible bridge to prevent tooltip from closing */}
               <motion.div
-                className="fixed z-[100]"
+                className="fixed z-100"
                 style={getBridgeFixedStyle()}
                 onMouseEnter={handleMouseEnter}
                 initial={{ opacity: 0 }}
@@ -264,7 +264,7 @@ export function WildcardString({
               />
 
               <motion.div
-                className="fixed z-[100] w-125 max-h-100 overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4"
+                className="fixed z-100 w-125 max-h-100 overflow-y-auto bg-background border border-cyan-medium rounded-lg shadow-xl p-4"
                 style={getTooltipFixedStyle()}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}

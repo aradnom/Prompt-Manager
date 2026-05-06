@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -14,12 +14,16 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverEvent,
+  CollisionDetection,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -27,7 +31,8 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { BlockStack, StackWithBlocks } from "@/types/schema";
+import { BlockStack, StackWithBlocks, TextBlockGroup } from "@/types/schema";
+import { resolveBlockGroups } from "@shared/block-groups";
 import { useActiveStack } from "@/contexts/ActiveStackContext";
 import { useStackContent } from "@/contexts/StackContentContext";
 import {
@@ -48,6 +53,10 @@ import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useSync } from "@/contexts/SyncContext";
 import { NotesDialog } from "@/components/NotesDialog";
 import { SortableBlock } from "@/components/SortableBlock";
+import {
+  BlockGroupContainer,
+  groupColorHex,
+} from "@/components/BlockGroupContainer";
 import { StackRevisionsOverlay } from "@/components/StackRevisionsOverlay";
 import { StackSnapshotsOverlay } from "@/components/StackSnapshotsOverlay";
 import { CameraFlash } from "@/components/CameraFlash";
@@ -253,6 +262,12 @@ export function StackEditor({ stack }: StackEditorProps) {
     },
   });
 
+  const setBlockGroupsMutation = api.stacks.setBlockGroups.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   const toggleBlockDisabledMutation =
     api.stacks.toggleBlockDisabled.useMutation({
       onSuccess: () => {
@@ -267,27 +282,217 @@ export function StackEditor({ stack }: StackEditorProps) {
     }),
   );
 
+  // Sortable ids: blocks use `b-${index}`, groups use `g-${groupId}`.
+  const blockSortId = (i: number) => `b-${i}`;
+  const groupSortId = (id: string) => `g-${id}`;
+  const parseSortId = (
+    id: string,
+  ):
+    | { kind: "block"; index: number }
+    | { kind: "group"; groupId: string }
+    | null => {
+    if (id.startsWith("b-")) {
+      const n = parseInt(id.slice(2), 10);
+      return Number.isFinite(n) ? { kind: "block", index: n } : null;
+    }
+    if (id.startsWith("g-")) return { kind: "group", groupId: id.slice(2) };
+    return null;
+  };
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [overDragId, setOverDragId] = useState<string | null>(null);
+
+  // When dragging a block, exclude group containers (g-*) from collision
+  // candidates. Group rects roughly center on their single child block,
+  // creating ties with closestCenter that flip the over target erratically
+  // mid-drag. Letting the inner block always be the over target keeps the
+  // visual stable; the cross-container drop logic still appends to the group.
+  const collisionDetection: CollisionDetection = (args) => {
+    const isBlock = String(args.active.id).startsWith("b-");
+    if (!isBlock) return closestCenter(args);
+    return closestCenter({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(
+        (c) => !String(c.id).startsWith("g-"),
+      ),
+    });
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverDragId(over ? String(over.id) : null);
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragId(null);
+    setOverDragId(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    setOverDragId(null);
     const { active, over } = event;
 
     if (!over || active.id === over.id || !stackWithBlocks?.blocks) {
       return;
     }
 
-    const oldIndex = active.id as number;
-    const newIndex = over.id as number;
+    const activeParsed = parseSortId(String(active.id));
+    const overParsed = parseSortId(String(over.id));
+    if (!activeParsed || !overParsed) return;
 
-    const reorderedBlocks = arrayMove(
-      stackWithBlocks.blocks,
-      oldIndex,
-      newIndex,
-    );
-    const blockIds = reorderedBlocks.map((block) => block.id);
+    const blocks = stackWithBlocks.blocks;
+    const groups = stackWithBlocks.blockGroups ?? [];
 
-    reorderBlocksMutation.mutate({
-      stackId: stack.id,
-      blockIds,
+    // Helper: resync a group's blockIds order against a flat block id list.
+    const resyncGroupOrder = (
+      g: TextBlockGroup,
+      flat: number[],
+      mutated: { changed: boolean },
+    ) => {
+      const positionOf = new Map(flat.map((id, i) => [id, i]));
+      const sorted = g.blockIds
+        .slice()
+        .sort((a, b) => (positionOf.get(a) ?? 0) - (positionOf.get(b) ?? 0));
+      if (
+        sorted.length !== g.blockIds.length ||
+        sorted.some((id, i) => id !== g.blockIds[i])
+      ) {
+        mutated.changed = true;
+      }
+      return { ...g, blockIds: sorted };
+    };
+
+    // Group drag: move the active group's whole block range to a new spot.
+    if (activeParsed.kind === "group") {
+      const sourceGroup = groups.find((g) => g.id === activeParsed.groupId);
+      if (!sourceGroup) return;
+      const groupIdSet = new Set(sourceGroup.blockIds);
+      const groupBlocksInOrder = blocks.filter((b) => groupIdSet.has(b.id));
+      const sourceFirstIdx = blocks.findIndex((b) => groupIdSet.has(b.id));
+
+      let targetBlockId: number | undefined;
+      let side: "above" | "below" = "below";
+      if (overParsed.kind === "block") {
+        targetBlockId = blocks[overParsed.index]?.id;
+        side = sourceFirstIdx < overParsed.index ? "below" : "above";
+      } else {
+        const targetGroup = groups.find((g) => g.id === overParsed.groupId);
+        if (!targetGroup) return;
+        const targetIds = new Set(targetGroup.blockIds);
+        const inOrder = blocks.filter((b) => targetIds.has(b.id));
+        const targetFirstIdx = blocks.findIndex((b) => targetIds.has(b.id));
+        side = sourceFirstIdx < targetFirstIdx ? "below" : "above";
+        targetBlockId =
+          side === "below" ? inOrder[inOrder.length - 1]?.id : inOrder[0]?.id;
+      }
+      if (targetBlockId === undefined) return;
+
+      const without = blocks.filter((b) => !groupIdSet.has(b.id));
+      const targetIdx = without.findIndex((b) => b.id === targetBlockId);
+      if (targetIdx === -1) return;
+      const insertAt = side === "below" ? targetIdx + 1 : targetIdx;
+      const reordered = [
+        ...without.slice(0, insertAt),
+        ...groupBlocksInOrder,
+        ...without.slice(insertAt),
+      ];
+      reorderBlocksMutation.mutate({
+        stackId: stack.id,
+        blockIds: reordered.map((b) => b.id),
+      });
+      return;
+    }
+
+    // active is a block. Determine over-block + target group.
+    const oldIndex = activeParsed.index;
+    const oldGroupId = indexToGroupId.get(oldIndex) ?? null;
+    let overIndex: number;
+    let overGroupId: string | null;
+    let effectiveSide: "above" | "below" = "below";
+
+    const lastIdxOfGroup = (groupId: string): number => {
+      const target = groups.find((g) => g.id === groupId);
+      if (!target) return -1;
+      const targetIds = new Set(target.blockIds);
+      const inOrder = blocks.filter((b) => targetIds.has(b.id));
+      const lastId = inOrder[inOrder.length - 1]?.id;
+      return lastId !== undefined
+        ? blocks.findIndex((b) => b.id === lastId)
+        : -1;
+    };
+
+    if (overParsed.kind === "group") {
+      // Dropped on a group's chrome — append to end of that group.
+      const lastIdx = lastIdxOfGroup(overParsed.groupId);
+      if (lastIdx === -1) return;
+      overIndex = lastIdx;
+      overGroupId = overParsed.groupId;
+      effectiveSide = "below";
+    } else {
+      overIndex = overParsed.index;
+      overGroupId = indexToGroupId.get(overIndex) ?? null;
+      effectiveSide = oldIndex < overIndex ? "below" : "above";
+      // Cross-container drop INTO a group always lands at the group's end —
+      // ordering within the group is done with a follow-up reorder.
+      if (overGroupId !== null && overGroupId !== oldGroupId) {
+        const lastIdx = lastIdxOfGroup(overGroupId);
+        if (lastIdx !== -1) {
+          overIndex = lastIdx;
+          effectiveSide = "below";
+        }
+      } else if (oldGroupId !== null && overGroupId === null) {
+        // Crossing OUT of a group into loose territory: the over target is
+        // the nearest loose block on whichever side. The default direction
+        // rule lands the dragged block on the far side of that block, which
+        // leaves no landing slot directly adjacent to the group. Invert so
+        // the block lands between the group and the over block.
+        effectiveSide = effectiveSide === "above" ? "below" : "above";
+      }
+    }
+
+    if (oldIndex === overIndex && oldGroupId === overGroupId) return;
+
+    const isCross = oldGroupId !== overGroupId;
+    let newIndex = overIndex;
+    if (isCross || overParsed.kind === "group") {
+      const targetLogical =
+        effectiveSide === "below" ? overIndex + 1 : overIndex;
+      newIndex = oldIndex < targetLogical ? targetLogical - 1 : targetLogical;
+    }
+
+    const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex);
+    const blockIds = reorderedBlocks.map((b) => b.id);
+    const activeBlockId = blocks[oldIndex].id;
+
+    reorderBlocksMutation.mutate({ stackId: stack.id, blockIds });
+
+    // Membership: dragged block now belongs to overGroupId (or stays if same).
+    const newGroupId = isCross ? overGroupId : oldGroupId;
+    const mutated = { changed: false };
+    const updatedGroups = groups.map((g) => {
+      const wasMember = g.blockIds.includes(activeBlockId);
+      const shouldBeMember = g.id === newGroupId;
+      let ids = g.blockIds;
+      if (wasMember && !shouldBeMember) {
+        ids = ids.filter((id) => id !== activeBlockId);
+        mutated.changed = true;
+      } else if (!wasMember && shouldBeMember) {
+        ids = [...ids, activeBlockId];
+        mutated.changed = true;
+      }
+      return resyncGroupOrder({ ...g, blockIds: ids }, blockIds, mutated);
     });
+    if (mutated.changed) {
+      setBlockGroupsMutation.mutate({
+        stackId: stack.id,
+        blockGroups: updatedGroups,
+      });
+    }
   };
 
   const handleAddExistingBlock = (blockId: number) => {
@@ -488,6 +693,135 @@ export function StackEditor({ stack }: StackEditorProps) {
     setIsSelectMode(false);
   };
 
+  const handleGroupSelectedBlocks = async () => {
+    if (!stackWithBlocks?.blocks || selectedBlockIndices.size === 0) return;
+
+    const blocks = stackWithBlocks.blocks;
+    const sortedIndices = Array.from(selectedBlockIndices).sort(
+      (a, b) => a - b,
+    );
+    const selectedIds = sortedIndices.map((i) => blocks[i].id);
+    const selectedSet = new Set(selectedIds);
+
+    // If selected blocks are non-contiguous, pull them together at the position
+    // of the lowest selected index. The first selected block stays put;
+    // anything between gets pushed below the run.
+    const isContiguous = sortedIndices.every(
+      (idx, i) => i === 0 || idx === sortedIndices[i - 1] + 1,
+    );
+
+    const currentBlockIds = blocks.map((b) => b.id);
+    if (!isContiguous) {
+      const targetStart = sortedIndices[0];
+      const others = currentBlockIds.filter((id) => !selectedSet.has(id));
+      const reordered = [
+        ...others.slice(0, targetStart),
+        ...selectedIds,
+        ...others.slice(targetStart),
+      ];
+      await reorderBlocksMutation.mutateAsync({
+        stackId: stack.id,
+        blockIds: reordered,
+      });
+    }
+
+    // Strip the selected ids out of any existing groups, then append the new
+    // group. Empty groups left behind are fine — server-side normalize keeps
+    // them as drop-targets.
+    const existingGroups = stackWithBlocks.blockGroups ?? [];
+    const filteredGroups = existingGroups.map((g) => ({
+      ...g,
+      blockIds: g.blockIds.filter((id) => !selectedSet.has(id)),
+    }));
+    const newGroup: TextBlockGroup = {
+      id: generateUUID(),
+      name: "New Group",
+      color: null,
+      blockIds: selectedIds,
+      collapsed: false,
+    };
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: [...filteredGroups, newGroup],
+    });
+
+    setSelectedBlockIndices(new Set());
+    setIsSelectMode(false);
+  };
+
+  const handleUngroupSelectedBlocks = () => {
+    if (!stackWithBlocks?.blocks || selectedBlockIndices.size === 0) return;
+    const blocks = stackWithBlocks.blocks;
+    const selectedIds = new Set(
+      Array.from(selectedBlockIndices).map((i) => blocks[i].id),
+    );
+    const existing = stackWithBlocks.blockGroups ?? [];
+    const next = existing
+      .map((g) => ({
+        ...g,
+        blockIds: g.blockIds.filter((id) => !selectedIds.has(id)),
+      }))
+      .filter((g) => g.blockIds.length > 0);
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: next,
+    });
+    setSelectedBlockIndices(new Set());
+    setIsSelectMode(false);
+  };
+
+  const selectedAreInAnyGroup = (() => {
+    if (!stackWithBlocks?.blocks || selectedBlockIndices.size === 0)
+      return false;
+    const blocks = stackWithBlocks.blocks;
+    const selectedIds = new Set(
+      Array.from(selectedBlockIndices).map((i) => blocks[i].id),
+    );
+    return (stackWithBlocks.blockGroups ?? []).some((g) =>
+      g.blockIds.some((id) => selectedIds.has(id)),
+    );
+  })();
+
+  const handleUpdateGroup = (
+    groupId: string,
+    patch: Partial<TextBlockGroup>,
+  ) => {
+    const existing = stackWithBlocks?.blockGroups ?? [];
+    const next = existing.map((g) =>
+      g.id === groupId ? { ...g, ...patch } : g,
+    );
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: next,
+    });
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    const existing = stackWithBlocks?.blockGroups ?? [];
+    const next = existing.filter((g) => g.id !== groupId);
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: next,
+    });
+  };
+
+  const handleRemoveBlockFromGroup = (groupId: string, blockId: number) => {
+    const existing = stackWithBlocks?.blockGroups ?? [];
+    const next = existing
+      .map((g) =>
+        g.id === groupId
+          ? { ...g, blockIds: g.blockIds.filter((id) => id !== blockId) }
+          : g,
+      )
+      // Drop the group entirely once its last member leaves so we don't
+      // leave a stale empty group lingering in storage.
+      .filter((g) => g.blockIds.length > 0);
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: next,
+    });
+  };
+
   const handleGenerateBlockCreated = async (newBlock: { id: number }) => {
     try {
       await addBlockMutation.mutateAsync({
@@ -532,6 +866,127 @@ export function StackEditor({ stack }: StackEditorProps) {
       setIsEnriching(false);
     }
   };
+
+  // Pre-resolve groups against the current block order so the renderer can
+  // emit either a standalone block or a contiguous run wrapped in a group.
+  // Anything that isn't part of a resolved (contiguous) group renders loose.
+  type RenderItem =
+    | { kind: "block"; index: number }
+    | { kind: "group"; group: TextBlockGroup; indices: number[] };
+  const renderItems = useMemo<RenderItem[]>(() => {
+    if (!stackWithBlocks?.blocks) return [];
+    const blocks = stackWithBlocks.blocks;
+    const groups = stackWithBlocks.blockGroups ?? [];
+    const blockIds = blocks.map((b) => b.id);
+    const { resolved } = resolveBlockGroups(groups, blockIds);
+    const startToGroup = new Map<number, (typeof resolved)[number]>();
+    resolved.forEach((r) => startToGroup.set(r.startIndex, r));
+
+    const items: RenderItem[] = [];
+    let i = 0;
+    while (i < blocks.length) {
+      const hit = startToGroup.get(i);
+      if (hit) {
+        const indices: number[] = [];
+        for (let j = 0; j < hit.contiguousBlockIds.length; j++) {
+          indices.push(i + j);
+        }
+        items.push({ kind: "group", group: hit.group, indices });
+        i += hit.contiguousBlockIds.length;
+      } else {
+        items.push({ kind: "block", index: i });
+        i++;
+      }
+    }
+    return items;
+  }, [stackWithBlocks?.blocks, stackWithBlocks?.blockGroups]);
+
+  // Map every block index to the id of the group it belongs to (or null if
+  // loose). Used by drag handling to detect cross-container drags.
+  const indexToGroupId = useMemo(() => {
+    const map = new Map<number, string | null>();
+    renderItems.forEach((item) => {
+      if (item.kind === "block") {
+        map.set(item.index, null);
+      } else {
+        item.indices.forEach((i) => map.set(i, item.group.id));
+      }
+    });
+    return map;
+  }, [renderItems]);
+
+  const activeParsedDrag = activeDragId ? parseSortId(activeDragId) : null;
+  const overParsedDrag = overDragId ? parseSortId(overDragId) : null;
+  const activeBlockIndex =
+    activeParsedDrag?.kind === "block" ? activeParsedDrag.index : null;
+  const overBlockIndex =
+    overParsedDrag?.kind === "block" ? overParsedDrag.index : null;
+  const activeBlockGroupId =
+    activeBlockIndex !== null
+      ? (indexToGroupId.get(activeBlockIndex) ?? null)
+      : null;
+  const overBlockGroupId =
+    overBlockIndex !== null
+      ? (indexToGroupId.get(overBlockIndex) ?? null)
+      : null;
+  const isCrossContainerDrag =
+    activeBlockIndex !== null &&
+    overBlockIndex !== null &&
+    activeBlockIndex !== overBlockIndex &&
+    activeBlockGroupId !== overBlockGroupId;
+  // Drop line only when crossing INTO loose territory. Crossing into a group
+  // is communicated via group highlight + always-append-to-end on drop.
+  const dropIndicatorSide: "above" | "below" | null = (() => {
+    if (!isCrossContainerDrag) return null;
+    if (overBlockGroupId !== null) return null;
+    if (activeBlockIndex === null || overBlockIndex === null) return null;
+    const natural: "above" | "below" =
+      activeBlockIndex < overBlockIndex ? "below" : "above";
+    if (activeBlockGroupId !== null) {
+      return natural === "above" ? "below" : "above";
+    }
+    return natural;
+  })();
+  // Which group (if any) is the highlighted drop target. Active must be a
+  // block from outside the target group (or active over the group itself).
+  const dropTargetGroupId: string | null = (() => {
+    if (!activeParsedDrag || activeParsedDrag.kind !== "block") return null;
+    if (!overParsedDrag) return null;
+    if (overParsedDrag.kind === "group") {
+      return activeBlockGroupId === overParsedDrag.groupId
+        ? null
+        : overParsedDrag.groupId;
+    }
+    if (overBlockGroupId !== null && overBlockGroupId !== activeBlockGroupId) {
+      return overBlockGroupId;
+    }
+    return null;
+  })();
+
+  // The active block being dragged — used to render a DragOverlay so the
+  // visual stays under the cursor across nested SortableContexts.
+  const activeBlock =
+    activeBlockIndex !== null && stackWithBlocks?.blocks
+      ? stackWithBlocks.blocks[activeBlockIndex]
+      : null;
+  const activeBlockBorderColor = (() => {
+    if (!activeBlock || !activeBlockGroupId) return null;
+    const g = (stackWithBlocks?.blockGroups ?? []).find(
+      (g) => g.id === activeBlockGroupId,
+    );
+    return g ? groupColorHex(g.color) : null;
+  })();
+
+  // Top-level sortable items: a string id per renderItem.
+  const topLevelSortableIds = useMemo(
+    () =>
+      renderItems.map((item) =>
+        item.kind === "block"
+          ? blockSortId(item.index)
+          : groupSortId(item.group.id),
+      ),
+    [renderItems],
+  );
 
   return (
     <>
@@ -701,7 +1156,7 @@ export function StackEditor({ stack }: StackEditorProps) {
               <div className="px-6 py-3 bg-cyan-dark/30">
                 <div className="flex gap-2">
                   <Button
-                    variant="destructive"
+                    variant="default"
                     size="sm"
                     onClick={handleRemoveSelectedBlocks}
                     disabled={selectedBlockIndices.size === 0}
@@ -715,6 +1170,22 @@ export function StackEditor({ stack }: StackEditorProps) {
                     disabled={selectedBlockIndices.size < 2}
                   >
                     Merge Blocks
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleGroupSelectedBlocks}
+                    disabled={selectedBlockIndices.size === 0}
+                  >
+                    Group Blocks
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleUngroupSelectedBlocks}
+                    disabled={!selectedAreInAnyGroup}
+                  >
+                    Ungroup Blocks
                   </Button>
                 </div>
               </div>
@@ -730,82 +1201,225 @@ export function StackEditor({ stack }: StackEditorProps) {
             ) : (
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={collisionDetection}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragCancel={handleDragCancel}
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex flex-col gap-4">
                   {stackWithBlocks?.blocks &&
                   stackWithBlocks.blocks.length > 0 ? (
                     <SortableContext
-                      items={stackWithBlocks.blocks.map((_, i) => i)}
+                      items={topLevelSortableIds}
                       strategy={verticalListSortingStrategy}
                     >
-                      {stackWithBlocks.blocks.map((block, index) => (
-                        <SortableBlock key={index} id={index}>
-                          {editingBlockId === block.id ? (
-                            <motion.div
-                              initial={{ opacity: 0, y: 16 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 16 }}
-                              transition={{ duration: 0.2 }}
+                      {(() => {
+                        const blocks = stackWithBlocks.blocks;
+                        const renderBlockAt = (
+                          index: number,
+                          borderColor?: string | null,
+                          inGroup?: boolean,
+                          groupId?: string,
+                        ) => {
+                          const block = blocks[index];
+                          const suppress =
+                            isCrossContainerDrag && index !== activeBlockIndex;
+                          const indicator =
+                            isCrossContainerDrag && index === overBlockIndex
+                              ? dropIndicatorSide
+                              : null;
+                          return (
+                            <SortableBlock
+                              key={index}
+                              id={blockSortId(index)}
+                              suppressTransform={suppress}
+                              dropIndicator={indicator}
+                              indicatorColor={borderColor ?? undefined}
+                              compactHandle={inGroup}
                             >
-                              <BlockForm
-                                mode="edit"
-                                initialValues={{
-                                  name: block.name ?? undefined,
-                                  displayId: block.displayId,
-                                  text: block.text,
-                                  labels: block.labels,
-                                  typeId: block.typeId ?? undefined,
-                                  notes: block.notes ?? undefined,
-                                }}
-                                onSubmit={(values) =>
-                                  handleUpdateBlock(block.id, values)
+                              {editingBlockId === block.id ? (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 16 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: 16 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <BlockForm
+                                    mode="edit"
+                                    initialValues={{
+                                      name: block.name ?? undefined,
+                                      displayId: block.displayId,
+                                      text: block.text,
+                                      labels: block.labels,
+                                      typeId: block.typeId ?? undefined,
+                                      notes: block.notes ?? undefined,
+                                    }}
+                                    onSubmit={(values) =>
+                                      handleUpdateBlock(block.id, values)
+                                    }
+                                    onCancel={() => setEditingBlockId(null)}
+                                    isSubmitting={updateBlockMutation.isPending}
+                                  />
+                                </motion.div>
+                              ) : (
+                                <div>
+                                  <TextBlock
+                                    block={block}
+                                    isDisabled={
+                                      stackWithBlocks?.disabledBlockIds?.includes(
+                                        block.id,
+                                      ) ?? false
+                                    }
+                                    onToggleDisable={() =>
+                                      handleToggleBlockDisabled(block.id)
+                                    }
+                                    onEdit={() => setEditingBlockId(block.id)}
+                                    onDelete={() =>
+                                      handleRemoveBlock(block.id, index)
+                                    }
+                                    onDuplicate={() =>
+                                      handleDuplicateBlock(index)
+                                    }
+                                    onTransform={(blockId, transformedText) =>
+                                      handleUpdateBlock(blockId, {
+                                        name: block.name ?? undefined,
+                                        displayId: block.displayId,
+                                        text: transformedText,
+                                        labels: block.labels,
+                                        typeId: block.typeId ?? undefined,
+                                        notes: block.notes ?? undefined,
+                                      })
+                                    }
+                                    onSelectBlock={handleAddExistingBlock}
+                                    isDeleting={removeBlockMutation.isPending}
+                                    isSelectMode={isSelectMode}
+                                    isSelected={selectedBlockIndices.has(index)}
+                                    onToggleSelect={() =>
+                                      handleToggleBlockSelection(index)
+                                    }
+                                    style={stack.style}
+                                    borderColorOverride={borderColor ?? null}
+                                    onRemoveFromGroup={
+                                      groupId
+                                        ? () =>
+                                            handleRemoveBlockFromGroup(
+                                              groupId,
+                                              block.id,
+                                            )
+                                        : undefined
+                                    }
+                                  />
+                                </div>
+                              )}
+                            </SortableBlock>
+                          );
+                        };
+                        return renderItems.map((item) => {
+                          if (item.kind === "block") {
+                            return renderBlockAt(item.index);
+                          }
+                          const groupBorder = groupColorHex(item.group.color);
+                          const innerIds = item.indices.map(blockSortId);
+                          const groupBlockIds = item.indices
+                            .map((i) => stackWithBlocks?.blocks?.[i]?.id)
+                            .filter(
+                              (id): id is number => typeof id === "number",
+                            );
+                          const currentDisabled =
+                            stackWithBlocks?.disabledBlockIds ?? [];
+                          const disabledCount = groupBlockIds.filter((id) =>
+                            currentDisabled.includes(id),
+                          ).length;
+                          const groupDisabledState: "all" | "none" | "mixed" =
+                            groupBlockIds.length === 0 || disabledCount === 0
+                              ? "none"
+                              : disabledCount === groupBlockIds.length
+                                ? "all"
+                                : "mixed";
+                          return (
+                            <BlockGroupContainer
+                              key={item.group.id}
+                              group={item.group}
+                              blockCount={item.indices.length}
+                              onUpdate={(patch) =>
+                                handleUpdateGroup(item.group.id, patch)
+                              }
+                              onDelete={() => handleDeleteGroup(item.group.id)}
+                              sortableId={groupSortId(item.group.id)}
+                              isDropTarget={dropTargetGroupId === item.group.id}
+                              disabledState={groupDisabledState}
+                              onToggleDisable={async () => {
+                                // mixed/none → disable-all; all → enable-all.
+                                // toggleBlockDisabledInStack does a read-
+                                // modify-write on the revision's disabled_
+                                // block_ids array, so concurrent calls race
+                                // and clobber each other. Await sequentially.
+                                const targetDisabled =
+                                  groupDisabledState !== "all";
+                                for (const id of groupBlockIds) {
+                                  const isDisabled =
+                                    currentDisabled.includes(id);
+                                  if (isDisabled !== targetDisabled) {
+                                    await toggleBlockDisabledMutation.mutateAsync(
+                                      { stackId: stack.id, blockId: id },
+                                    );
+                                  }
                                 }
-                                onCancel={() => setEditingBlockId(null)}
-                                isSubmitting={updateBlockMutation.isPending}
-                              />
-                            </motion.div>
-                          ) : (
-                            <div>
-                              <TextBlock
-                                block={block}
-                                isDisabled={
-                                  stackWithBlocks?.disabledBlockIds?.includes(
-                                    block.id,
-                                  ) ?? false
-                                }
-                                onToggleDisable={() =>
-                                  handleToggleBlockDisabled(block.id)
-                                }
-                                onEdit={() => setEditingBlockId(block.id)}
-                                onDelete={() =>
-                                  handleRemoveBlock(block.id, index)
-                                }
-                                onDuplicate={() => handleDuplicateBlock(index)}
-                                onTransform={(blockId, transformedText) =>
-                                  handleUpdateBlock(blockId, {
-                                    name: block.name ?? undefined,
-                                    displayId: block.displayId,
-                                    text: transformedText,
-                                    labels: block.labels,
-                                    typeId: block.typeId ?? undefined,
-                                    notes: block.notes ?? undefined,
-                                  })
-                                }
-                                onSelectBlock={handleAddExistingBlock}
-                                isDeleting={removeBlockMutation.isPending}
-                                isSelectMode={isSelectMode}
-                                isSelected={selectedBlockIndices.has(index)}
-                                onToggleSelect={() =>
-                                  handleToggleBlockSelection(index)
-                                }
-                                style={stack.style}
-                              />
-                            </div>
-                          )}
-                        </SortableBlock>
-                      ))}
+                              }}
+                              onRandomize={
+                                groupBlockIds.length < 2
+                                  ? undefined
+                                  : async () => {
+                                      const enabledIds = groupBlockIds.filter(
+                                        (id) => !currentDisabled.includes(id),
+                                      );
+                                      // Exclude the sole currently-enabled
+                                      // block so randomize always changes
+                                      // something. With 0 or 2+ enabled,
+                                      // pick from the full set.
+                                      const candidates =
+                                        enabledIds.length === 1
+                                          ? groupBlockIds.filter(
+                                              (id) => id !== enabledIds[0],
+                                            )
+                                          : groupBlockIds;
+                                      const winner =
+                                        candidates[
+                                          Math.floor(
+                                            Math.random() * candidates.length,
+                                          )
+                                        ];
+                                      for (const id of groupBlockIds) {
+                                        const shouldBeDisabled = id !== winner;
+                                        const isDisabled =
+                                          currentDisabled.includes(id);
+                                        if (isDisabled !== shouldBeDisabled) {
+                                          await toggleBlockDisabledMutation.mutateAsync(
+                                            { stackId: stack.id, blockId: id },
+                                          );
+                                        }
+                                      }
+                                    }
+                              }
+                            >
+                              <SortableContext
+                                items={innerIds}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                {item.indices.map((idx) =>
+                                  renderBlockAt(
+                                    idx,
+                                    groupBorder,
+                                    true,
+                                    item.group.id,
+                                  ),
+                                )}
+                              </SortableContext>
+                            </BlockGroupContainer>
+                          );
+                        });
+                      })()}
                     </SortableContext>
                   ) : (
                     !isCreatingNew && (
@@ -817,6 +1431,25 @@ export function StackEditor({ stack }: StackEditorProps) {
                       </div>
                     )
                   )}
+
+                  <DragOverlay dropAnimation={null}>
+                    {activeBlock ? (
+                      <div style={{ pointerEvents: "none" }}>
+                        <TextBlock
+                          block={activeBlock}
+                          isDisabled={
+                            stackWithBlocks?.disabledBlockIds?.includes(
+                              activeBlock.id,
+                            ) ?? false
+                          }
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                          style={stack.style}
+                          borderColorOverride={activeBlockBorderColor}
+                        />
+                      </div>
+                    ) : null}
+                  </DragOverlay>
 
                   {isCreatingNew && (
                     <motion.div

@@ -45,6 +45,21 @@ export function FeatureTour() {
       </FeatureShowcase>
 
       <FeatureShowcase
+        title="Group Blocks"
+        description="Collect related blocks into a labeled, color-coded container"
+      >
+        <p className="text-foreground">
+          Groups bundle a set of contiguous blocks together so you can manage
+          them as a unit. Give the group a name and color, collapse it to keep
+          the editor tidy, or disable every block inside with a single click.
+          The randomize action picks one block in the group to enable while
+          disabling the rest — handy for swapping between alternatives. Drag
+          blocks in or out to restructure, or ungroup entirely when you're done.
+        </p>
+        <VideoClip name="block-groups" />
+      </FeatureShowcase>
+
+      <FeatureShowcase
         title="Add Emphasis"
         description="Boost or reduce the weight of specific words and phrases"
       >
@@ -94,6 +109,19 @@ export function FeatureTour() {
           fits, or use them as inspiration for further editing.
         </p>
         <VideoClip name="explore-variations" />
+      </FeatureShowcase>
+
+      <FeatureShowcase
+        title="Generate a Wildcard"
+        description="Use an LLM to generate a wildcard's options from a description"
+      >
+        <p className="text-foreground">
+          Describe the kind of wildcard you want — a theme, a category, a mood —
+          and let an LLM populate it with a set of fitting options. Skip the
+          tedium of brainstorming dozens of variants by hand and get a
+          ready-to-use wildcard you can immediately reference in your blocks.
+        </p>
+        <VideoClip name="generate-wildcard" />
       </FeatureShowcase>
 
       <FeatureShowcase

@@ -49,6 +49,12 @@ export const LENGTH_LIMITS = {
   /** Max block IDs in a stack or template */
   blockIds: 500,
 
+  /** Max block groups within a single stack revision */
+  blockGroups: 64,
+
+  /** Max length of a block group name */
+  blockGroupName: 120,
+
   /** Max labels on a block */
   labels: 100,
 
