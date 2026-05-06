@@ -749,6 +749,39 @@ export function StackEditor({ stack }: StackEditorProps) {
     setIsSelectMode(false);
   };
 
+  const handleUngroupSelectedBlocks = () => {
+    if (!stackWithBlocks?.blocks || selectedBlockIndices.size === 0) return;
+    const blocks = stackWithBlocks.blocks;
+    const selectedIds = new Set(
+      Array.from(selectedBlockIndices).map((i) => blocks[i].id),
+    );
+    const existing = stackWithBlocks.blockGroups ?? [];
+    const next = existing
+      .map((g) => ({
+        ...g,
+        blockIds: g.blockIds.filter((id) => !selectedIds.has(id)),
+      }))
+      .filter((g) => g.blockIds.length > 0);
+    setBlockGroupsMutation.mutate({
+      stackId: stack.id,
+      blockGroups: next,
+    });
+    setSelectedBlockIndices(new Set());
+    setIsSelectMode(false);
+  };
+
+  const selectedAreInAnyGroup = (() => {
+    if (!stackWithBlocks?.blocks || selectedBlockIndices.size === 0)
+      return false;
+    const blocks = stackWithBlocks.blocks;
+    const selectedIds = new Set(
+      Array.from(selectedBlockIndices).map((i) => blocks[i].id),
+    );
+    return (stackWithBlocks.blockGroups ?? []).some((g) =>
+      g.blockIds.some((id) => selectedIds.has(id)),
+    );
+  })();
+
   const handleUpdateGroup = (
     groupId: string,
     patch: Partial<TextBlockGroup>,
@@ -1123,7 +1156,7 @@ export function StackEditor({ stack }: StackEditorProps) {
               <div className="px-6 py-3 bg-cyan-dark/30">
                 <div className="flex gap-2">
                   <Button
-                    variant="destructive"
+                    variant="default"
                     size="sm"
                     onClick={handleRemoveSelectedBlocks}
                     disabled={selectedBlockIndices.size === 0}
@@ -1145,6 +1178,14 @@ export function StackEditor({ stack }: StackEditorProps) {
                     disabled={selectedBlockIndices.size === 0}
                   >
                     Group Blocks
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleUngroupSelectedBlocks}
+                    disabled={!selectedAreInAnyGroup}
+                  >
+                    Ungroup Blocks
                   </Button>
                 </div>
               </div>
