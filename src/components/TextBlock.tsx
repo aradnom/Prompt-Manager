@@ -812,24 +812,32 @@ export function TextBlock({
             </div>
           )}
 
-          {/* Top-right cluster: per-block actions + Expand (or Checkbox in select mode) */}
-          <div
-            className={cn(
-              "absolute top-0 right-0 z-20 flex items-center transition-all duration-200 ease-out",
-              isRevealed && !isInlineEditing
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 -translate-y-1 pointer-events-none",
-            )}
-          >
-            {isSelectMode ? (
-              <div className="w-8 h-8 flex items-center justify-center">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={onToggleSelect}
-                  className="cursor-pointer"
-                />
-              </div>
-            ) : (
+          {/* Top-left checkbox: always visible while select mode is on so
+              users see at a glance where to click to select blocks. */}
+          {isSelectMode && (
+            <div
+              className="absolute top-0 left-0 z-20 w-8 h-8 flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onToggleSelect}
+                className="cursor-pointer"
+              />
+            </div>
+          )}
+
+          {/* Top-right cluster: per-block actions + Expand. Hidden in
+              select mode — the only relevant action is the checkbox. */}
+          {!isSelectMode && (
+            <div
+              className={cn(
+                "absolute top-0 right-0 z-20 flex items-center transition-all duration-200 ease-out",
+                isRevealed && !isInlineEditing
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 -translate-y-1 pointer-events-none",
+              )}
+            >
               <>
                 <div className="flex items-center gap-3 pl-2 pr-3 h-8">
                   <TooltipProvider delayDuration={0}>
@@ -959,8 +967,8 @@ export function TextBlock({
                   </Tooltip>
                 </TooltipProvider>
               </>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Content group: labels/type + text — translates up on reveal */}
           <div
