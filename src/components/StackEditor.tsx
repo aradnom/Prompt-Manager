@@ -539,6 +539,7 @@ export function StackEditor({ stack }: StackEditorProps) {
         text: values.text,
         labels: values.labels,
         typeId: values.typeId,
+        folderId: values.folderId,
         notes: values.notes,
       });
     } catch (error) {

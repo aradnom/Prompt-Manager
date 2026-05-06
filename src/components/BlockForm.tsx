@@ -184,22 +184,8 @@ export function BlockForm({
   const handleFolderChange = (value: string) => {
     const newFolderId = value === "none" ? undefined : Number(value);
     setFolderId(newFolderId);
-
-    if (mode === "edit") {
-      // Update ref immediately so getFormValues gets the new value
-      formValuesRef.current.folderId = newFolderId;
-
-      // Save immediately and close the form
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      const values = getFormValues();
-      if (values) {
-        onSubmit(values);
-      }
-      hasPendingSave.current = false;
-      onCancel();
-    }
+    formValuesRef.current.folderId = newFolderId;
+    debouncedSave();
   };
 
   return (
