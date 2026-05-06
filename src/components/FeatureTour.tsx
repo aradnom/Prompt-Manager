@@ -134,7 +134,9 @@ export function FeatureTour() {
           one when you compile your prompt. For example, you might create a
           "weather" wildcard with options like "sunny", "rainy", "foggy", and
           "stormy". Reference it in your blocks using the wildcard syntax, and
-          each generation can use a different weather condition.
+          each generation can use a different weather condition. Press{" "}
+          <kbd>{"{"}</kbd> while editing a block to pop open the wildcard picker
+          right at the cursor.
         </p>
         <VideoClip name="use-wildcard" />
       </FeatureShowcase>
