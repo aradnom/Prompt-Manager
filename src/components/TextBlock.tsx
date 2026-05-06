@@ -13,6 +13,7 @@ import {
   EyeOff,
   StickyNote,
   Maximize2,
+  Minimize2,
   Ungroup,
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
@@ -957,7 +958,7 @@ export function TextBlock({
                           setIsActive(true);
                           setIsTouchRevealed(false);
                         }}
-                        className="w-8 h-8 flex items-center justify-center rounded-tr-lg rounded-bl-lg border-l border-b bg-cyan-medium/15 text-cyan-medium hover:bg-cyan-medium/40 hover:text-foreground transition-colors cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center rounded-tr-lg rounded-bl-lg border-l border-b bg-cyan-medium/40 text-cyan-light hover:bg-cyan-medium/75 hover:text-foreground transition-colors cursor-pointer"
                         aria-label="Show more"
                       >
                         <Maximize2 className="h-4 w-4" />
@@ -1195,6 +1196,27 @@ export function TextBlock({
         </div>
       )}
 
+      {!isHMode && !alwaysActive && (
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsActive(false);
+                  setIsTouchRevealed(false);
+                }}
+                className="absolute top-0 right-0 z-20 w-8 h-8 flex items-center justify-center rounded-tr-lg rounded-bl-lg border-l border-b bg-cyan-medium/40 text-cyan-light hover:bg-cyan-medium/75 hover:text-foreground transition-colors cursor-pointer"
+                aria-label="Show less"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Show less</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+
       {!isHMode && (
         <>
           <CardHeader
@@ -1361,7 +1383,13 @@ export function TextBlock({
                   </div>
                 )}
               </div>
-              <div className={cn("flex items-center", isActive && "gap-2")}>
+              <div
+                className={cn(
+                  "flex items-center",
+                  isActive && "gap-2",
+                  !alwaysActive && "pr-8",
+                )}
+              >
                 {isSelectMode ? (
                   <Checkbox
                     checked={isSelected}
