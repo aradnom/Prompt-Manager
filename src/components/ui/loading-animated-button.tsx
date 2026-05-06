@@ -26,6 +26,23 @@ const dotVariants = cva("rounded-full", {
   },
 });
 
+// Loader border is always one color step brighter than the button's variant bg.
+const loaderBorderVariants = cva("border-2", {
+  variants: {
+    variant: {
+      default: "border-magenta-medium",
+      destructive: "border-foreground",
+      outline: "border-cyan-light",
+      secondary: "border-cyan-light",
+      ghost: "border-cyan-medium",
+      link: "border-magenta-medium",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
+
 export interface LoadingAnimatedButtonProps
   extends
     React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -90,7 +107,10 @@ const LoadingAnimatedButton = React.forwardRef<
           {loading ? (
             <>
               <span
-                className="p-0.5 rounded-sm border-2 border-cyan-light"
+                className={cn(
+                  "p-0.5 rounded-sm",
+                  loaderBorderVariants({ variant }),
+                )}
                 style={{ backgroundColor: "transparent" }}
               >
                 <DefragLoader size={loaderSize} />
