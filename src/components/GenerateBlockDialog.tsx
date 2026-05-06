@@ -8,7 +8,7 @@ import { calculateNonOverlappingPositions } from "@/lib/layout-utils";
 import { useTransform } from "@/hooks/useTransform";
 import { useSync } from "@/contexts/SyncContext";
 import { LoadingAnimatedButton } from "@/components/ui/loading-animated-button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DefragLoader } from "@/components/ui/defrag-loader";
 import {
   Dialog,
   DialogContent,
@@ -155,7 +155,7 @@ export function GenerateBlockDialog({
               </div>
             </div>
           ) : generateMutation.isPending ? (
-            <LoadingSpinner />
+            <DefragLoader size={32} />
           ) : (
             <div className="relative w-full h-full">
               {/* Spokes from center to suggestions */}

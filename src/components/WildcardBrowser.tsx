@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DefragLoader } from "@/components/ui/defrag-loader";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { getRandomWildcardPath } from "@/lib/wildcard-random";
 import { LENGTH_LIMITS } from "@shared/limits";
@@ -85,7 +85,7 @@ export function WildcardBrowser({
           <div className="flex-1 overflow-y-auto space-y-2">
             {isLoading ? (
               <div className="flex justify-center py-8">
-                <LoadingSpinner />
+                <DefragLoader size={32} />
               </div>
             ) : filteredWildcards && filteredWildcards.length > 0 ? (
               filteredWildcards.map((wildcard) => {

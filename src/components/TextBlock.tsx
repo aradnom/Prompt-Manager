@@ -58,7 +58,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DefragLoader } from "@/components/ui/defrag-loader";
 import { BlockSearchDialog } from "@/components/BlockSearchDialog";
 import { NotesDialog } from "@/components/NotesDialog";
@@ -1864,7 +1863,7 @@ export function TextBlock({
           </DialogHeader>
           <div className="flex-1 flex items-center justify-center p-8">
             {exploreMutation.isPending ? (
-              <LoadingSpinner />
+              <DefragLoader size={32} />
             ) : (
               <div className="relative w-full h-full">
                 {/* Spokes from center to variations */}

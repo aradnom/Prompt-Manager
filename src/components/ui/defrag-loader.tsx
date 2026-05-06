@@ -65,7 +65,7 @@ export function DefragLoader({ size = 60, className = "" }: DefragLoaderProps) {
         return (
           <motion.div
             key={index}
-            className="absolute rounded-[1px]"
+            className={`absolute rounded-[${size > 30 ? 2 : 1}px]`}
             style={{
               width: blockWidth,
               height: blockHeight,
