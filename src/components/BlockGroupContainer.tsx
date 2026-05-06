@@ -37,17 +37,21 @@ export const GROUP_COLOR_PRESETS = [
   "6",
   "7",
   "8",
+  "9",
+  "10",
 ] as const;
 
 const GROUP_COLOR_HEX: Record<string, string> = {
   "1": "#c94657",
   "2": "#c84d29",
-  "3": "#748400",
-  "4": "#009161",
-  "5": "#0087ab",
-  "6": "#147bd8",
-  "7": "#7b64d4",
-  "8": "#bf4884",
+  "3": "#b85e00",
+  "4": "#957600",
+  "5": "#748400",
+  "6": "#009161",
+  "7": "#0087ab",
+  "8": "#147bd8",
+  "9": "#7b64d4",
+  "10": "#bf4884",
 };
 
 /** Return the hex for a stored color key, or null when the group uses defaults. */
