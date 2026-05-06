@@ -1203,36 +1203,6 @@ function SinglePromptView({ displayId }: { displayId: string }) {
                 Negative
               </span>
             )}
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setNotesDialogOpen(true)}
-                    className={`text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${stack.notes ? "text-foreground" : ""}`}
-                    aria-label="Edit notes"
-                  >
-                    <StickyNote className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {stack.notes ? "Edit notes" : "Add notes"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setDeleteDialogOpen(true)}
-                    className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
-                    aria-label="Delete prompt"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Delete prompt</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
         {stack.name && (
@@ -1242,7 +1212,39 @@ function SinglePromptView({ displayId }: { displayId: string }) {
         )}
       </div>
 
-      <Card>
+      <Card className="relative">
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-3">
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setNotesDialogOpen(true)}
+                  className={`text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${stack.notes ? "text-foreground" : ""}`}
+                  aria-label="Edit notes"
+                >
+                  <StickyNote className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {stack.notes ? "Edit notes" : "Add notes"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="text-cyan-medium hover:text-destructive transition-colors cursor-pointer"
+                  aria-label="Delete prompt"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Delete prompt</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <CardContent className="p-6">
           <StackEditForm
             stack={stack}

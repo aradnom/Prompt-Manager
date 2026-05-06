@@ -317,44 +317,10 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
           <ArrowLeft className="h-4 w-4" />
           Back to Templates
         </Link>
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold flex items-center gap-3">
-            <RasterIcon name="templates" size={36} />
-            {template.name || template.displayId}
-          </h1>
-          <div className="flex items-center gap-2">
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setNotesDialogOpen(true)}
-                    className={`text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${template.notes ? "text-foreground" : ""}`}
-                    aria-label="Edit notes"
-                  >
-                    <StickyNote className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {template.notes ? "Edit notes" : "Add notes"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setDeleteDialogOpen(true)}
-                    className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
-                    aria-label="Delete template"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Delete template</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
+        <h1 className="text-4xl font-bold flex items-center gap-3">
+          <RasterIcon name="templates" size={36} />
+          {template.name || template.displayId}
+        </h1>
         {template.name && (
           <p className="text-cyan-medium font-mono text-sm mt-2 bg-background/60 inline-block px-2 py-1">
             {template.displayId}
@@ -362,7 +328,39 @@ function SingleTemplateView({ templateId }: { templateId: number }) {
         )}
       </div>
 
-      <Card>
+      <Card className="relative">
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-3">
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setNotesDialogOpen(true)}
+                  className={`text-cyan-medium hover:text-foreground transition-colors cursor-pointer ${template.notes ? "text-foreground" : ""}`}
+                  aria-label="Edit notes"
+                >
+                  <StickyNote className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {template.notes ? "Edit notes" : "Add notes"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
+                  aria-label="Delete template"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Delete template</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <CardContent className="p-6">
           <TemplateEditor template={template} onUpdate={() => refetch()} />
         </CardContent>
