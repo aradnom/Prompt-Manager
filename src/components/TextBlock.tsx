@@ -75,6 +75,11 @@ import { useSync } from "@/contexts/SyncContext";
 import type { OutputStyle } from "@/types/schema";
 import { LENGTH_LIMITS } from "@shared/limits";
 
+// Toggle for whether grouped blocks inherit the group's color on their
+// border. Flip to `false` while iterating on alternative group-styling
+// ideas without ripping out the wiring.
+const APPLY_GROUP_BORDER_COLOR = false;
+
 /**
  * Get the approximate pixel position of a text offset within a textarea
  * Uses a mirror div technique to measure text position
@@ -791,7 +796,9 @@ export function TextBlock({
       }}
       transition={TEXT_BLOCK_ANIMATION}
       style={
-        borderColorOverride ? { borderColor: borderColorOverride } : undefined
+        APPLY_GROUP_BORDER_COLOR && borderColorOverride
+          ? { borderColor: borderColorOverride }
+          : undefined
       }
     >
       {isHMode && (
