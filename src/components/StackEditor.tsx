@@ -1254,6 +1254,7 @@ export function StackEditor({ stack }: StackEditorProps) {
                                       text: block.text,
                                       labels: block.labels,
                                       typeId: block.typeId ?? undefined,
+                                      folderId: block.folderId ?? undefined,
                                       notes: block.notes ?? undefined,
                                     }}
                                     onSubmit={(values) =>
