@@ -110,6 +110,12 @@ function HomeContent() {
                   that can be easily added/deleted/rearranged/disabled.
                 </li>
                 <li>
+                  <strong>Block groups:</strong> Bundle related blocks into
+                  labeled, color-coded groups. Collapse to keep the editor tidy,
+                  disable the whole group at once, or randomize to pick a single
+                  block from the set.
+                </li>
+                <li>
                   <strong>Transformations:</strong> Easily generate new block
                   content via LLMs (supports BYOK with
                   OpenAI/Anthropic/Gemini/Grok, or LM Studio, or local model

@@ -45,6 +45,20 @@ export function FeatureTour() {
       </FeatureShowcase>
 
       <FeatureShowcase
+        title="Group Blocks"
+        description="Collect related blocks into a labeled, color-coded container"
+      >
+        <p className="text-foreground">
+          Groups bundle a set of contiguous blocks together so you can manage
+          them as a unit. Give the group a name and color, collapse it to keep
+          the editor tidy, or disable every block inside with a single click.
+          The randomize action picks one block in the group to enable while
+          disabling the rest — handy for swapping between alternatives. Drag
+          blocks in or out to restructure, or ungroup entirely when you're done.
+        </p>
+      </FeatureShowcase>
+
+      <FeatureShowcase
         title="Add Emphasis"
         description="Boost or reduce the weight of specific words and phrases"
       >
