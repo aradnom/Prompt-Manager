@@ -73,6 +73,8 @@ export default function Account() {
   const {
     setActiveLLMPlatform: setGlobalActiveLLMPlatform,
     refetchAccountData,
+    tooltipsDisabled,
+    setTooltipsDisabled,
   } = useUserState();
   const { setActiveTarget, availableTargets, getTargetInfo } = useLLMStatus();
   const [accountData, setAccountData] = useState<Record<string, string> | null>(
@@ -1014,7 +1016,7 @@ export default function Account() {
 
             <Card id="system">
               <CardHeader>
-                <CardTitle>System</CardTitle>
+                <CardTitle>App Settings</CardTitle>
                 <CardDescription>
                   Low-level maintenance stuff you probably won't need. Useful if
                   the local search cache has drifted out of sync with the
@@ -1022,24 +1024,48 @@ export default function Account() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Reset local search cache
-                    </p>
-                    <p className="text-sm text-cyan-medium">
-                      Wipes the browser's local content cache and reloads the
-                      app. Your content on the server is untouched; it will be
-                      re-downloaded on next load.
-                    </p>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <label
+                        htmlFor="tooltips-disabled-toggle"
+                        className="text-sm font-medium"
+                      >
+                        Disable Tooltips
+                      </label>
+                      <p className="text-sm text-cyan-medium">
+                        Suppress every hover tooltip throughout the app. Handy
+                        if you know your way around and find them to be
+                        annoying.
+                      </p>
+                    </div>
+                    <Switch
+                      id="tooltips-disabled-toggle"
+                      checked={tooltipsDisabled}
+                      onCheckedChange={setTooltipsDisabled}
+                    />
                   </div>
-                  <Button
-                    variant="outline-magenta"
-                    onClick={handleResetCache}
-                    disabled={isResettingCache}
-                  >
-                    {isResettingCache ? "Resetting\u2026" : "Reset Local Cache"}
-                  </Button>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium">
+                        Reset local search cache
+                      </p>
+                      <p className="text-sm text-cyan-medium">
+                        Wipes the browser's local content cache and reloads the
+                        app. Your content on the server is untouched; it will be
+                        re-downloaded on next load.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline-magenta"
+                      onClick={handleResetCache}
+                      disabled={isResettingCache}
+                    >
+                      {isResettingCache
+                        ? "Resetting\u2026"
+                        : "Reset Local Cache"}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

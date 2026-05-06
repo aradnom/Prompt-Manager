@@ -2,10 +2,23 @@ import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "@/lib/utils";
+import { useUserState } from "@/contexts/UserStateContext";
 
 const TooltipProvider = TooltipPrimitive.Provider;
 
-const Tooltip = TooltipPrimitive.Root;
+// Wrap Radix Root so the global "Disable Tooltips" account flag can suppress
+// every tooltip in the app without touching individual callsites. When the
+// flag is on we force `open={false}`, which overrides any caller-supplied
+// open value — that's intentional: disabled wins.
+const Tooltip = ({
+  open,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root>) => {
+  const { tooltipsDisabled } = useUserState();
+  return (
+    <TooltipPrimitive.Root {...props} open={tooltipsDisabled ? false : open} />
+  );
+};
 
 const TooltipTrigger = TooltipPrimitive.Trigger;
 

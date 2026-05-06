@@ -15,6 +15,8 @@ interface UserStateContextType {
   activeLLMPlatform: string | null;
   setActiveLLMPlatform: (platform: string | null) => void;
   accountToken: string | null;
+  tooltipsDisabled: boolean;
+  setTooltipsDisabled: (disabled: boolean) => Promise<void>;
   isLoading: boolean;
   accountDataLoaded: boolean;
   refetch: () => void;
@@ -33,6 +35,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [accountToken, setAccountToken] = useState<string | null>(null);
+  const [tooltipsDisabled, setTooltipsDisabledState] = useState(false);
   const [accountDataLoaded, setAccountDataLoaded] = useState(false);
   const [isLoading] = useState(false);
 
@@ -61,6 +64,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       setActiveLLMPlatform(data.accountData?.activeLLMPlatform || null);
       setAccountToken(data.accountData?.token ?? null);
+      setTooltipsDisabledState(data.accountData?.tooltipsDisabled === "true");
       setAccountDataLoaded(true);
     } catch (error) {
       console.error("Error fetching account data:", error);
@@ -73,6 +77,7 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) {
       setActiveLLMPlatform(null);
       setAccountToken(null);
+      setTooltipsDisabledState(false);
       setAccountDataLoaded(true); // No account data needed when not authenticated
       return;
     }
@@ -99,6 +104,23 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated]);
 
+  const setTooltipsDisabled = useCallback(async (disabled: boolean) => {
+    // Optimistic update so the UI flips immediately.
+    setTooltipsDisabledState(disabled);
+    try {
+      const response = await fetch("/api/auth/tooltips-disabled", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disabled }),
+      });
+      if (!response.ok) throw new Error("Failed to save tooltips flag");
+    } catch (error) {
+      console.error("Error saving tooltips-disabled flag:", error);
+      setTooltipsDisabledState(!disabled);
+    }
+  }, []);
+
   const refetch = () => {
     refetchStacks();
     refetchBlocks();
@@ -112,6 +134,8 @@ export function UserStateProvider({ children }: { children: ReactNode }) {
         activeLLMPlatform,
         setActiveLLMPlatform,
         accountToken,
+        tooltipsDisabled,
+        setTooltipsDisabled,
         accountDataLoaded,
         isLoading,
         refetch,

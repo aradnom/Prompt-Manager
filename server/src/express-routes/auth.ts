@@ -462,6 +462,41 @@ export function registerAuthRoutes(
     }
   });
 
+  // Set tooltips-disabled flag
+  app.post("/api/auth/tooltips-disabled", withDerivedKey, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { disabled } = req.body;
+      if (typeof disabled !== "boolean") {
+        return res
+          .status(400)
+          .json({ error: "disabled (boolean) is required" });
+      }
+
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const currentAccountData = user.accountData || {};
+      const derivedKey = req.derivedKey!;
+      const updatedAccountData = {
+        ...currentAccountData,
+        tooltipsDisabled: encrypt(String(disabled), derivedKey),
+      };
+
+      await storage.updateUserAccountData(userId, updatedAccountData);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving tooltips-disabled flag:", error);
+      res.status(500).json({ error: "Failed to save tooltips-disabled flag" });
+    }
+  });
+
   // Test API key (validates without incurring inference costs)
   app.post("/api/auth/api-keys/test", withDerivedKey, async (req, res) => {
     try {
