@@ -42,6 +42,8 @@ export function WildcardString({
     useState<TooltipPosition>("top");
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const spanRef = useRef<HTMLSpanElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const HOVER_DELAY_MS = 250;
 
   const calculateTooltipPosition = (): TooltipPosition => {
     if (!spanRef.current) return "top";
@@ -75,7 +77,7 @@ export function WildcardString({
     return "top";
   };
 
-  const handleMouseEnter = () => {
+  const openTooltip = () => {
     if (!enableTooltip) return;
     const position = calculateTooltipPosition();
     setTooltipPosition(position);
@@ -83,7 +85,21 @@ export function WildcardString({
     setShowTooltip(true);
   };
 
+  const handleMouseEnter = () => {
+    if (!enableTooltip) return;
+    if (showTooltip) {
+      openTooltip();
+      return;
+    }
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(openTooltip, HOVER_DELAY_MS);
+  };
+
   const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
     setShowTooltip(false);
   };
 
