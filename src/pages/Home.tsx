@@ -129,6 +129,11 @@ function HomeContent() {
                   wildcards, etc.
                 </li>
                 <li>
+                  <strong>Generate wildcards:</strong> Describe the wildcard you
+                  want and let an LLM populate it with a set of fitting options
+                  — no need to brainstorm dozens of variants by hand.
+                </li>
+                <li>
                   <strong>Revisions:</strong> Supports full revision history for
                   text blocks and prompts. Easily tell what changed between
                   versions and roll back to a previous version.

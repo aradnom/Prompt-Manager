@@ -112,6 +112,19 @@ export function FeatureTour() {
       </FeatureShowcase>
 
       <FeatureShowcase
+        title="Generate a Wildcard"
+        description="Use an LLM to generate a wildcard's options from a description"
+      >
+        <p className="text-foreground">
+          Describe the kind of wildcard you want — a theme, a category, a mood —
+          and let an LLM populate it with a set of fitting options. Skip the
+          tedium of brainstorming dozens of variants by hand and get a
+          ready-to-use wildcard you can immediately reference in your blocks.
+        </p>
+        <VideoClip name="generate-wildcard" />
+      </FeatureShowcase>
+
+      <FeatureShowcase
         title="Use a Wildcard"
         description="Insert wildcards into blocks for randomized or selectable options"
       >
