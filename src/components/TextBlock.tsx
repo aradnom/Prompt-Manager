@@ -939,12 +939,12 @@ export function TextBlock({
                           }}
                           disabled={isDeleting}
                           className="text-cyan-medium hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
-                          aria-label="Delete block"
+                          aria-label="Remove block"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>Delete block</TooltipContent>
+                      <TooltipContent>Remove block</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>

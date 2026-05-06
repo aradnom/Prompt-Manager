@@ -56,6 +56,7 @@ export function FeatureTour() {
           disabling the rest — handy for swapping between alternatives. Drag
           blocks in or out to restructure, or ungroup entirely when you're done.
         </p>
+        <VideoClip name="block-groups" />
       </FeatureShowcase>
 
       <FeatureShowcase
