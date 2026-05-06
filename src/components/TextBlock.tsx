@@ -809,7 +809,7 @@ export function TextBlock({
         >
           {overlayLoading && (
             <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/70 rounded-lg">
-              <DefragLoader size={32} />
+              <DefragLoader size={24} />
             </div>
           )}
 

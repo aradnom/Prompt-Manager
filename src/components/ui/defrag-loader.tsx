@@ -23,7 +23,7 @@ function getRandomColors(count: number): string[] {
 }
 
 export function DefragLoader({ size = 60, className = "" }: DefragLoaderProps) {
-  const gap = 3;
+  const gap = 4;
   const blockHeight = (size - gap * 2) / 3;
   const cycleDuration = 2;
 
@@ -65,7 +65,7 @@ export function DefragLoader({ size = 60, className = "" }: DefragLoaderProps) {
         return (
           <motion.div
             key={index}
-            className="absolute rounded-xs"
+            className="absolute rounded-[1px]"
             style={{
               width: blockWidth,
               height: blockHeight,
