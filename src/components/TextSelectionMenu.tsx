@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Minus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -454,7 +455,7 @@ export function TextSelectionMenu({
   const isHoverMode = onMouseEnter !== undefined;
   const shouldShow = isVisible;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {/* Invisible bridge to prevent menu from closing when moving mouse to it */}
       {shouldShow && isHoverMode && initialRectRef.current && (
@@ -537,6 +538,7 @@ export function TextSelectionMenu({
           </Button>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
