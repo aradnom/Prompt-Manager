@@ -32,14 +32,26 @@ export function ModifierString({
   const isActive = activeModifierId === modifierId;
   const spanRef = useRef<HTMLSpanElement>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const openTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const HOVER_DELAY_MS = 250;
 
-  // Clean up timeout on unmount
+  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       if (closeTimeoutRef.current) {
         clearTimeout(closeTimeoutRef.current);
       }
+      if (openTimeoutRef.current) {
+        clearTimeout(openTimeoutRef.current);
+      }
     };
+  }, []);
+
+  const cancelOpen = useCallback(() => {
+    if (openTimeoutRef.current) {
+      clearTimeout(openTimeoutRef.current);
+      openTimeoutRef.current = null;
+    }
   }, []);
 
   const cancelClose = useCallback(() => {
@@ -50,22 +62,32 @@ export function ModifierString({
   }, []);
 
   const scheduleClose = useCallback(() => {
+    cancelOpen();
     cancelClose();
     // Defer to next tick to give the bridge/menu a chance to catch the mouse
     closeTimeoutRef.current = setTimeout(() => {
       onSetActive(null);
     }, 0);
-  }, [cancelClose, onSetActive]);
+  }, [cancelClose, cancelOpen, onSetActive]);
 
   const handleMouseEnter = useCallback(() => {
     cancelClose();
-    onSetActive(modifierId);
-  }, [modifierId, onSetActive, cancelClose]);
+    // If already active (e.g. moved from menu back to span), open immediately.
+    if (isActive) {
+      onSetActive(modifierId);
+      return;
+    }
+    cancelOpen();
+    openTimeoutRef.current = setTimeout(() => {
+      onSetActive(modifierId);
+    }, HOVER_DELAY_MS);
+  }, [modifierId, onSetActive, cancelClose, cancelOpen, isActive]);
 
   const handleMouseLeave = useCallback(() => {
+    cancelOpen();
     // Schedule close - will be cancelled if mouse enters the menu
     scheduleClose();
-  }, [scheduleClose]);
+  }, [scheduleClose, cancelOpen]);
 
   // Compute the absolute indices for this modifier in the block text
   const startIndex = textOffset + match.index;
