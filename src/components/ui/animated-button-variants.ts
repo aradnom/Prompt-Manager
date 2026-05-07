@@ -5,7 +5,7 @@ export const animatedButtonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-magenta-dark text-foreground hover:bg-magenta-dark/90",
+        default: "bg-magenta-medium text-foreground hover:bg-magenta-medium/80",
         destructive:
           "bg-magenta-light text-foreground hover:bg-magenta-light/90",
         outline:

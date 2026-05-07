@@ -149,6 +149,7 @@ export function GenerateBlockDialog({
                   disabled={
                     !generateConcept.trim() || generateMutation.isPending
                   }
+                  whiteLoader
                 >
                   Generate
                 </LoadingAnimatedButton>

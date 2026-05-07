@@ -13,7 +13,7 @@ import { DefragLoader } from "./defrag-loader";
 const dotVariants = cva("rounded-full", {
   variants: {
     variant: {
-      default: "bg-magenta-dark",
+      default: "bg-magenta-medium",
       destructive: "bg-magenta-light",
       outline: "bg-foreground",
       secondary: "bg-cyan-medium",
@@ -30,7 +30,7 @@ const dotVariants = cva("rounded-full", {
 const loaderBorderVariants = cva("border-2", {
   variants: {
     variant: {
-      default: "border-magenta-medium",
+      default: "border-magenta-light",
       destructive: "border-foreground",
       outline: "border-cyan-light",
       secondary: "border-cyan-light",
@@ -51,7 +51,19 @@ export interface LoadingAnimatedButtonProps
   active?: boolean;
   loading?: boolean;
   loaderSize?: number;
+  /** Render the loader (border + defrag blocks) in white. */
+  whiteLoader?: boolean;
 }
+
+// Heights matching animatedButtonVariants size classes (h-10/h-9/h-11/h-10).
+// We have to animate to explicit px because motion's inline style would
+// otherwise override the Tailwind height class with `auto`.
+const SIZE_HEIGHT_PX: Record<string, number> = {
+  default: 40,
+  sm: 36,
+  lg: 44,
+  icon: 40,
+};
 
 const LoadingAnimatedButton = React.forwardRef<
   HTMLButtonElement,
@@ -65,26 +77,32 @@ const LoadingAnimatedButton = React.forwardRef<
       active = false,
       loading = false,
       loaderSize = 12,
+      whiteLoader = false,
       children,
       disabled,
       ...props
     },
     ref,
   ) => {
+    const sizeKey = size ?? "default";
+    const activeHeight = SIZE_HEIGHT_PX[sizeKey] ?? 40;
+    const activeWidth = sizeKey === "icon" ? activeHeight : "auto";
     return (
       <motion.button
         ref={ref}
         className={cn(
           active
             ? animatedButtonVariants({ variant, size, className })
-            : cn(dotVariants({ variant }), "w-2 h-2 text-sm", className),
-          "overflow-hidden p-0 cursor-pointer",
+            : cn(dotVariants({ variant }), "w-2 h-2 text-sm p-0", className),
+          "overflow-hidden cursor-pointer",
         )}
         animate={{
-          width: active ? "auto" : "8px",
-          height: active ? "auto" : "8px",
-          paddingTop: active ? undefined : "0",
-          paddingBottom: active ? undefined : "0",
+          width: active ? activeWidth : "8px",
+          height: active ? activeHeight : "8px",
+          paddingTop: active ? undefined : 0,
+          paddingBottom: active ? undefined : 0,
+          paddingLeft: active ? undefined : 0,
+          paddingRight: active ? undefined : 0,
         }}
         transition={{
           ...TEXT_BLOCK_ANIMATION,
@@ -109,11 +127,16 @@ const LoadingAnimatedButton = React.forwardRef<
               <span
                 className={cn(
                   "p-0.5 rounded-sm",
-                  loaderBorderVariants({ variant }),
+                  whiteLoader
+                    ? "border-2 border-foreground"
+                    : loaderBorderVariants({ variant }),
                 )}
                 style={{ backgroundColor: "transparent" }}
               >
-                <DefragLoader size={loaderSize} />
+                <DefragLoader
+                  size={loaderSize}
+                  color={whiteLoader ? "var(--color-foreground)" : undefined}
+                />
               </span>
               <span>Loading...</span>
             </>

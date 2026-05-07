@@ -751,6 +751,7 @@ export default function Wildcards() {
                       generateWildcardMutation.isPending ||
                       autoLabelMutation.isPending
                     }
+                    whiteLoader
                   >
                     Generate
                   </LoadingAnimatedButton>

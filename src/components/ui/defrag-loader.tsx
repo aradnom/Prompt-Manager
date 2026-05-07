@@ -4,6 +4,8 @@ import { motion } from "motion/react";
 interface DefragLoaderProps {
   size?: number;
   className?: string;
+  /** When set, all blocks use this single color instead of cycling. */
+  color?: string;
 }
 
 const COLORS = [
@@ -22,8 +24,13 @@ function getRandomColors(count: number): string[] {
   );
 }
 
-export function DefragLoader({ size = 60, className = "" }: DefragLoaderProps) {
-  const gap = 4;
+export function DefragLoader({
+  size = 60,
+  className = "",
+  color,
+}: DefragLoaderProps) {
+  // Scale gap with size so small loaders don't end up with hairline blocks.
+  const gap = Math.max(1, Math.round(size / 15));
   const blockHeight = (size - gap * 2) / 3;
   const cycleDuration = 2;
 
@@ -38,17 +45,21 @@ export function DefragLoader({ size = 60, className = "" }: DefragLoaderProps) {
   ];
 
   const [blockColors, setBlockColors] = useState(() =>
-    getRandomColors(blocks.length),
+    color ? Array(blocks.length).fill(color) : getRandomColors(blocks.length),
   );
 
-  // Randomize colors each cycle
+  // Randomize colors each cycle (skip when locked to a single color)
   useEffect(() => {
+    if (color) {
+      setBlockColors(Array(blocks.length).fill(color));
+      return;
+    }
     const interval = setInterval(() => {
       setBlockColors(getRandomColors(blocks.length));
     }, cycleDuration * 1000);
 
     return () => clearInterval(interval);
-  }, [blocks.length]);
+  }, [blocks.length, color]);
 
   return (
     <div
@@ -56,10 +67,10 @@ export function DefragLoader({ size = 60, className = "" }: DefragLoaderProps) {
       style={{ width: size, height: size }}
     >
       {blocks.map((block, index) => {
-        const blockWidth =
-          size * block.widthFraction - gap * (1 - block.widthFraction);
-        const x =
-          block.col * (size / (block.row === 0 ? 1 : block.row === 1 ? 2 : 3));
+        const cols = block.row === 0 ? 1 : block.row === 1 ? 2 : 3;
+        // N blocks + (N-1) gaps must fill `size` exactly.
+        const blockWidth = (size - gap * (cols - 1)) / cols;
+        const x = block.col * (blockWidth + gap);
         const y = size - blockHeight * (block.row + 1) - gap * block.row;
 
         return (
