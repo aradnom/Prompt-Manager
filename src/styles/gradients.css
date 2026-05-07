@@ -1,4 +1,12 @@
 @layer utilities {
+  .content-gradient {
+    background: linear-gradient(
+      to right,
+      rgb(from var(--color-cyan-dark) r g b / 50%),
+      transparent
+    );
+  }
+
   .radial-gradient-magenta {
     background: radial-gradient(
       circle at top left,

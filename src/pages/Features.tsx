@@ -1,6 +1,8 @@
 import { motion } from "motion/react";
 import { RasterIcon } from "@/components/RasterIcon";
 import { FeatureTour } from "@/components/FeatureTour";
+import { IntroContent } from "@/components/IntroContent";
+import { DotDivider } from "@/components/ui/dot-divider";
 
 export default function Features() {
   return (
@@ -22,12 +24,7 @@ export default function Features() {
         </p>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="max-w-4xl mb-8 space-y-3 text-foreground"
-      >
+      <IntroContent accent>
         <p>
           Working with diffusion models often means juggling dozens of
           similar-but-different prompts. You might have a core prompt that you
@@ -40,7 +37,9 @@ export default function Features() {
           variations in scattered files, you can build a library of reusable
           components and combine them however you need.
         </p>
-      </motion.div>
+      </IntroContent>
+
+      <DotDivider className="mb-4" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -1,5 +1,7 @@
 import { motion } from "motion/react";
 import { RasterIcon } from "@/components/RasterIcon";
+import { IntroContent } from "@/components/IntroContent";
+import { DotDivider } from "@/components/ui/dot-divider";
 
 export default function Privacy() {
   return (
@@ -20,12 +22,7 @@ export default function Privacy() {
         </p>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="max-w-4xl mb-8 space-y-3 text-foreground"
-      >
+      <IntroContent accent>
         <p>
           This is a small, independent project, so the privacy story here is a
           bit different from most sites. Since there's no company behind it, no
@@ -35,7 +32,9 @@ export default function Privacy() {
           sure even I can't see the content you create here. What follows is a
           plain-English description of how that actually works.
         </p>
-      </motion.div>
+      </IntroContent>
+
+      <DotDivider className="mb-4" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -44,7 +43,7 @@ export default function Privacy() {
         className="standard-content accent-border-gradient space-y-12"
       >
         <section>
-          <h2 className="text-2xl font-bold gradient-heading mb-3">
+          <h2 className="text-2xl font-bold gradient-heading mb-3 rounded-[1px]">
             Your Account ID
           </h2>
           <div className="space-y-3 text-foreground">
@@ -62,9 +61,8 @@ export default function Privacy() {
               <strong> 2.3 × 10²³ possible combinations</strong> — about 78 bits
               of entropy. Even at a wildly optimistic one billion guesses per
               second, brute-forcing a single account would take on the order of
-              millions of years. And because the server rate-limits
-              authentication, the real-world number is much, much worse for an
-              attacker.
+              millions of years. And because the app rate-limits attemps, the
+              real-world number is much, much worse for an attacker.
             </p>
             <p>
               The ID itself is generated using Node's cryptographic random
