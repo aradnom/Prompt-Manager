@@ -140,6 +140,20 @@ export function FeatureTour() {
         </p>
         <VideoClip name="use-wildcard" />
       </FeatureShowcase>
+
+      <FeatureShowcase
+        title="ComfyUI Integration"
+        description="Pipe your active prompt straight into ComfyUI as you edit"
+      >
+        <p className="text-foreground">
+          Wire up Diffusion Prompt Manager to a running ComfyUI instance and
+          your active prompt streams in live. As you tweak blocks, reorder them,
+          or swap wildcards, the corresponding prompt node in your ComfyUI graph
+          updates in real time — no copy-pasting, no back-and-forth, just edit
+          on one side and watch it land on the other.
+        </p>
+        <VideoClip name="comfyui" />
+      </FeatureShowcase>
     </div>
   );
 }
