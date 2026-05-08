@@ -33,6 +33,22 @@ function getErrorMessage(error: unknown): string {
     : "Invalid API key or insufficient permissions";
 }
 
+// Seeded into a new user's first prompt so they have something to play with
+// before any LLM features are configured. Mix of character and landscape
+// prompts in a comma-tag style that works with most diffusion models.
+const STARTER_BLOCK_TEXTS: readonly string[] = [
+  "a windswept coastal cliff at golden hour, dramatic clouds, distant lighthouse",
+  "a young woman with auburn hair and freckles, soft natural lighting, gentle smile",
+  "dense ancient pine forest blanketed in mist, shafts of morning light, mossy stones",
+  "a weathered old fisherman in a yellow raincoat, salt-crusted beard, kind eyes",
+  "neon-soaked Tokyo back alley at night, wet pavement reflecting signs, light rain",
+  "rolling lavender fields under a pastel sunset, distant farmhouse, summer haze",
+  "an elven scholar in flowing robes, reading by candlelight, ink-stained fingers",
+  "a frozen lake surrounded by snow-laden conifers, aurora borealis overhead",
+  "a cyberpunk samurai in chrome armor, glowing katana, rain-slick rooftop",
+  "a sun-drenched Tuscan vineyard, stone villa in the distance, cypress trees lining a dirt road",
+];
+
 export function registerAuthRoutes(
   app: Express,
   storage: PostgresStorageAdapter,
@@ -80,6 +96,34 @@ export function registerAuthRoutes(
       });
       await storage.setUserActiveStackId(user.id, firstStack.id);
 
+      // Derive the encryption key from the token. Used both to seed the
+      // user's starter blocks below and to populate the session further down.
+      const derivedKey = await deriveEncryptionKey(
+        token,
+        config.encryptionSalt,
+      );
+
+      // Seed the first prompt with a single randomly-chosen starter block so
+      // the user has something tangible to explore on their first visit.
+      const starterText =
+        STARTER_BLOCK_TEXTS[
+          Math.floor(Math.random() * STARTER_BLOCK_TEXTS.length)
+        ];
+      const encryptedStarterText = encrypt(starterText, derivedKey);
+      const starterBlock = await storage.createBlock({
+        uuid: crypto.randomUUID(),
+        displayId: generateDisplayId(),
+        text: encryptedStarterText,
+        labels: [],
+        userId: user.id,
+      });
+      await storage.addBlockToStack(
+        firstStack.id,
+        starterBlock.id,
+        undefined,
+        encryptedStarterText,
+      );
+
       // Notify watchdog of new user
       getWatchdog()?.notify(`newUserCreated:${user.id}`, {
         subject: `New user registered (ID: ${user.id})`,
@@ -89,13 +133,7 @@ export function registerAuthRoutes(
       // Generate session encryption key
       const sessionKey = generateSessionKey();
 
-      // Derive the encryption key from the token
-      const derivedKey = await deriveEncryptionKey(
-        token,
-        config.encryptionSalt,
-      );
-
-      // Encrypt the derived key with the session key and store in session
+      // Encrypt the (already-derived) key with the session key for storage
       const encryptedDerivedKey = encryptDerivedKey(derivedKey, sessionKey);
 
       // Regenerate session to prevent session fixation attacks
