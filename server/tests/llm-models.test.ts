@@ -51,7 +51,7 @@ function createTestConfig(): LLMConfig {
     vertex: {
       projectId: process.env.VERTEX_PROJECT_ID || "",
       location: process.env.VERTEX_LOCATION || "us-central1",
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       apiKey: process.env.VERTEX_API_KEY,
     },
     openai: {

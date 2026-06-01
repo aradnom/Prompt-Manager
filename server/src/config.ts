@@ -118,7 +118,7 @@ export function loadConfig(): ServerConfig {
       vertex: {
         projectId: process.env.VERTEX_PROJECT_ID || "",
         location: process.env.VERTEX_LOCATION || "us-central1",
-        model: process.env.VERTEX_MODEL || "gemini-3-flash-preview",
+        model: process.env.VERTEX_MODEL || "gemini-3.1-flash-lite",
         serviceAccountJson: process.env.VERTEX_SERVICE_ACCOUNT_JSON,
         apiEndpoint: process.env.VERTEX_API_ENDPOINT,
         apiKey: process.env.VERTEX_API_KEY,

@@ -1,4 +1,4 @@
-export type ThinkingLevel = "low" | "medium" | "high";
+export type ThinkingLevel = "minimal" | "low" | "medium" | "high";
 
 export interface ModelInfo {
   /** Display name for the model */
@@ -13,8 +13,13 @@ export type ModelRegistry = Record<string, ModelInfo>;
 
 export const MODELS: Record<string, ModelRegistry> = {
   vertex: {
-    "gemini-3.1-flash-lite-preview": {
-      name: "Gemini 3.1 Flash Lite Preview",
+    "gemini-3.5-flash": {
+      name: "Gemini 3.5 Flash",
+      hasThinking: true,
+      thinkingLevels: ["minimal", "low", "medium", "high"],
+    },
+    "gemini-3.1-flash-lite": {
+      name: "Gemini 3.1 Flash Lite",
       hasThinking: true,
       // MINIMAL and MEDIUM only for Flash, mapping: low->MINIMAL, medium->MEDIUM, high->HIGH
       thinkingLevels: ["low", "medium", "high"],
@@ -24,27 +29,10 @@ export const MODELS: Record<string, ModelRegistry> = {
       hasThinking: true,
       thinkingLevels: ["low", "high"],
     },
-    "gemini-3-flash-preview": {
-      name: "Gemini 3 Flash Preview",
-      hasThinking: true,
-      // MINIMAL and MEDIUM only for Flash, mapping: low->MINIMAL, medium->MEDIUM, high->HIGH
-      thinkingLevels: ["low", "medium", "high"],
-    },
     "gemini-3-pro-preview": {
       name: "Gemini 3 Pro Preview",
       hasThinking: true,
       thinkingLevels: ["low", "high"],
-    },
-    "gemini-2.5-flash": {
-      name: "Gemini 2.5 Flash",
-      hasThinking: true,
-      // 2.5 models only support budget, not levels - we'll map to budget internally
-      thinkingLevels: ["low", "medium", "high"],
-    },
-    "gemini-2.5-flash-lite": {
-      name: "Gemini 2.5 Flash Lite",
-      // Lite model likely doesn't support thinking
-      hasThinking: false,
     },
     "gemini-2.5-pro": {
       name: "Gemini 2.5 Pro",

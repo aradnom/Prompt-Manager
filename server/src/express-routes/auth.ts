@@ -598,7 +598,7 @@ export function registerAuthRoutes(
 
           // Minimal inference call to test the key (very low cost - just a few tokens)
           await client.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3.1-flash-lite",
             contents: [{ role: "user", parts: [{ text: "Hi" }] }],
             config: {
               generationConfig: {

@@ -2645,9 +2645,27 @@ export class PostgresStorageAdapter implements IStorageAdapter {
                 .limit(1),
             )
             .as("disabled_block_ids"),
+          eb
+            .selectFrom("stack_revisions as active_rev")
+            .select("active_rev.block_groups")
+            .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+            .limit(1)
+            .as("active_block_groups"),
+          eb
+            .selectFrom("stack_revisions")
+            .select("block_groups")
+            .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+            .orderBy("created_at", "desc")
+            .limit(1)
+            .as("latest_block_groups"),
         ])
         .where("stacks.id", "=", stackId)
         .executeTakeFirst();
+
+      const carriedBlockGroups =
+        currentRev?.active_block_groups ??
+        currentRev?.latest_block_groups ??
+        null;
 
       let newBlockIds: number[];
       if (!currentRev?.block_ids) {
@@ -2675,6 +2693,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           stack_id: stackId,
           block_ids: newBlockIds,
           disabled_block_ids: currentRev?.disabled_block_ids || [],
+          block_groups: carriedBlockGroups,
           rendered_content: renderedContent || null,
           created_at: now,
           updated_at: now,
@@ -2739,11 +2758,29 @@ export class PostgresStorageAdapter implements IStorageAdapter {
                 .limit(1),
             )
             .as("disabled_block_ids"),
+          eb
+            .selectFrom("stack_revisions as active_rev")
+            .select("active_rev.block_groups")
+            .whereRef("active_rev.id", "=", "stacks.active_revision_id")
+            .limit(1)
+            .as("active_block_groups"),
+          eb
+            .selectFrom("stack_revisions")
+            .select("block_groups")
+            .whereRef("stack_revisions.stack_id", "=", "stacks.id")
+            .orderBy("created_at", "desc")
+            .limit(1)
+            .as("latest_block_groups"),
         ])
         .where("stacks.id", "=", stackId)
         .executeTakeFirst();
 
       if (!currentRev?.block_ids) return;
+
+      const carriedBlockGroups =
+        currentRev.active_block_groups ??
+        currentRev.latest_block_groups ??
+        null;
 
       // When `position` is provided, remove only that single occurrence (so
       // duplicates of the same block can coexist and be removed individually).
@@ -2774,6 +2811,7 @@ export class PostgresStorageAdapter implements IStorageAdapter {
           stack_id: stackId,
           block_ids: newBlockIds,
           disabled_block_ids: newDisabledBlockIds,
+          block_groups: carriedBlockGroups,
           rendered_content: renderedContent || null,
           created_at: now,
           updated_at: now,
