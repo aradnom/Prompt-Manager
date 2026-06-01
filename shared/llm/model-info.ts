@@ -78,10 +78,13 @@ export const MODELS: Record<string, ModelRegistry> = {
     },
   },
   anthropic: {
+    "claude-opus-4-8": {
+      name: "Claude 4.8 Opus",
+      hasThinking: false,
+    },
     "claude-opus-4-7": {
       name: "Claude 4.7 Opus",
-      hasThinking: true,
-      thinkingLevels: ["low", "medium", "high"],
+      hasThinking: false,
     },
     "claude-sonnet-4-6": {
       name: "Claude 4.6 Sonnet",
