@@ -10,7 +10,8 @@ dist
 .env.example
 deploy
 design-dump
-local-dev
+local-dev/*
+!local-dev/init
 notes
 scripts
 README.md

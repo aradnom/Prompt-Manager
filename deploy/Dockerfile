@@ -34,6 +34,9 @@ COPY --from=build --chown=app:app /app/dist ./dist
 COPY --chown=app:app server ./server
 COPY --chown=app:app shared ./shared
 
+# Baseline schema, needed by `npm run init-schema` to bootstrap a fresh database
+COPY --chown=app:app local-dev/init ./local-dev/init
+
 # tsconfig files (needed by tsx for path alias resolution)
 COPY --chown=app:app tsconfig.json ./
 COPY --chown=app:app server/tsconfig.json ./server/
