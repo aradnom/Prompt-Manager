@@ -16,7 +16,9 @@ dist-ssr
 
 # Environment variables
 .env
-deploy/.env.deploy
+deploy/k8s/.env.deploy
+deploy/vps/.env
+deploy/vps/app.env
 
 # Auth
 server/auth/*.json
