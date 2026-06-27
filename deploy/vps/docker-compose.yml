@@ -1,0 +1,73 @@
+# Standalone VPS stack: app + Postgres + Redis.
+# The app image is built on the box from the repo's deploy/Dockerfile.
+#
+# Cloudflare Tunnel runs on the HOST (cloudflared systemd service), not in
+# compose. It reaches the app at http://localhost:3001 via the loopback-only
+# published port below.
+#
+# Two env files live next to this one (both gitignored, see *.example):
+#   .env      - infra config (Postgres creds) used for ${...} below
+#   app.env   - app runtime secrets (auth, LLM keys, etc.)
+#
+# DATABASE_URL and the Redis URLs are defined here (not in app.env) so the
+# Postgres password has a single source of truth.
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile
+    image: prompt-manager:latest
+    restart: unless-stopped
+    # Published on the host loopback only, so the host-side cloudflared can
+    # reach it at http://localhost:3001. Not exposed to the public internet.
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      SESSION_DATABASE_URL: "redis://redis:6379/0"
+      RATE_LIMIT_DATABASE_URL: "redis://redis:6379/1"
+      NOTIFICATION_DATABASE_URL: "redis://redis:6379/2"
+    env_file:
+      - ./app.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Bound to loopback only - reach it from your laptop via db-tunnel.sh (SSH).
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
