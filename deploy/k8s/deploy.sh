@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Load deploy config
 if [[ ! -f "$SCRIPT_DIR/.env.deploy" ]]; then
@@ -19,7 +19,7 @@ echo "Deploying ${APP_NAME} @ ${COMMIT_SHA}"
 
 # Build for linux/amd64
 echo "Building image..."
-docker build --platform linux/amd64 -t "${APP_NAME}:latest" -f "$SCRIPT_DIR/Dockerfile" "$PROJECT_ROOT"
+docker build --platform linux/amd64 -t "${APP_NAME}:latest" -f "$SCRIPT_DIR/../Dockerfile" "$PROJECT_ROOT"
 
 # Tag with latest and commit SHA
 echo "Tagging..."
