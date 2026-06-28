@@ -62,16 +62,10 @@ likewise loopback-only and reached from your laptop over SSH.
    ```
 
 5. **Install the Cloudflare Tunnel on the host** and route it to the app. Create
-   a tunnel in the dashboard (Zero Trust → Networks → Tunnels), then on the box:
-   ```bash
-   # Debian/Ubuntu - install cloudflared, then register it as a service with
-   # your tunnel's connector token (shown in the dashboard install command):
-   sudo cloudflared service install <TUNNEL_TOKEN>
-   ```
-   In the tunnel's **Public Hostname** settings, add a hostname (e.g. subdomain
-   `vps`) with **Service `HTTP` → `localhost:3001`**. Because cloudflared runs on
-   the host, `localhost:3001` is the app's loopback-published port. This also
-   auto-creates the proxied DNS record for you.
+   a tunnel in the dashboard (Networking → Tunnels), then follow the
+   instructions on the page to install the service on the host. Create a new
+   Route for the Tunnel with a blank Path and a Service URL of
+   `http://localhost:3001`.
 
 The app is now live at your Cloudflare hostname.
 

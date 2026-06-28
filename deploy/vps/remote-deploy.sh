@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # Runs LOCALLY (wired up as `npm run deploy:vps`). SSHes into the VPS and runs
 # deploy.sh there. The VPS pulls from origin, so commit and push whatever you
 # want deployed BEFORE running this.

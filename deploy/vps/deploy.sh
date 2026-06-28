@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # Runs ON the VPS. Pulls the latest code, rebuilds the app image, applies any
 # new DB migrations, and swaps in the new app container. Postgres, Redis and
 # the Cloudflare tunnel keep running untouched.
