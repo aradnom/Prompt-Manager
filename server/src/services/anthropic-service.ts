@@ -12,6 +12,7 @@ import type {
 // Map our thinking levels to Anthropic budget_tokens
 // Anthropic minimum is 1024
 const THINKING_BUDGETS: Record<ThinkingLevel, number> = {
+  minimal: 1024, // Anthropic's floor is 1024, so minimal == low here
   low: 1024,
   medium: 8192,
   high: 32768,

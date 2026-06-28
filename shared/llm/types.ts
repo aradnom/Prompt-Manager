@@ -1,6 +1,6 @@
 export type OutputStyle = "t5" | "clip" | null;
 
-export type ThinkingLevel = "low" | "medium" | "high";
+export type ThinkingLevel = "minimal" | "low" | "medium" | "high";
 
 export interface ThinkingConfig {
   /** Whether thinking/reasoning is enabled */

@@ -1,4 +1,7 @@
-export type ThinkingLevel = "minimal" | "low" | "medium" | "high";
+// Single source of truth lives in ./types; re-exported here so existing
+// importers of ThinkingLevel from this module keep working.
+import type { ThinkingLevel } from "./types";
+export type { ThinkingLevel };
 
 export interface ModelInfo {
   /** Display name for the model */
@@ -192,7 +195,7 @@ export function getClosestThinkingLevel(
   }
 
   // Fall back to closest level
-  const levelOrder: ThinkingLevel[] = ["low", "medium", "high"];
+  const levelOrder: ThinkingLevel[] = ["minimal", "low", "medium", "high"];
   const requestedIndex = levelOrder.indexOf(requestedLevel);
 
   // Try lower levels first, then higher

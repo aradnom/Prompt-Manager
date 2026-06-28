@@ -7,13 +7,15 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 // Map our thinking levels to Google's ThinkingLevel for Gemini 3 Flash
 const FLASH_THINKING_LEVELS: Record<AppThinkingLevel, ThinkingLevel> = {
-  low: ThinkingLevel.MINIMAL,
+  minimal: ThinkingLevel.MINIMAL,
+  low: ThinkingLevel.MINIMAL, // Flash has no LOW; round down to MINIMAL
   medium: ThinkingLevel.MEDIUM,
   high: ThinkingLevel.HIGH,
 };
 
 // Map our thinking levels to Google's ThinkingLevel for Gemini 3 Pro
 const PRO_THINKING_LEVELS: Record<AppThinkingLevel, ThinkingLevel> = {
+  minimal: ThinkingLevel.LOW, // Pro's lowest is LOW
   low: ThinkingLevel.LOW,
   medium: ThinkingLevel.LOW, // Pro doesn't have medium, fall back to low
   high: ThinkingLevel.HIGH,
@@ -21,6 +23,7 @@ const PRO_THINKING_LEVELS: Record<AppThinkingLevel, ThinkingLevel> = {
 
 // Map our thinking levels to budget tokens for Gemini 2.5 models
 const THINKING_BUDGETS: Record<AppThinkingLevel, number> = {
+  minimal: 1024, // floor budget, same as low
   low: 1024,
   medium: 8192,
   high: 32768,

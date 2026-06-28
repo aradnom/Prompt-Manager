@@ -21,7 +21,7 @@ const LLM_OPERATIONS: [LLMOperation, ...LLMOperation[]] = [
 const llmTargetSchema = z.enum(LLM_TARGETS);
 const llmOperationSchema = z.enum(LLM_OPERATIONS);
 const outputStyleSchema = z.enum(["t5", "clip"]).nullable().optional();
-const thinkingLevelSchema = z.enum(["low", "medium", "high"]);
+const thinkingLevelSchema = z.enum(["minimal", "low", "medium", "high"]);
 const thinkingConfigSchema = z
   .object({
     enabled: z.boolean(),
