@@ -23,14 +23,14 @@ likewise loopback-only and reached from your laptop over SSH.
 
 ## Files
 
-| File                 | Runs on | Purpose                                               |
-| -------------------- | ------- | ----------------------------------------------------- |
-| `docker-compose.yml` | VPS     | the stack: app + postgres + redis                     |
-| `deploy.sh`          | VPS     | pull → build → migrate → swap app                     |
-| `remote-deploy.sh`   | laptop  | `npm run deploy:vps` → push + SSH-trigger `deploy.sh` |
-| `db-tunnel.sh`       | laptop  | SSH tunnel to the VPS Postgres                        |
-| `.env`               | VPS     | infra config (Postgres creds) — gitignored            |
-| `app.env`            | VPS     | app runtime secrets — gitignored                      |
+| File                 | Runs on | Purpose                                        |
+| -------------------- | ------- | ---------------------------------------------- |
+| `docker-compose.yml` | VPS     | the stack: app + postgres + redis              |
+| `deploy.sh`          | VPS     | pull → build → migrate → swap app              |
+| `remote-deploy.sh`   | laptop  | `npm run deploy:vps` → SSH-trigger `deploy.sh` |
+| `db-tunnel.sh`       | laptop  | SSH tunnel to the VPS Postgres                 |
+| `.env`               | VPS     | infra config (Postgres creds) — gitignored     |
+| `app.env`            | VPS     | app runtime secrets — gitignored               |
 
 ## First-time setup (on the VPS)
 
@@ -77,16 +77,15 @@ The app is now live at your Cloudflare hostname.
 
 ## Deploying updates
 
-From your laptop, after committing your changes:
+Commit and push your changes to origin first, then from your laptop:
 
 ```bash
 npm run deploy:vps
 ```
 
-That pushes the current branch to origin, SSHes into the box, and runs
-`deploy.sh` (pull → rebuild app image → run `npm run migrate` → swap the app
-container). Postgres and Redis are left running, and the host's cloudflared is
-untouched.
+That SSHes into the box and runs `deploy.sh` (pull → rebuild app image → run
+`npm run migrate` → swap the app container). Postgres and Redis are left
+running, and the host's cloudflared is untouched.
 
 The scripts pass `VPS_HOST` straight to `ssh`, so the user/key/port all come
 from your `~/.ssh/config`. Define the alias (Hetzner connects as `root` by
