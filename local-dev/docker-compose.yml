@@ -1,5 +1,6 @@
 version: '3.8'
 
+name: prompt-manager
 services:
   postgres:
     image: postgres:16-alpine
@@ -36,4 +37,6 @@ services:
 
 volumes:
   postgres_data:
+    name: local-dev_postgres_data
   redis_data:
+    name: local-dev_redis_data
