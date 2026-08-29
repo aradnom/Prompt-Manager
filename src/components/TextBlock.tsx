@@ -74,6 +74,7 @@ import { useLLMStatus } from "@/contexts/LLMStatusContext";
 import { useSync } from "@/contexts/SyncContext";
 import type { OutputStyle } from "@/types/schema";
 import { LENGTH_LIMITS } from "@shared/limits";
+import { stripCommentedLines } from "@shared/comments";
 
 // Toggle for whether grouped blocks inherit the group's color on their
 // border. Flip to `false` while iterating on alternative group-styling
@@ -308,6 +309,16 @@ export function TextBlock({
   const getResolvedText = (text: string) => {
     return wildcards ? resolveWildcardsInText(text, wildcards) : text;
   };
+
+  // What the block actually contributes to a prompt: its text minus
+  // commented-out lines. Used for clipboard copies and as LLM transform
+  // input, so a transform operates on the intended text rather than
+  // silently carrying comments along. Note a transform's result replaces
+  // the whole block, so comments don't survive one either way.
+  const outputText = useMemo(
+    () => stripCommentedLines(block.text),
+    [block.text],
+  );
 
   // Sort revisions to put active one first
   const sortedRevisions = useMemo(() => {
@@ -641,10 +652,10 @@ export function TextBlock({
     if (fromHover) setOverlayLoading(true);
     try {
       const result = await transformMutation.mutateAsync({
-        text: getResolvedText(block.text),
+        text: getResolvedText(outputText),
         operation: "more-descriptive",
         style,
-        wildcards: getWildcardMarkers(block.text),
+        wildcards: getWildcardMarkers(outputText),
       });
 
       if (onTransform) {
@@ -663,10 +674,10 @@ export function TextBlock({
     if (fromHover) setOverlayLoading(true);
     try {
       const result = await transformMutation.mutateAsync({
-        text: getResolvedText(block.text),
+        text: getResolvedText(outputText),
         operation: "less-descriptive",
         style,
-        wildcards: getWildcardMarkers(block.text),
+        wildcards: getWildcardMarkers(outputText),
       });
 
       if (onTransform) {
@@ -688,10 +699,10 @@ export function TextBlock({
     if (fromHover) setOverlayLoading(true);
     try {
       const result = await transformMutation.mutateAsync({
-        text: getResolvedText(block.text),
+        text: getResolvedText(outputText),
         operation,
         style,
-        wildcards: getWildcardMarkers(block.text),
+        wildcards: getWildcardMarkers(outputText),
       });
 
       if (onTransform) {
@@ -710,7 +721,7 @@ export function TextBlock({
 
     try {
       const result = await exploreMutation.mutateAsync({
-        text: getResolvedText(block.text),
+        text: getResolvedText(outputText),
         operation: "explore",
         style,
       });
@@ -899,7 +910,7 @@ export function TextBlock({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(block.text);
+                            navigator.clipboard.writeText(outputText);
                           }}
                           className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
                           aria-label="Copy block text"
@@ -1453,7 +1464,7 @@ export function TextBlock({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigator.clipboard.writeText(block.text);
+                                  navigator.clipboard.writeText(outputText);
                                 }}
                                 className="text-cyan-medium hover:text-foreground transition-colors cursor-pointer"
                                 aria-label="Copy block text"

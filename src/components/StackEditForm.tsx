@@ -4,6 +4,7 @@ import { api, RouterOutput } from "@/lib/api";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave";
 import { useSync } from "@/contexts/SyncContext";
 import { applyCommaSeparation } from "@/lib/comma-separation";
+import { stripCommentedLines } from "@shared/comments";
 import {
   resolveWildcardsInText,
   resolveWildcardsWithMarkers,
@@ -157,7 +158,10 @@ export function StackEditForm({ stack, stackDetails }: StackEditFormProps) {
       return { rendered: "", withMarkers: "" };
     }
 
-    const rawText = stackDetails.blocks.map((b) => b.text).join("\n\n");
+    const rawText = stackDetails.blocks
+      .map((b) => stripCommentedLines(b.text))
+      .filter((t) => t.trim().length > 0)
+      .join("\n\n");
 
     if (!wildcards) {
       return { rendered: rawText, withMarkers: rawText };

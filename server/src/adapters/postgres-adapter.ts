@@ -2432,6 +2432,11 @@ export class PostgresStorageAdapter implements IStorageAdapter {
     return { items, total: Number(countResult?.count ?? 0) };
   }
 
+  // Note: unlike `getRenderedPrompt`, this joins per-block ciphertext that
+  // only the caller can decrypt, so `//` comment lines can NOT be stripped
+  // here — the consumer has to drop them after decrypting. Every other output
+  // path derives from `rendered_content`, which the client writes already
+  // stripped (see `stripCommentedLines` in shared/comments.ts).
   async getCompiledPrompt(
     displayId: string,
     userId: number,

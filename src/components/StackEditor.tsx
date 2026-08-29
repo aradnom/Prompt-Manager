@@ -41,6 +41,7 @@ import {
 } from "@/lib/wildcard-resolver";
 import { api } from "@/lib/api";
 import { applyCommaSeparation } from "@/lib/comma-separation";
+import { stripCommentedLines } from "@shared/comments";
 import { generateDisplayId } from "@/lib/generate-display-id";
 import { generateUUID } from "@/lib/uuid";
 import { TextBlock } from "@/components/TextBlock";
@@ -188,11 +189,13 @@ export function StackEditor({ stack }: StackEditorProps) {
     if (stackWithBlocks?.blocks) {
       setActiveStackBlocks(stackWithBlocks.blocks);
 
-      // Compute rendered content (excluding disabled blocks)
+      // Compute rendered content (excluding disabled blocks and commented
+      // lines). Stripping happens before the trim/empty filter so a block
+      // that is entirely commented out drops out of the join.
       const disabledIds = stackWithBlocks.disabledBlockIds || [];
       const rawText = stackWithBlocks.blocks
         .filter((b) => !disabledIds.includes(b.id))
-        .map((b) => b.text.trim())
+        .map((b) => stripCommentedLines(b.text).trim())
         .filter((t) => t.length > 0)
         .join("\n\n");
 
