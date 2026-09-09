@@ -20,8 +20,7 @@
     "migrate:down": "tsx server/src/scripts/migrate.ts down",
     "migrate:check": "tsx server/src/scripts/migrate-check.ts",
     "migrate:user-content": "tsx server/src/scripts/migrate-user-content.ts",
-    "deploy:k8s": "deploy/k8s/deploy.sh",
-    "deploy:vps": "deploy/vps/remote-deploy.sh",
+    "deploy": "deploy/remote-deploy.sh",
     "tw-scs": "npx @laststance/tailwind-suggest-canonical-classes 'src/**/*.{tsx,jsx,html}'"
   },
   "dependencies": {

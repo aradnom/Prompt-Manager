@@ -1,0 +1,84 @@
+# Standard deployment object. The app name comes from deploy/app.env, which the
+# deploy scripts source and export before invoking compose.
+#
+# The image tag is supplied via $APP_SHA (set by deploy.sh from the git SHA);
+# it falls back to :latest for convenience so `docker compose` works locally
+# after a plain build. The tag is intentionally NOT hardcoded here because
+# this file is versioned and the SHA changes every deploy.
+#
+# $APP_NAME deliberately has no default: if it's unset, compose fails loudly
+# here rather than quietly building something called ":latest".
+name: ${APP_NAME:?not set — run via the deploy/ scripts, which export it from deploy/app.env}
+services:
+  # This key stays literal ("app") because compose can't interpolate mapping
+  # keys. `container_name` below is the name that actually matters — it's how
+  # Caddy reaches this app over the `web` network.
+  app:
+    image: ${APP_NAME}:${APP_SHA:-latest}
+    container_name: ${APP_NAME}
+    restart: unless-stopped
+    environment:
+      # Overrides whatever PORT the .env below carries. The box's convention is
+      # that every app listens on 8080 inside its container; Caddy proxies to
+      # ${APP_NAME}:8080 over the `web` network.
+      PORT: "8080"
+
+    # Secrets and box-specific config come from .env at the repo root — the
+    # same file local dev uses (git-ignored, excluded from the image by
+    # Dockerfile.dockerignore; compose injects it at runtime). On the box this
+    # is /root/apps/prompt-manager/.env, which replaces the old
+    # deploy/vps/app.env. This app needs:
+    #   DATABASE_URL                — postgresql://promptuser:pass@postgres:5432/prompt_manager
+    #   SESSION_DATABASE_URL        — redis://:pass@valkey:6379/0
+    #   RATE_LIMIT_DATABASE_URL     — redis://:pass@valkey:6379/1
+    #   NOTIFICATION_DATABASE_URL   — redis://:pass@valkey:6379/2
+    #   SESSION_SECRET, ENCRYPTION_SALT, TOKEN_SECRET, API_KEY_SECRET
+    #   CORS_ORIGINS, NODE_ENV=production  (SERVER_URL is dev-only — it just
+    #                                       points the Vite proxy at the API)
+    #   plus the optional LLM / Resend / Turnstile keys (see .env.example)
+    # Postgres and Valkey are the SHARED services from the general-vps stack,
+    # reachable on the `services` network as hosts `postgres` and `valkey`.
+    # `required: false` keeps a bare `compose config` parseable without the
+    # file — the app then fails fast at boot naming the missing var, and
+    # deploy.sh warns when the file is absent.
+    # NOTE: the path resolves against the compose PROJECT directory, which the
+    # deploy scripts set to the repo root via --project-directory.
+    env_file:
+      - path: .env
+        required: false
+
+    # Publish only to loopback: Caddy reaches the app over the `web` network by
+    # container name, so a public port isn't needed — but binding 127.0.0.1
+    # keeps it curl-able for debugging on the host (and for local testing).
+    # Default is 3001 because host 8080 is already taken on the box (Dozzle,
+    # see the root compose.yml in general-vps). It's also this app's dev port,
+    # so `npm run dev` and this can't both be up at once — pass HOST_PORT to
+    # move it.
+    ports:
+      - "127.0.0.1:${HOST_PORT:-3001}:8080"
+    # Lets host.docker.internal resolve on Linux too (built in on Docker
+    # Desktop). config.ts rewrites `localhost` in DATABASE_URL / LM_STUDIO_URL
+    # to $DOCKER_HOST when set, which is how local container runs reach a
+    # service on the host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - web       # Caddy + other apps
+      - services  # shared Postgres + Valkey
+
+    # Standard logging settings
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
+
+# Shared external networks, created once on the box with `docker network create`:
+#   web      — Caddy and all public-facing apps
+#   services — stateful backing services (Postgres, Valkey)
+networks:
+  web:
+    external: true
+  services:
+    external: true

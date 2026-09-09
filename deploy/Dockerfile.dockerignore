@@ -1,0 +1,48 @@
+# Ignore-file for deploy/Dockerfile specifically. BuildKit reads
+# <dockerfile-name>.dockerignore from next to the Dockerfile, and it takes
+# precedence over any .dockerignore at the context root — which is what lets
+# this whole bundle stay self-contained in deploy/.
+#
+# Because it takes precedence, the repo-root .dockerignore is no longer
+# consulted for this build; its contents were folded in below.
+#
+# Paths are relative to the BUILD CONTEXT (the repo root), not to deploy/.
+
+.git
+.gitignore
+.husky
+node_modules
+npm-debug.log*
+
+# Build output — the image builds its own dist/ in the first stage. A stale
+# tsbuildinfo from the host would also make `tsc -b` skip work it should do.
+dist
+*.tsbuildinfo
+
+# The deploy bundle itself is never needed inside the image.
+deploy
+
+# Local env / secrets — must never be baked into an image layer.
+.env
+.env.*
+
+# Common dev-only noise.
+*.md
+.DS_Store
+coverage
+test
+tests
+.vscode
+.claude
+
+# App-specific: scratch material and private notes never belong in the image.
+design-dump
+notes
+notes-private
+scripts
+
+# local-dev is the docker-compose dev stack — not wanted, EXCEPT init/, which
+# holds the baseline schema `npm run init-schema` needs to bootstrap a fresh
+# database. The Dockerfile copies local-dev/init into the runtime image.
+local-dev/*
+!local-dev/init
