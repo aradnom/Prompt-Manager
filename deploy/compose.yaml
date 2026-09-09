@@ -50,12 +50,12 @@ services:
     # Publish only to loopback: Caddy reaches the app over the `web` network by
     # container name, so a public port isn't needed — but binding 127.0.0.1
     # keeps it curl-able for debugging on the host (and for local testing).
-    # Default is 3001 because host 8080 is already taken on the box (Dozzle,
+    # Default is 3002 because host 8080 is already taken on the box (Dozzle,
     # see the root compose.yml in general-vps). It's also this app's dev port,
     # so `npm run dev` and this can't both be up at once — pass HOST_PORT to
     # move it.
     ports:
-      - "127.0.0.1:${HOST_PORT:-3001}:8080"
+      - "127.0.0.1:${HOST_PORT:-3002}:8080"
     # Lets host.docker.internal resolve on Linux too (built in on Docker
     # Desktop). config.ts rewrites `localhost` in DATABASE_URL / LM_STUDIO_URL
     # to $DOCKER_HOST when set, which is how local container runs reach a
