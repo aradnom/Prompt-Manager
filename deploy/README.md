@@ -152,12 +152,13 @@ run _before_ the swap, so a failing migration leaves the old container serving.
 
 ```
 ./deploy/local/build.sh    # build prompt-manager:latest
-./deploy/local/start.sh    # up -d, on http://127.0.0.1:3001
+./deploy/local/start.sh    # up -d, on http://127.0.0.1:3002
 ./deploy/local/stop.sh     # down
 ```
 
-`HOST_PORT=9000 ./deploy/local/start.sh` if 3001 is taken — which it will be if
-`npm run dev` is running, since that's the same port.
+`HOST_PORT=9000 ./deploy/local/start.sh` to move it. The default is 3002 rather
+than the app's usual 3001 because another app on the box already publishes
+3001 — and it keeps this out of the way of `npm run dev`, which uses 3001.
 
 Two things to know when running the container locally:
 

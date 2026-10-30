@@ -44,4 +44,4 @@ echo "==> Starting ${APP_NAME} (compose up -d)"
 docker compose -f "$DEPLOY_DIR/compose.yaml" --project-directory "$ROOT_DIR" up -d
 
 # Keep this default in sync with the ports mapping in ../compose.yaml.
-echo "==> Up: http://127.0.0.1:${HOST_PORT:-3001}"
+echo "==> Up: http://127.0.0.1:${HOST_PORT:-3002}"
