@@ -1,12 +1,12 @@
 # deploy/
 
-Deploy bundle for prompt-manager on the shared Hetzner/Caddy box (`general-vps`).
-Same shape as the standard bundle in the `general-vps` repo
+Deploy bundle for prompt-manager on the shared Hetzner/Caddy box.
+Same shape as the standard bundle in the `vps-admin` repo
 (`app-deploy-template/`), with one app-specific addition: `deploy.sh` runs
 `npm run migrate` before swapping the container.
 
 The app runs as a single container. Postgres and Valkey are **shared services**
-owned by the `general-vps` repo (`services/compose.yml`) and reached over the
+owned by the `vps-admin` repo (`services/compose.yml`) and reached over the
 `services` Docker network as hosts `postgres` and `valkey`. TLS and routing are
 Caddy's job — no Cloudflare Tunnel, no `cloudflared` on the host.
 
@@ -77,7 +77,7 @@ same filename local dev uses; on the box that's
 4. **Write `/root/apps/prompt-manager/.env`.** Start from the old
    `deploy/vps/app.env` and repoint the four connection URLs at the shared
    services (note the Valkey password comes from `services/.env` in the
-   `general-vps` repo):
+   `vps-admin` repo):
 
    ```
    NODE_ENV=production
@@ -99,7 +99,7 @@ same filename local dev uses; on the box that's
      server's proxy at the API; nothing reads it at runtime, and `.env` never
      reaches the image anyway.
 
-5. **Add the Caddy route** in the `general-vps` repo's `caddy/Caddyfile`. Deploy
+5. **Add the Caddy route** in the `vps-admin` repo's `caddy/Caddyfile`. Deploy
    behind the test subdomain first, so a broken deploy never touches the live
    domain:
 
@@ -143,7 +143,7 @@ Push to master first, then from your laptop:
 ./deploy/remote-deploy.sh          # or: npm run deploy
 ```
 
-That SSHes to the box (`DEPLOY_HOST`, default `general-vps`) and runs
+That SSHes to the box (`DEPLOY_HOST`) and runs
 `deploy/deploy.sh` there: pull master → build an image tagged with the git SHA →
 `npm run migrate` in a one-off container → `compose up -d` to swap. Migrations
 run _before_ the swap, so a failing migration leaves the old container serving.
@@ -171,7 +171,7 @@ Two things to know when running the container locally:
 ## Reaching the shared services from your laptop
 
 The old `deploy/vps/db-tunnel.sh` is gone; the tunnels now live in the
-`general-vps` repo and point at the shared containers:
+`vps-admin` repo and point at the shared containers:
 
 ```
 ./commands/pg-tunnel.sh       # Postgres     -> localhost:5433
@@ -192,4 +192,4 @@ The old `deploy/vps/db-tunnel.sh` is gone; the tunnels now live in the
   this build; its rules were folded into `Dockerfile.dockerignore`.
 - Valkey is shared, and this app uses **logical DBs 0, 1 and 2** on it. Any
   other app on the box needs different numbers. See `services/setup.md` in the
-  `general-vps` repo for the allocation table.
+  `vps-admin` repo for the allocation table.
