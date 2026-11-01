@@ -4,7 +4,7 @@
 # deploy.sh. Assumes master has already been pushed.
 #
 #   ./deploy/remote-deploy.sh
-#   DEPLOY_HOST=general-vps DEPLOY_APP_DIR=/root/apps/other ./deploy/remote-deploy.sh
+#   DEPLOY_HOST=vps-dankwart DEPLOY_APP_DIR=/root/apps/other ./deploy/remote-deploy.sh
 #
 set -euo pipefail
 
@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/app.env"
 : "${APP_NAME:?not set in deploy/app.env}"
 
-HOST="${DEPLOY_HOST:-general-vps}"
+HOST="${DEPLOY_HOST:-vps-dankwart}"
 APP_DIR="${DEPLOY_APP_DIR:-/root/apps/${APP_NAME}}"
 
 echo "==> Deploying ${APP_NAME} to ${HOST}:${APP_DIR}"
